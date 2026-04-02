@@ -3345,7 +3345,30 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Supabase JS: carica da jsDelivr, con fallback automatico su unpkg se offline -->
+  <script>
+    (function () {
+      function tryLoad(urls, idx) {
+        if (idx >= urls.length) {
+          console.error('[FitFlow] Impossibile caricare supabase-js da tutti i CDN disponibili.');
+          return;
+        }
+        var s = document.createElement('script');
+        s.src = urls[idx];
+        s.onerror = function () {
+          console.warn('[FitFlow] CDN non disponibile:', urls[idx], '— provo il successivo…');
+          document.head.removeChild(s);
+          tryLoad(urls, idx + 1);
+        };
+        document.head.appendChild(s);
+      }
+      tryLoad([
+        'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2',
+        'https://unpkg.com/@supabase/supabase-js@2',
+        'https://esm.sh/@supabase/supabase-js@2'
+      ], 0);
+    })();
+  </script>
   <script>
     let _excelJsLoaded = false;
     function ensureExcelJS() {
@@ -8383,7 +8406,18 @@ function renderClientFormStickySummary() {
       updateSyncBadge('Offline');
     });
 
-    initApp();
+    // Attende che window.supabase sia disponibile (necessario con CDN di fallback asincroni)
+    (function waitForSupabase(attempts) {
+      if (window.supabase && window.supabase.createClient) {
+        initApp();
+      } else if (attempts > 0) {
+        setTimeout(function () { waitForSupabase(attempts - 1); }, 150);
+      } else {
+        console.error('[FitFlow] supabase-js non caricato dopo tutti i tentativi CDN.');
+        // Avvia comunque l'app in modalità solo locale
+        initApp();
+      }
+    })(40); // 40 × 150ms = 6 secondi max di attesa
   </script>
 </body>
 </html>

@@ -38,6 +38,18 @@
     * { box-sizing: border-box; }
     html, body { margin: 0; min-height: 100%; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: radial-gradient(circle at top, #1f1f1f 0%, #141414 55%, #090909 100%); color: var(--text); }
     body { padding: 16px; }
+    body.modal-scroll-lock {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      overflow: hidden;
+      overscroll-behavior: none;
+      touch-action: none;
+    }
+    html.modal-scroll-lock {
+      overflow: hidden;
+      overscroll-behavior: none;
+    }
     button, input, select, textarea { font: inherit; }
     button { cursor: pointer; }
 
@@ -102,6 +114,14 @@
       margin: 0 auto;
       display: grid;
       gap: 16px;
+      min-width: 0;
+    }
+
+    .hero, .hero-left, .hero-right, .panel, .panel-body, .layout, .calendar-wrap,
+    .selected-card, .mobile-selected-client-card, .hero-insights, .hero-stats,
+    .selected-metrics, .client-data-points, .ops-board, .report-grid, .package-grid,
+    .agenda-wrap, .calendar-toolbar, .calendar-toolbar-left, .calendar-top-tools {
+      min-width: 0;
     }
 
     .topbar {
@@ -712,6 +732,8 @@
       width: min(980px, 100%);
       max-height: min(90vh, 980px);
       overflow: auto;
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
       background: linear-gradient(180deg, #1a1a1a, #121212);
       border: 1px solid rgba(255,255,255,0.06);
       border-radius: 24px;
@@ -1194,6 +1216,9 @@
     .confirm-modal-backdrop.open { display: flex; }
     .confirm-modal {
       background: linear-gradient(180deg, #1c1c1c, #131313);
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
       border: 1px solid rgba(255,255,255,0.08);
       border-radius: 22px;
       padding: 24px;
@@ -1221,6 +1246,9 @@
     .fsc-backdrop.open { display: flex; }
     .fsc-modal {
       background: linear-gradient(160deg,#1e1a1a 0%,#141414 100%);
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
       border: 1px solid rgba(229,9,20,0.20);
       border-radius: 26px; padding: 26px;
       width: min(500px,100%); display: grid; gap: 18px;
@@ -1271,6 +1299,9 @@
     .mp-backdrop.open { display:flex; }
     .mp-modal {
       background:linear-gradient(180deg,#1e1e1e,#141414);
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
       border:1px solid rgba(255,255,255,0.09); border-radius:24px;
       padding:24px; width:min(400px,100%);
       display:grid; gap:18px;
@@ -2208,6 +2239,8 @@
 
     .sidebar-drawer {
       position: fixed;
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
       top: 0;
       left: 0;
       bottom: 0;
@@ -2355,16 +2388,49 @@
         white-space: normal;
       }
       .hero-right { display: none; }
-      .hero-insights { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .hero-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .hero-insights { grid-template-columns: 1fr; }
+      .hero-stats { grid-template-columns: 1fr; }
       .ops-board { grid-template-columns: 1fr; }
       .quick-actions-grid { grid-template-columns: 1fr; }
       .selected-metrics { grid-template-columns: 1fr; }
       .mobile-selected-client-wrap { display: block; }
       .mobile-selected-client-card { margin-top: 2px; }
-      .mobile-kpi-row { grid-template-columns: 1fr 1fr; }
+      .mobile-kpi-row { grid-template-columns: 1fr; }
       .mobile-selected-actions { grid-template-columns: 1fr; }
       .mobile-selected-actions .btn { width: 100%; }
+
+      .hero-insight, .stat-box, .metric-tile, .mobile-kpi, .client-data-point, .report-card, .package-card, .mini-card {
+        min-height: auto;
+      }
+      .report-grid, .package-grid, .client-data-points {
+        grid-template-columns: 1fr;
+      }
+      .selected-card,
+      .mobile-selected-client-card,
+      .panel,
+      .hero,
+      .calendar-wrap,
+      .calendar-top-tools,
+      .toolbar-search,
+      .quick-client-search-wrap,
+      .quick-search-results {
+        width: 100%;
+        max-width: 100%;
+      }
+      .month-title {
+        font-size: 1.3rem;
+        line-height: 1.1;
+      }
+      .calendar-toolbar,
+      .calendar-toolbar-left,
+      .calendar-top-tools {
+        align-items: stretch;
+      }
+      .calendar-toolbar > *,
+      .calendar-toolbar-left > *,
+      .calendar-top-tools > * {
+        max-width: 100%;
+      }
 
       /* Calendar mobile month view: iPhone-like monthly grid */
       .calendar-head {
@@ -2499,6 +2565,14 @@
       .pwa-install-banner .pwa-actions { width: 100%; justify-content: flex-end; }
 
       /* Modal → bottom sheet */
+      .modal-backdrop,
+      .confirm-modal-backdrop,
+      .fsc-backdrop,
+      .mp-backdrop,
+      .drawer-overlay {
+        overscroll-behavior: contain;
+        touch-action: none;
+      }
       .modal-backdrop {
         align-items: flex-end;
         padding: 0;
@@ -2506,6 +2580,9 @@
       .modal {
         width: 100%;
         max-height: 92dvh;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        touch-action: pan-y;
         border-radius: 24px 24px 0 0;
         padding: 0 18px 18px;
         border-left: 0;
@@ -5277,6 +5354,33 @@
         first.focus();
       }
     }
+    let bodyScrollLockDepth = 0;
+    let bodyScrollLockY = 0;
+
+    function lockBodyScroll() {
+      bodyScrollLockDepth += 1;
+      if (bodyScrollLockDepth > 1) return;
+      bodyScrollLockY = window.scrollY || window.pageYOffset || 0;
+      document.documentElement.classList.add('modal-scroll-lock');
+      document.body.classList.add('modal-scroll-lock');
+      document.body.style.top = `-${bodyScrollLockY}px`;
+    }
+
+    function unlockBodyScroll(force = false) {
+      if (force) {
+        bodyScrollLockDepth = 0;
+      } else if (bodyScrollLockDepth > 0) {
+        bodyScrollLockDepth -= 1;
+      }
+      if (bodyScrollLockDepth > 0) return;
+      const restoreY = Math.abs(parseInt(document.body.style.top || '0', 10)) || bodyScrollLockY || 0;
+      document.documentElement.classList.remove('modal-scroll-lock');
+      document.body.classList.remove('modal-scroll-lock');
+      document.body.style.top = '';
+      window.scrollTo(0, restoreY);
+      bodyScrollLockY = 0;
+    }
+
     function openModal(id, trigger = document.activeElement) {
       if (id === 'operazioniModalBackdrop') renderOperazioniModal();
       if (id === 'atRiskModalBackdrop') renderAtRiskModal();
@@ -5285,7 +5389,7 @@
       if (!backdrop) return;
       activeModalTrigger = trigger instanceof HTMLElement ? trigger : activeModalTrigger;
       backdrop.classList.add('open');
-      document.body.style.overflow = 'hidden';
+      lockBodyScroll();
       const modal = backdrop.querySelector('.modal');
       if (modal) {
         if (!modal.hasAttribute('tabindex')) modal.setAttribute('tabindex', '-1');
@@ -5299,9 +5403,9 @@
       const backdrop = document.getElementById(id);
       if (!backdrop) return;
       backdrop.classList.remove('open');
-      if (!document.querySelector('.modal-backdrop.open')) {
-        document.body.style.overflow = '';
-        if (activeModalTrigger && document.body.contains(activeModalTrigger)) activeModalTrigger.focus();
+      unlockBodyScroll();
+      if (!document.querySelector('.modal-backdrop.open') && activeModalTrigger && document.body.contains(activeModalTrigger)) {
+        activeModalTrigger.focus();
       }
     }
 
@@ -5380,6 +5484,12 @@
         resetSwipeState();
         el.style.transform = '';
       });
+      el.addEventListener('touchmove', e => {
+        if (!window.innerWidth || window.innerWidth > 580) return;
+        const target = e.target;
+        const isScrollableArea = target instanceof HTMLElement && !!target.closest('.modal, .confirm-modal, .fsc-modal, .mp-modal');
+        if (!isScrollableArea) e.preventDefault();
+      }, { passive: false });
     }
 
     /* ── Custom confirm dialog (replaces window.confirm) ─────── */
@@ -5394,7 +5504,7 @@
       msgEl.textContent     = message;
       okBtn.textContent     = confirmLabel;
       backdrop.classList.add('open');
-      document.body.style.overflow = 'hidden';
+      lockBodyScroll();
       /* remove old listeners */
       const newOk = okBtn.cloneNode(true);
       const newCancel = cancelBtn.cloneNode(true);
@@ -5402,7 +5512,7 @@
       cancelBtn.replaceWith(newCancel);
       function close() {
         backdrop.classList.remove('open');
-        document.body.style.overflow = '';
+        unlockBodyScroll();
       }
       newOk.addEventListener('click', () => { close(); if (onConfirm) onConfirm(); });
       newCancel.addEventListener('click', close);
@@ -5413,7 +5523,7 @@
     document.addEventListener('keydown', event => {
       if (event.key === 'Escape') {
         const confirmOpen = document.getElementById('confirmModalBackdrop')?.classList.contains('open');
-        if (confirmOpen) { document.getElementById('confirmModalBackdrop').classList.remove('open'); document.body.style.overflow = ''; return; }
+        if (confirmOpen) { document.getElementById('confirmModalBackdrop').classList.remove('open'); unlockBodyScroll(); return; }
         const openBackdrop = document.querySelector('.modal-backdrop.open');
         if (openBackdrop) closeModal(openBackdrop.id);
       }
@@ -8442,7 +8552,7 @@ function renderClientFormStickySummary() {
         if (closeDrawerOnSelect) {
           document.getElementById('sidebarDrawer')?.classList.remove('open');
           document.getElementById('drawerOverlay')?.classList.remove('open');
-          document.body.style.overflow = '';
+          unlockBodyScroll();
         }
       };
       root.addEventListener('click', event => activate(event.target));
@@ -8582,7 +8692,7 @@ function renderClientFormStickySummary() {
       /* Se non ci sono pacchetti, vai direttamente a modifica cliente */
       if (!packages.length) {
         backdrop.classList.remove('open');
-        document.body.style.overflow = '';
+        unlockBodyScroll();
         renderClientModal(client);
         openModal('clientModalBackdrop');
         showToast('Aggiungi prima un pacchetto.', 'warn');
@@ -8629,7 +8739,7 @@ function renderClientFormStickySummary() {
         el2.parentNode.replaceChild(clone, el2);
       });
 
-      function closeFsc() { backdrop.classList.remove('open'); document.body.style.overflow = ''; }
+      function closeFsc() { backdrop.classList.remove('open'); unlockBodyScroll(); }
 
       /* NO → da ricontattare */
       document.getElementById('fscNoBtn').addEventListener('click', () => {
@@ -8676,7 +8786,7 @@ function renderClientFormStickySummary() {
       });
 
       backdrop.classList.add('open');
-      document.body.style.overflow = 'hidden';
+      lockBodyScroll();
       requestAnimationFrame(() => document.getElementById('fscYesBtn')?.focus());
     }
 
@@ -8717,19 +8827,19 @@ function renderClientFormStickySummary() {
 
       document.getElementById('mpPrevYear').addEventListener('click',  () => { pickerY--; renderMpGrid(); });
       document.getElementById('mpNextYear').addEventListener('click',  () => { pickerY++; renderMpGrid(); });
-      document.getElementById('mpCancelBtn').addEventListener('click', () => { backdrop.classList.remove('open'); document.body.style.overflow = ''; });
+      document.getElementById('mpCancelBtn').addEventListener('click', () => { backdrop.classList.remove('open'); unlockBodyScroll(); });
       document.getElementById('mpConfirmBtn').addEventListener('click', () => {
-        backdrop.classList.remove('open'); document.body.style.overflow = '';
+        backdrop.classList.remove('open'); unlockBodyScroll();
         onConfirm(new Date(pickerY, pickerM, 1));
       });
 
       backdrop.addEventListener('click', e => {
-        if (e.target === backdrop) { backdrop.classList.remove('open'); document.body.style.overflow = ''; }
+        if (e.target === backdrop) { backdrop.classList.remove('open'); unlockBodyScroll(); }
       }, { once: true });
 
       renderMpGrid();
       backdrop.classList.add('open');
-      document.body.style.overflow = 'hidden';
+      lockBodyScroll();
       requestAnimationFrame(() => document.getElementById('mpConfirmBtn')?.focus());
     }
 
@@ -8828,14 +8938,14 @@ function renderClientFormStickySummary() {
       function openDrawer() {
         sidebarDrawer.classList.add('open');
         drawerOverlay.classList.add('open');
-        document.body.style.overflow = 'hidden';
+        lockBodyScroll();
         const search = document.getElementById('clientSearchDrawer');
         if (search) setTimeout(() => search.focus(), 260);
       }
       function closeDrawer() {
         sidebarDrawer.classList.remove('open');
         drawerOverlay.classList.remove('open');
-        document.body.style.overflow = '';
+        unlockBodyScroll();
       }
 
       if (drawerOverlay) drawerOverlay.addEventListener('click', closeDrawer);

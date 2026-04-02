@@ -507,6 +507,13 @@
     .lesson-pill strong { font-size: 0.83rem; }
     .lesson-pill span { color: rgba(255,255,255,0.72); font-size: 0.76rem; }
     .lesson-pill.status-done { border-color: rgba(29,185,84,0.24); background: rgba(29,185,84,0.14); }
+    .lesson-pill.duo { border-color: rgba(59,130,246,0.32); background: rgba(59,130,246,0.10); }
+    .lesson-pill.duo.status-done { border-color: rgba(29,185,84,0.24); background: rgba(29,185,84,0.14); }
+    .lesson-pill.duo.status-cancelled { border-color: rgba(239,68,68,0.26); background: rgba(239,68,68,0.16); }
+    .duo-badge { display:inline-flex; align-items:center; gap:6px; background:rgba(59,130,246,0.13); border:1px solid rgba(59,130,246,0.28); color:#c8dcff; border-radius:999px; padding:8px 13px; font-size:0.86rem; font-weight:700; }
+    .duo-section { display:grid; gap:10px; padding:14px; background:rgba(59,130,246,0.06); border:1px solid rgba(59,130,246,0.14); border-radius:16px; }
+    .duo-section-title { font-size:0.78rem; text-transform:uppercase; letter-spacing:0.08em; color:rgba(255,255,255,0.55); font-weight:700; }
+    .duo-partner-row { display:flex; align-items:center; justify-content:space-between; gap:10px; }
     .lesson-pill.status-cancelled {
       border-color: rgba(239,68,68,0.26);
       background: rgba(239,68,68,0.16);
@@ -597,6 +604,8 @@
       text-align: left;
       transition: transform 120ms ease, border-color 120ms ease, background 120ms ease;
     }
+    .day-slot.duo { border-color: rgba(59,130,246,0.30); background: rgba(59,130,246,0.07); }
+    .day-slot.duo:hover { border-color: rgba(59,130,246,0.55); }
     .day-slot:hover {
       transform: translateY(-1px);
       border-color: color-mix(in srgb, var(--accent) 35%, var(--line));
@@ -3054,6 +3063,26 @@
           <button class="btn btn-danger" id="deleteLessonBtn">Elimina</button>
         </div>
 
+        <!-- ── SEZIONE DUO ─────────────────────────────── -->
+        <div class="duo-section" id="duoSection">
+          <div class="duo-section-title">👥 Lezione DUO</div>
+
+          <!-- Partner già collegato -->
+          <div id="duoPartnerRow" class="duo-partner-row" style="display:none">
+            <span class="duo-badge" id="duoPartnerBadge">—</span>
+            <button class="btn btn-ghost btn-small" id="duoUnlinkBtn">Scollega</button>
+          </div>
+
+          <!-- Nessun partner → mostra selector -->
+          <div id="duoAddRow" style="display:none; display:grid; gap:8px;">
+            <div class="muted small">Aggiungi un secondo cliente allo stesso orario</div>
+            <div style="display:flex; gap:8px; align-items:center;">
+              <select id="duoClientSelect" style="flex:1"></select>
+              <button class="btn btn-primary btn-small" id="duoLinkBtn">Collega</button>
+            </div>
+          </div>
+        </div>
+
         <div class="divider"></div>
 
         <div style="display:grid;gap:10px;">
@@ -3550,6 +3579,13 @@
       lessonTimeInput: document.getElementById('lessonTimeInput'),
       lessonNoteInput: document.getElementById('lessonNoteInput'),
       rescheduleList: document.getElementById('rescheduleList'),
+      duoSection: document.getElementById('duoSection'),
+      duoPartnerRow: document.getElementById('duoPartnerRow'),
+      duoPartnerBadge: document.getElementById('duoPartnerBadge'),
+      duoUnlinkBtn: document.getElementById('duoUnlinkBtn'),
+      duoAddRow: document.getElementById('duoAddRow'),
+      duoClientSelect: document.getElementById('duoClientSelect'),
+      duoLinkBtn: document.getElementById('duoLinkBtn'),
 
       timeModalBackdrop: document.getElementById('timeModalBackdrop'),
       timeModalTitle: document.getElementById('timeModalTitle'),
@@ -3821,9 +3857,16 @@
       return lesson?.lessonType || getClientServiceType(client || getClient(lesson?.clientId));
     }
 
+    function getDuoPartner(lesson) {
+      if (!lesson?.duoGroupId) return null;
+      return state.lessons.find(l => l.duoGroupId === lesson.duoGroupId && l.id !== lesson.id) || null;
+    }
+
     function getLessonDisplayTitle(lesson) {
       const client = getClient(lesson.clientId);
-      return `${getClientFullName(client)} · ${serviceTypeLabel(getLessonServiceType(lesson, client))}`;
+      const partner = getDuoPartner(lesson);
+      const partnerName = partner ? ` + ${getClientFullName(getClient(partner.clientId))}` : '';
+      return `${getClientFullName(client)}${partnerName} · ${serviceTypeLabel(getLessonServiceType(lesson, client))}`;
     }
 
     function clientHasAnyFreeSession(clientId) {
@@ -4799,20 +4842,22 @@
       return getUsualTimes(clientId)[0] || '';
     }
 
-    function getOverlappingLesson({ lessonId = null, date, time, duration }) {
+    function getOverlappingLesson({ lessonId = null, date, time, duration, duoGroupId = null }) {
       const start = minutesFromTime(time);
       const end = start + Number(duration || 0);
       return state.lessons.find(lesson => {
         if (lesson.id === lessonId) return false;
         if (lesson.date !== date || lesson.status === 'cancelled') return false;
+        // Due lezioni dello stesso gruppo DUO possono coesistere nello stesso slot
+        if (duoGroupId && lesson.duoGroupId === duoGroupId) return false;
         const otherStart = minutesFromTime(lesson.time);
         const otherEnd = otherStart + Number(lesson.duration || 60);
         return start < otherEnd && end > otherStart;
       }) || null;
     }
 
-    function hasTimeConflict({ lessonId = null, date, time, duration }) {
-      return Boolean(getOverlappingLesson({ lessonId, date, time, duration }) || getExternalBusyOverlap({ date, time, duration }));
+    function hasTimeConflict({ lessonId = null, date, time, duration, duoGroupId = null }) {
+      return Boolean(getOverlappingLesson({ lessonId, date, time, duration, duoGroupId }) || getExternalBusyOverlap({ date, time, duration }));
     }
 
     function addMinutesToTime(time, minutesToAdd) {
@@ -6304,9 +6349,9 @@ function applyReportFilter() {
               return `
                 <div class="agenda-week-cell" data-week-slot="${iso}|${time}">
                   ${slotLessons.length ? slotLessons.map(lesson => {
-                    const client = getClient(lesson.clientId);
-                    return `<button type="button" class="lesson-pill agenda-inline-pill status-${lesson.status}" data-lesson-id="${lesson.id}">
-                      <strong>${escapeHtml(getLessonDisplayTitle(lesson))}</strong>
+                    const isDuo = !!lesson.duoGroupId;
+                    return `<button type="button" class="lesson-pill agenda-inline-pill status-${lesson.status}${isDuo ? ' duo' : ''}" data-lesson-id="${lesson.id}">
+                      <strong>${isDuo ? '👥 ' : ''}${escapeHtml(getLessonDisplayTitle(lesson))}</strong>
                       <span>${lesson.time}</span>
                     </button>`;
                   }).join('') : (getExternalBusyOverlap({ date: iso, time, duration: 60 }) ? `<div class="lesson-pill agenda-inline-pill" style="opacity:.68;cursor:not-allowed;"><strong>OCCUPATO</strong><span>${time}</span></div>` : `<button type="button" class="agenda-week-add" data-add-slot="${iso}|${time}">Slot libero</button>`)}
@@ -6359,17 +6404,25 @@ function applyReportFilter() {
                 const overlappingLesson = getOverlappingLesson({ date: dayIso, time, duration: selectedDuration || 60 });
                 if (exactLesson) {
                   const statusText = exactLesson.status === 'done' ? 'Svolta' : 'Apri';
+                  const duoPartnerAgenda = getDuoPartner(exactLesson);
+                  const duoTagAgenda = duoPartnerAgenda ? ' 👥 DUO' : '';
+                  const duoMetaAgenda = duoPartnerAgenda
+                    ? `${escapeHtml(getClientFullName(getClient(exactLesson.clientId)))} + ${escapeHtml(getClientFullName(getClient(duoPartnerAgenda.clientId)))}`
+                    : escapeHtml(getLessonDisplayTitle(exactLesson));
                   return `
-                    <button class="day-slot exact" data-slot-lesson-id="${exactLesson.id}">
+                    <button class="day-slot exact${duoPartnerAgenda ? ' duo' : ''}" data-slot-lesson-id="${exactLesson.id}">
                       <div class="day-slot-main">
-                        <div class="day-slot-time">${time} - ${endTime}</div>
-                        <div class="day-slot-meta">${escapeHtml(getLessonDisplayTitle(exactLesson))}${exactLesson.note ? ` • ${escapeHtml(exactLesson.note)}` : ''}</div>
+                        <div class="day-slot-time">${time} - ${endTime}${duoTagAgenda}</div>
+                        <div class="day-slot-meta">${duoMetaAgenda}${exactLesson.note ? ` • ${escapeHtml(exactLesson.note)}` : ''}</div>
                       </div>
                       <span class="day-slot-state">${statusText}</span>
                     </button>
                   `;
                 }
                 if (overlappingLesson) {
+                  const overlapExactAgenda = dayLessons.find(l => l.time === time && l.status !== 'cancelled');
+                  const isHiddenDuoPartnerAgenda = overlapExactAgenda && overlapExactAgenda.duoGroupId && overlapExactAgenda.duoGroupId === overlappingLesson.duoGroupId;
+                  if (isHiddenDuoPartnerAgenda) return '';
                   return `
                     <button class="day-slot busy" data-slot-lesson-id="${overlappingLesson.id}">
                       <div class="day-slot-main">
@@ -6504,9 +6557,10 @@ function applyReportFilter() {
             <div class="day-events">
               ${dayLessons.length ? visibleLessons.map(lesson => {
                 const client = getClient(lesson.clientId);
+                const isDuo = !!lesson.duoGroupId;
                 return `
-                  <button class="lesson-pill status-${lesson.status}" data-lesson-id="${lesson.id}" title="${escapeHtml(getClientFullName(client) || '')}">
-                    <strong>${escapeHtml(getLessonDisplayTitle(lesson) || 'Cliente')}</strong>
+                  <button class="lesson-pill status-${lesson.status}${isDuo ? ' duo' : ''}" data-lesson-id="${lesson.id}" title="${escapeHtml(getClientFullName(client) || '')}">
+                    <strong>${isDuo ? '👥 ' : ''}${escapeHtml(getLessonDisplayTitle(lesson) || 'Cliente')}</strong>
                     <span>${lesson.time}</span>
                   </button>
                 `;
@@ -6588,17 +6642,29 @@ function applyReportFilter() {
         const overlappingLesson = getOverlappingLesson({ date, time, duration: selectedDuration || 60 });
         if (exactLesson) {
           const statusText = exactLesson.status === 'done' ? 'Svolta' : 'Apri';
+          const duoPartnerSlot = getDuoPartner(exactLesson);
+          const duoTag = duoPartnerSlot ? ' 👥 DUO' : '';
+          const duoMeta = duoPartnerSlot
+            ? `${escapeHtml(getClientFullName(getClient(exactLesson.clientId)))} + ${escapeHtml(getClientFullName(getClient(duoPartnerSlot.clientId)))}`
+            : escapeHtml(getLessonDisplayTitle(exactLesson));
           return `
-            <button class="day-slot exact" data-slot-lesson-id="${exactLesson.id}">
+            <button class="day-slot exact${duoPartnerSlot ? ' duo' : ''}" data-slot-lesson-id="${exactLesson.id}">
               <div class="day-slot-main">
-                <div class="day-slot-time">${time} - ${endTime}</div>
-                <div class="day-slot-meta">${escapeHtml(getLessonDisplayTitle(exactLesson))}${exactLesson.note ? ` • ${escapeHtml(exactLesson.note)}` : ''}</div>
+                <div class="day-slot-time">${time} - ${endTime}${duoTag}</div>
+                <div class="day-slot-meta">${duoMeta}${exactLesson.note ? ` • ${escapeHtml(exactLesson.note)}` : ''}</div>
               </div>
               <span class="day-slot-state">${statusText}</span>
             </button>
           `;
         }
         if (overlappingLesson) {
+          // Se il conflitto è la lezione-partner di un DUO già mostrata come exactLesson, salta
+          const overlapExact = dayLessons.find(l => l.time === time && l.status !== 'cancelled');
+          const isHiddenDuoPartner = overlapExact && overlapExact.duoGroupId && overlapExact.duoGroupId === overlappingLesson.duoGroupId;
+          if (isHiddenDuoPartner) {
+            // Slot già coperto dal duo: non mostrare riga separata
+            return '';
+          }
           return `
             <button class="day-slot busy" data-slot-lesson-id="${overlappingLesson.id}">
               <div class="day-slot-main">
@@ -6704,7 +6770,7 @@ function applyReportFilter() {
       });
     }
 
-    function createLesson({ clientId, planId, date, time, duration, setFixedTime = false, note = '', linkedTo = null }) {
+    function createLesson({ clientId, planId, date, time, duration, setFixedTime = false, note = '', linkedTo = null, duoGroupId = null }) {
       const client = getClient(clientId);
       if (!client || !time) {
         showToast('Inserisci un orario.');
@@ -6718,7 +6784,7 @@ function applyReportFilter() {
         showToast('Cliente già inserito in questo slot.', 'warn');
         return false;
       }
-      if (hasTimeConflict({ date, time, duration })) {
+      if (hasTimeConflict({ date, time, duration, duoGroupId })) {
         showToast('Conflitto di orario.', 'warn');
         return false;
       }
@@ -6732,6 +6798,7 @@ function applyReportFilter() {
         status: 'scheduled',
         note,
         linkedTo,
+        duoGroupId,
         googleEventId: '',
         createdAt: new Date().toISOString()
       };
@@ -6767,6 +6834,31 @@ function applyReportFilter() {
       el.rescheduleList.querySelectorAll('[data-date]').forEach(button => {
         button.addEventListener('click', () => rescheduleCancelledLesson({ date: button.getAttribute('data-date'), time: button.getAttribute('data-time') }));
       });
+
+      // ── Sezione DUO ──────────────────────────────────────────
+      const partner = getDuoPartner(lesson);
+      if (partner) {
+        // Ha già un partner → mostra badge e bottone scollega
+        const partnerClient = getClient(partner.clientId);
+        el.duoPartnerBadge.textContent = `👥 ${getClientFullName(partnerClient)}`;
+        el.duoPartnerRow.style.display = 'flex';
+        el.duoAddRow.style.display = 'none';
+        el.duoUnlinkBtn.onclick = () => unlinkDuoLesson(lesson.id);
+      } else {
+        // Nessun partner → mostra selector con gli altri clienti
+        el.duoPartnerRow.style.display = 'none';
+        el.duoAddRow.style.display = 'grid';
+        const otherClients = state.clients.filter(c => c.id !== lesson.clientId && getActivePlan(c.id));
+        el.duoClientSelect.innerHTML = otherClients.length
+          ? otherClients.map(c => `<option value="${c.id}">${escapeHtml(getClientFullName(c))}</option>`).join('')
+          : '<option value="">Nessun cliente con pacchetto attivo</option>';
+        el.duoLinkBtn.disabled = !otherClients.length;
+        el.duoLinkBtn.onclick = () => {
+          const selectedId = el.duoClientSelect.value;
+          if (selectedId) createDuoLesson(lesson.id, selectedId);
+        };
+      }
+
       openModal('lessonModalBackdrop');
     }
 
@@ -6778,6 +6870,12 @@ function applyReportFilter() {
         return;
       }
       lesson.status = status;
+      // Sincronizza stato al partner DUO
+      const duoPartnerStatus = getDuoPartner(lesson);
+      if (duoPartnerStatus) {
+        duoPartnerStatus.status = status;
+        requestGoogleLessonSync('upsert', duoPartnerStatus);
+      }
       saveState(true);
       renderAll();
       requestGoogleLessonSync('upsert', lesson);
@@ -6826,11 +6924,68 @@ function applyReportFilter() {
       lesson.note = el.lessonNoteInput.value.trim();
       const client = getClient(lesson.clientId);
       if (client?.scheduleMode === 'same') client.fixedTime = newTime;
+      // Sincronizza orario e nota al partner DUO
+      const duoPartnerSave = getDuoPartner(lesson);
+      if (duoPartnerSave) {
+        duoPartnerSave.time = newTime;
+        duoPartnerSave.note = lesson.note;
+        requestGoogleLessonSync('upsert', duoPartnerSave);
+      }
       saveState();
       renderAll();
       requestGoogleLessonSync('upsert', lesson);
       openLessonModal(lesson.id);
       showToast('Lezione salvata.', 'ok');
+    }
+
+    /* ── DUO: collega un secondo cliente a una lezione esistente ── */
+    function createDuoLesson(existingLessonId, partnerClientId) {
+      const existingLesson = getLesson(existingLessonId);
+      if (!existingLesson) return;
+      const partnerClient = getClient(partnerClientId);
+      if (!partnerClient) { showToast('Cliente non trovato.', 'warn'); return; }
+      if (existingLesson.clientId === partnerClientId) { showToast('Scegli un cliente diverso.', 'warn'); return; }
+
+      const partnerPlan = getActivePlan(partnerClientId);
+      const partnerPkg = getPackage(partnerPlan?.packageId);
+      if (!partnerPlan || !partnerPkg) { showToast('Pacchetto mancante per il secondo cliente.', 'warn'); return; }
+
+      // Genera un duoGroupId condiviso (o riusa quello esistente)
+      const duoGroupId = existingLesson.duoGroupId || uid('duo');
+      existingLesson.duoGroupId = duoGroupId;
+
+      const ok = createLesson({
+        clientId: partnerClientId,
+        planId: partnerPlan.id,
+        date: existingLesson.date,
+        time: existingLesson.time,
+        duration: existingLesson.duration,
+        note: existingLesson.note || '',
+        duoGroupId,
+      });
+      if (ok) {
+        saveState(true);
+        renderAll();
+        openLessonModal(existingLessonId);
+        showToast('Lezione DUO collegata.', 'ok');
+      } else {
+        // rollback duoGroupId se createLesson ha fallito
+        existingLesson.duoGroupId = null;
+      }
+    }
+
+    function unlinkDuoLesson(lessonId) {
+      const lesson = getLesson(lessonId);
+      if (!lesson?.duoGroupId) return;
+      const partner = getDuoPartner(lesson);
+      showConfirm('Scollega DUO', `Le due lezioni diventeranno indipendenti. I pacchetti non vengono modificati.`, () => {
+        if (partner) partner.duoGroupId = null;
+        lesson.duoGroupId = null;
+        saveState(true);
+        renderAll();
+        openLessonModal(lesson.id);
+        showToast('Lezioni scollegate.', 'ok');
+      });
     }
 
     function rescheduleCancelledLesson({ date, time }) {
@@ -6858,14 +7013,23 @@ function applyReportFilter() {
     function deleteLesson() {
       const lesson = getLesson(state.selectedLessonId);
       if (!lesson) return;
-      showConfirm('Elimina lezione', 'La lezione verrà rimossa definitivamente. Questa azione non è reversibile.', () => {
+      const partner = getDuoPartner(lesson);
+      const confirmMsg = partner
+        ? `Questa è una lezione DUO: verranno eliminate sia la lezione di ${getClientFullName(getClient(lesson.clientId))} che quella di ${getClientFullName(getClient(partner.clientId))}. Questa azione non è reversibile.`
+        : 'La lezione verrà rimossa definitivamente. Questa azione non è reversibile.';
+      showConfirm('Elimina lezione', confirmMsg, () => {
         const deletedPayload = buildGoogleSyncPayload(lesson);
         state.lessons = state.lessons.filter(item => item.id !== lesson.id);
+        if (partner) {
+          const partnerPayload = buildGoogleSyncPayload(partner);
+          state.lessons = state.lessons.filter(item => item.id !== partner.id);
+          requestGoogleLessonSync('delete', partnerPayload);
+        }
         saveState(true);
         renderAll();
         requestGoogleLessonSync('delete', deletedPayload);
         closeModal('lessonModalBackdrop');
-        showToast('Lezione eliminata.', 'ok');
+        showToast(partner ? 'Lezione DUO eliminata.' : 'Lezione eliminata.', 'ok');
       });
     }
 

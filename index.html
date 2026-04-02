@@ -5309,30 +5309,76 @@
     function attachSwipeClose(el, onClose) {
       if (el._swipeAttached) return;
       el._swipeAttached = true;
-      let startY = 0, currentY = 0, dragging = false;
+
+      const interactiveSelector = 'input, textarea, select, button, [contenteditable="true"]';
+      let startY = 0;
+      let currentY = 0;
+      let dragging = false;
+      let canStartDrag = false;
+
+      function findScrollableAncestor(node) {
+        let current = node;
+        while (current && current !== el) {
+          if (current instanceof HTMLElement) {
+            const style = window.getComputedStyle(current);
+            const canScroll = /(auto|scroll|overlay)/.test(style.overflowY || '');
+            if (canScroll && current.scrollHeight > current.clientHeight + 2) return current;
+          }
+          current = current.parentElement;
+        }
+        return null;
+      }
+
+      function startedFromTopZone(target, touchY) {
+        if (!(target instanceof HTMLElement)) return false;
+        if (target.closest(interactiveSelector)) return false;
+        const scrollable = findScrollableAncestor(target);
+        if (scrollable && scrollable.scrollTop > 0) return false;
+        const modalTop = el.getBoundingClientRect().top;
+        return (touchY - modalTop) <= 88;
+      }
+
       el.addEventListener('touchstart', e => {
         if (window.innerWidth > 580) return;
         startY = e.touches[0].clientY;
-        dragging = true;
+        currentY = startY;
+        canStartDrag = startedFromTopZone(e.target, startY);
+        dragging = false;
+        if (!canStartDrag) return;
         el.style.transition = 'none';
       }, { passive: true });
+
       el.addEventListener('touchmove', e => {
-        if (!dragging) return;
+        if (!canStartDrag) return;
         currentY = e.touches[0].clientY;
         const dy = Math.max(0, currentY - startY);
+        if (dy < 8 && !dragging) return;
+        dragging = true;
         el.style.transform = `translateY(${dy}px)`;
       }, { passive: true });
-      el.addEventListener('touchend', () => {
-        if (!dragging) return;
+
+      function resetSwipeState() {
         dragging = false;
+        canStartDrag = false;
         el.style.transition = '';
+      }
+
+      el.addEventListener('touchend', () => {
+        if (!canStartDrag) return;
         const dy = currentY - startY;
+        resetSwipeState();
         if (dy > 90) {
           el.style.transform = 'translateY(100%)';
           setTimeout(() => { el.style.transform = ''; onClose(); }, 220);
         } else {
           el.style.transform = '';
         }
+      });
+
+      el.addEventListener('touchcancel', () => {
+        if (!canStartDrag && !dragging) return;
+        resetSwipeState();
+        el.style.transform = '';
       });
     }
 

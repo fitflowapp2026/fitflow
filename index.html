@@ -3007,6 +3007,20 @@
     </div>
   </div>
 
+  <!-- ── MODAL: Pagamento rapido ───────────────────────────── -->
+  <div class="modal-backdrop" id="paymentQuickModalBackdrop">
+    <div class="modal narrow" role="dialog" aria-modal="true" aria-labelledby="paymentQuickTitle" style="max-width:380px;">
+      <div class="modal-top">
+        <div>
+          <h3 class="modal-title" id="paymentQuickTitle">Pagamento</h3>
+          <div class="muted small" id="paymentQuickSub"></div>
+        </div>
+        <button class="btn btn-ghost btn-small" data-close="paymentQuickModalBackdrop">Chiudi</button>
+      </div>
+      <div id="paymentQuickContent" style="display:grid;gap:12px;"></div>
+    </div>
+  </div>
+
   <!-- ── MODAL: Avvisi operativi ───────────────────────────── -->
   <div class="modal-backdrop" id="operazioniModalBackdrop">
     <div class="modal narrow" role="dialog" aria-modal="true" aria-labelledby="operazioniModalTitle">
@@ -5954,6 +5968,72 @@ function applyReportFilter() {
     }
 
 
+    /* ── Modal pagamento rapido ──────────────────────── */
+    function openPaymentQuickModal() {
+      const client = getClient(state.selectedClientId);
+      if (!client || client.paymentStatus === 'paid') return;
+      renderPaymentQuickModal(client);
+      openModal('paymentQuickModalBackdrop');
+    }
+
+    function renderPaymentQuickModal(client) {
+      const title = document.getElementById('paymentQuickTitle');
+      const sub = document.getElementById('paymentQuickSub');
+      const content = document.getElementById('paymentQuickContent');
+      if (!content) return;
+
+      const isInstallments = client.paymentMode === 'installments';
+      const total = Math.min(3, Math.max(1, Number(client.installmentsTotal || 2)));
+      const paid = Number(client.installmentsPaid || 0);
+
+      if (title) title.textContent = isInstallments ? 'Pagamento a rate' : 'Pagamento';
+      if (sub) sub.textContent = escapeHtml(getClientFullName(client));
+
+      if (!isInstallments) {
+        // Pagamento unica soluzione
+        content.innerHTML = `
+          <div style="font-size:0.95rem;color:rgba(255,255,255,0.75);">Stato attuale: <strong>DA PAGARE</strong></div>
+          <div class="inline-actions">
+            <button class="btn btn-good" id="pqMarkPaidBtn">✓ Saldato</button>
+            <button class="btn btn-ghost btn-small" data-close="paymentQuickModalBackdrop">Annulla</button>
+          </div>`;
+        document.getElementById('pqMarkPaidBtn')?.addEventListener('click', () => {
+          client.paymentStatus = 'paid';
+          pushClientPaymentSnapshot(client, 'update');
+          saveState(true); renderAll();
+          closeModal('paymentQuickModalBackdrop');
+          showToast('Pagamento saldato.', 'ok');
+        });
+      } else {
+        // Pagamento a rate — max 3
+        const rateButtons = Array.from({ length: total }, (_, i) => i + 1).map(n => `
+          <button class="btn ${n === total ? 'btn-good' : 'btn-soft'} ${paid >= n ? 'active' : ''}"
+            data-pq-rate="${n}" ${paid >= n ? 'style="opacity:.45;pointer-events:none;"' : ''}>
+            ${n === total ? `✓ ${n} rate — tutto saldato` : `${n} ${n === 1 ? 'rata' : 'rate'} pagate`}
+          </button>`).join('');
+
+        content.innerHTML = `
+          <div style="font-size:0.95rem;color:rgba(255,255,255,0.75);">
+            Rate pagate: <strong>${paid} / ${total}</strong>
+          </div>
+          <div style="display:grid;gap:8px;">${rateButtons}</div>
+          <button class="btn btn-ghost btn-small" data-close="paymentQuickModalBackdrop">Annulla</button>`;
+
+        content.querySelectorAll('[data-pq-rate]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const n = Number(btn.getAttribute('data-pq-rate'));
+            client.installmentsPaid = n;
+            client.paymentStatus = n >= total ? 'paid' : 'partial';
+            pushClientPaymentSnapshot(client, 'update');
+            saveState(true); renderAll();
+            closeModal('paymentQuickModalBackdrop');
+            const msg = n >= total ? 'Tutto saldato.' : `${n} ${n === 1 ? 'rata' : 'rate'} registrate.`;
+            showToast(msg, 'ok');
+          });
+        });
+      }
+    }
+
     /* ── Modal completamento lezioni ─────────────────── */
     function renderCompletamentoModal() {
       const el_content = document.getElementById('completamentoModalContent');
@@ -6119,7 +6199,7 @@ function applyReportFilter() {
       const progressTags = `
         <span class="tag">${stats.done}/${stats.total} svolte</span>
         <span class="tag ${stats.remaining <= 3 ? 'gold' : ''}">${stats.remaining} rimaste</span>
-        <span class="tag ${client.paymentStatus === 'paid' ? 'green' : client.paymentStatus === 'partial' ? 'gold' : 'red'}">${escapeHtml(paymentLabel)}</span>
+        <span class="tag ${client.paymentStatus === 'paid' ? 'green' : client.paymentStatus === 'partial' ? 'gold' : 'red'}${client.paymentStatus !== 'paid' ? ' stat-box-clickable' : ''}" style="${client.paymentStatus !== 'paid' ? 'cursor:pointer;' : ''}" id="paymentStatusTag" data-open-payment="1">${escapeHtml(paymentLabel)}${client.paymentStatus !== 'paid' ? ' ›' : ''}</span>
         <span class="tag">${history.cancelled} annullate</span>
       `;
       el.selectedClientCard.innerHTML = `
@@ -6180,7 +6260,7 @@ function applyReportFilter() {
             <button class="btn btn-tertiary btn-small" id="mobileCopyAppointmentsBtn" type="button">Copia</button>
           </div>
           <div class="selected-pill-row">
-            <span class="tag ${client.paymentStatus === 'paid' ? 'green' : client.paymentStatus === 'partial' ? 'gold' : 'red'}">${escapeHtml(paymentLabel)}</span>
+            <span class="tag ${client.paymentStatus === 'paid' ? 'green' : client.paymentStatus === 'partial' ? 'gold' : 'red'}${client.paymentStatus !== 'paid' ? ' stat-box-clickable' : ''}" style="${client.paymentStatus !== 'paid' ? 'cursor:pointer;' : ''}" id="mobilePaymentStatusTag" data-open-payment="1">${escapeHtml(paymentLabel)}${client.paymentStatus !== 'paid' ? ' ›' : ''}</span>
             <span class="tag ${stats.remaining <= 3 ? 'gold' : ''}">${stats.remaining} rimaste</span>
           </div>
           <div class="mobile-kpi-row">
@@ -6232,6 +6312,9 @@ function applyReportFilter() {
       };
 
       document.getElementById('heroCopyAppointmentsBtn').addEventListener('click', copyAppointments);
+      // Tag pagamento cliccabile (desktop e mobile)
+      document.getElementById('paymentStatusTag')?.addEventListener('click', openPaymentQuickModal);
+      document.getElementById('mobilePaymentStatusTag')?.addEventListener('click', openPaymentQuickModal);
       document.getElementById('editClientBtn').addEventListener('click', () => renderClientModal(client));
       document.getElementById('renewClientBtn').addEventListener('click', openRenewModal);
       const nextAgendaDate = stats.nextLesson?.date || todayISO();

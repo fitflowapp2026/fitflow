@@ -3226,7 +3226,7 @@
             </select>
           </label>
         </div>
-        <label>Prezzo del pacchetto (€)
+        <label>Prezzo pacchetto (€)
           <input id="renewPrice" type="number" min="0" step="0.01" placeholder="Prezzo personalizzato" />
           <div class="muted small" id="renewPriceHint" style="margin-top:4px;"></div>
         </label>
@@ -5003,16 +5003,15 @@
         if (managed && stats.remaining > 0 && stats.remaining <= 3) {
           alerts.push({ type: 'renewal', clientId: client.id, text: `Restano ${stats.remaining} lezioni`, when: stats.nextLesson?.date || today });
         }
-        // Alert pagamento: solo se il piano è già iniziato (startDate <= oggi)
         if (managed && (client.paymentStatus || 'unpaid') !== 'paid') {
-          const planStart = activePlan?.startDate || null;
-          if (!planStart || planStart <= today) {
+          const planStartDate = activePlan?.startDate || null;
+          if (!planStartDate || planStartDate <= today) {
+            // Piano già iniziato → alert pagamento urgente
             const paymentText = client.paymentStatus === 'partial' ? 'Pagamento parziale da chiudere' : 'Pagamento da incassare';
-            alerts.push({ type: 'payment', clientId: client.id, text: paymentText, when: stats.nextLesson?.date || planStart || today });
-          }
-          // Piano non ancora iniziato → avviso soft (non urgente)
-          else {
-            alerts.push({ type: 'check', clientId: client.id, text: `Pacchetto inizia il ${formatDateFancy(planStart)} — incasso da gestire`, when: planStart });
+            alerts.push({ type: 'payment', clientId: client.id, text: paymentText, when: stats.nextLesson?.date || planStartDate || today });
+          } else {
+            // Piano non ancora iniziato → avviso soft, non urgente
+            alerts.push({ type: 'check', clientId: client.id, text: `Pacchetto inizia il ${formatDateFancy(planStartDate)} — incasso da gestire`, when: planStartDate });
           }
         }
         const history = clientHistoryStats(client.id);
@@ -5032,12 +5031,11 @@
         .map(a => {
           const c = state.clients.find(cl => cl.id === a.clientId);
           const plan = c ? getActivePlan(c.id) : null;
-          const stats = plan ? planStats(plan) : {};
-          // L'alertId include lo stato corrente: se lo stato cambia, l'alert ricompare
+          const st = plan ? planStats(plan) : {};
           let stateKey = a.when || '';
           if (a.type === 'payment') stateKey = c?.paymentStatus || 'unpaid';
-          if (a.type === 'renewal') stateKey = String(stats.remaining ?? '');
-          if (a.type === 'check') stateKey = plan?.checkMode || '';
+          if (a.type === 'renewal') stateKey = String(st.remaining ?? '');
+          if (a.type === 'check')   stateKey = plan?.checkMode || '';
           return { ...a, alertId: `${a.type}_${a.clientId}_${stateKey}` };
         })
         .filter(a => !dismissed.includes(a.alertId))
@@ -5875,19 +5873,17 @@ function applyReportFilter() {
       const urgentAlerts = alerts.filter(item => item.type === 'renewal' || item.type === 'payment').length;
       const completionRate = snapshot.done + snapshot.cancelled ? Math.round((snapshot.done / (snapshot.done + snapshot.cancelled)) * 100) : 0;
       const todayLessons = state.lessons.filter(item => item.date === todayISO() && item.status !== 'cancelled').length;
-      // Clienti a rischio: solo quelli con piano attivo nel mese corrente
+      // Fix 4: atRisk solo mese corrente con piano iniziato
       const viewMonth = state.viewDate;
       const atRisk = state.clients.filter(c => {
         if (!isManagedClient(c)) return false;
         if ((c.paymentStatus || 'unpaid') === 'paid') return false;
         const plan = getActivePlan(c.id);
-        if (!plan) return false;
-        // Il piano deve avere lezioni nel mese corrente o essere iniziato nel mese
+        if (!plan || (plan.startDate && plan.startDate > todayISO())) return false;
+        const hasLessonsMonth = state.lessons.some(l =>
+          l.clientId === c.id && l.status !== 'cancelled' && sameMonth(fromISO(l.date), viewMonth));
         const planStart = fromISO(plan.startDate || todayISO());
-        const hasLessonsThisMonth = state.lessons.some(l => l.clientId === c.id && l.status !== 'cancelled' && sameMonth(fromISO(l.date), viewMonth));
-        const planStartedThisMonth = sameMonth(planStart, viewMonth);
-        const planStartedBefore = planStart <= new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 0); // entro fine mese
-        return hasLessonsThisMonth || planStartedThisMonth || (planStartedBefore && plan.startDate <= todayISO());
+        return hasLessonsMonth || sameMonth(planStart, viewMonth) || planStart <= new Date();
       }).length;
       const previous = getMonthSnapshot(addMonths(state.viewDate, -1));
 
@@ -5901,6 +5897,10 @@ function applyReportFilter() {
         .filter(item => item.status === 'scheduled' && `${item.date}T${item.time}` >= `${todayISO()}T00:00`)
         .sort((a, b) => `${a.date}T${a.time}`.localeCompare(`${b.date}T${b.time}`))[0] || null;
 
+      const prossimaVal = upcomingHeroLesson ? getClientFullName(getClient(upcomingHeroLesson.clientId)) : 'Agenda libera';
+      const prossimaSub = upcomingHeroLesson ? `${formatDateFancy(upcomingHeroLesson.date)} · ${upcomingHeroLesson.time}` : 'Nessuna sessione imminente';
+
+      // Fix 3: Prossima lezione nella riga heroInsights fianco a Clienti a rischio
       el.heroInsights.innerHTML = [
         { key: 'Incasso mese', value: formatCurrency(snapshot.revenue), sub: `Mese prec. ${formatCurrency(previous.revenue || 0)}`, extra: `<span class="trend ${revTrend}">${revTrendIcon} ${revTrendLabel}</span>`, cls: 'revenue-card' },
         { key: 'Sessioni oggi', value: todayLessons, sub: todayLessons ? 'Operatività in agenda' : 'Giornata libera', cls: '' },
@@ -5931,10 +5931,7 @@ function applyReportFilter() {
         prossimaInsight.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); goToDay(); } });
       }
 
-      // Prossima lezione → in heroInsights
-      const prossimaVal = upcomingHeroLesson ? getClientFullName(getClient(upcomingHeroLesson.clientId)) : 'Agenda libera';
-      const prossimaSub = upcomingHeroLesson ? `${formatDateFancy(upcomingHeroLesson.date)} · ${upcomingHeroLesson.time}` : 'Nessuna sessione imminente';
-
+      // Fix 2: Completamento NON cliccabile — heroStats 3 voci
       el.heroStats.innerHTML = [
         { label: 'Base clienti', value: getManagedClients().length, sub: `${snapshot.newClients} nuovi nel mese` },
         { label: 'Completamento', value: `${completionRate}%`, sub: `${snapshot.done} svolte • ${snapshot.cancelled} annullate` },
@@ -6036,20 +6033,7 @@ function applyReportFilter() {
     function renderAtRiskModal() {
       const el_content = document.getElementById('atRiskModalContent');
       if (!el_content) return;
-      const viewMonth = state.viewDate;
-      const today = todayISO();
-      const unpaidClients = state.clients.filter(c => {
-        if (!isManagedClient(c)) return false;
-        if ((c.paymentStatus || 'unpaid') === 'paid') return false;
-        const plan = getActivePlan(c.id);
-        if (!plan) return false;
-        // Solo se il piano è già iniziato
-        if ((plan.startDate || today) > today) return false;
-        // Solo se ha lezioni nel mese corrente o il piano è iniziato questo mese
-        const hasLessons = state.lessons.some(l => l.clientId === c.id && l.status !== 'cancelled' && sameMonth(fromISO(l.date), viewMonth));
-        const planStart = fromISO(plan.startDate || today);
-        return hasLessons || sameMonth(planStart, viewMonth) || planStart <= new Date();
-      });
+      const unpaidClients = state.clients.filter(c => isManagedClient(c) && (c.paymentStatus || 'unpaid') !== 'paid');
       const titleEl = document.getElementById('atRiskModalTitle');
       if (titleEl) titleEl.textContent = unpaidClients.length ? `Clienti a rischio (${unpaidClients.length})` : 'Clienti a rischio';
       if (!unpaidClients.length) {
@@ -7245,36 +7229,26 @@ function applyReportFilter() {
 
     function openRenewModal() {
       const client = getClient(state.selectedClientId);
-      if (!client) {
-        showToast('Seleziona un cliente.');
-        return;
-      }
+      if (!client) { showToast('Seleziona un cliente.'); return; }
       const activePlan = getActivePlan(client.id);
       renderPackageOptions(el.renewPackage, activePlan?.packageId || state.packages[0]?.id || '');
       el.renewCheckMode.value = normalizeCheckMode(activePlan?.checkMode);
       const lastLesson = getLessonsForClient(client.id).filter(item => item.status !== 'cancelled').map(item => item.date).sort().slice(-1)[0];
       el.renewStartDate.value = lastLesson || todayISO();
 
-      // Precompila il prezzo dal pacchetto selezionato
-      const updateRenewPrice = () => {
+      const syncPrice = () => {
         const pkg = getPackage(el.renewPackage.value);
         const defaultPrice = Number(client.packagePrice || pkg?.totalPrice || 0);
-        if (el.renewPrice) {
-          el.renewPrice.value = defaultPrice;
-          if (el.renewPriceHint) el.renewPriceHint.textContent = `Prezzo default pacchetto: ${formatCurrency(defaultPrice)}`;
-        }
-        el.renewPreview.innerHTML = buildPackageSummary(pkg, defaultPrice);
+        if (el.renewPrice && !el.renewPrice._touched) el.renewPrice.value = defaultPrice;
+        if (el.renewPriceHint) el.renewPriceHint.textContent = `Default pacchetto: ${formatCurrency(defaultPrice)}`;
+        el.renewPreview.innerHTML = buildPackageSummary(pkg, Number(el.renewPrice?.value || defaultPrice));
       };
-      updateRenewPrice();
-      el.renewPackage.onchange = () => {
-        updateRenewPrice();
-        el.renewPreview.innerHTML = buildPackageSummary(getPackage(el.renewPackage.value), Number(el.renewPrice?.value || 0));
-      };
+      syncPrice();
       if (el.renewPrice) {
-        el.renewPrice.oninput = () => {
-          el.renewPreview.innerHTML = buildPackageSummary(getPackage(el.renewPackage.value), Number(el.renewPrice.value || 0));
-        };
+        el.renewPrice._touched = false;
+        el.renewPrice.oninput = () => { el.renewPrice._touched = true; syncPrice(); };
       }
+      el.renewPackage.onchange = () => { if (el.renewPrice) el.renewPrice._touched = false; syncPrice(); };
       openModal('renewModalBackdrop');
     }
 

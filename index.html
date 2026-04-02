@@ -5429,6 +5429,12 @@
       if (!isInstallments) {
         if (el.clientInstallmentsTotal) el.clientInstallmentsTotal.value = '2';
         if (el.clientInstallmentsPaid) el.clientInstallmentsPaid.value = el.clientPaymentStatus?.value === 'paid' ? '1' : '0';
+      } else {
+        // Modalità rate: aggiorna il select paymentStatus in base alle rate inserite
+        const total = Math.min(3, Math.max(2, Number(el.clientInstallmentsTotal?.value || 2)));
+        const paid  = Math.max(0, Math.min(total, Number(el.clientInstallmentsPaid?.value || 0)));
+        const derived = paid >= total ? 'paid' : paid > 0 ? 'partial' : 'unpaid';
+        if (el.clientPaymentStatus) el.clientPaymentStatus.value = derived;
       }
     }
 
@@ -7886,6 +7892,9 @@ function renderClientFormStickySummary() {
     });
     el.clientPaymentMode.addEventListener('change', updateInstallmentsUI);
     el.clientPaymentStatus.addEventListener('change', updateInstallmentsUI);
+    // Aggiorna paymentStatus in tempo reale quando si cambiano le rate
+    if (el.clientInstallmentsTotal) el.clientInstallmentsTotal.addEventListener('input', updateInstallmentsUI);
+    if (el.clientInstallmentsPaid)  el.clientInstallmentsPaid.addEventListener('input', updateInstallmentsUI);
     document.querySelectorAll('input[name="scheduleMode"]').forEach(input => input.addEventListener('change', () => {
       updateFixedScheduleUI();
       renderFixedSchedulePreview();
@@ -7908,10 +7917,14 @@ function renderClientFormStickySummary() {
       const freeSessionDone = el.clientFreeSessionDone.value === 'yes';
       const packagePurchased = el.clientPackagePurchased.value === 'yes';
       const conversionStatus = el.clientConversionStatus.value || 'path_started';
-      const paymentStatus = el.clientPaymentStatus.value || 'unpaid';
       const paymentMode = el.clientPaymentMode.value || 'single';
-      const installmentsTotal = paymentMode === 'installments' ? Math.max(2, Number(el.clientInstallmentsTotal.value || 2)) : 2;
-      const installmentsPaid = paymentMode === 'installments' ? Math.max(0, Math.min(installmentsTotal, Number(el.clientInstallmentsPaid.value || 0))) : (paymentStatus === 'paid' ? 1 : 0);
+      const installmentsTotal = paymentMode === 'installments' ? Math.min(3, Math.max(2, Number(el.clientInstallmentsTotal.value || 2))) : 2;
+      const installmentsPaid = paymentMode === 'installments' ? Math.max(0, Math.min(installmentsTotal, Number(el.clientInstallmentsPaid.value || 0))) : 0;
+      // Se modalità rate: lo stato si deriva dalle rate (non dal select) — evita incoerenze
+      const paymentStatusRaw = el.clientPaymentStatus.value || 'unpaid';
+      const paymentStatus = paymentMode === 'installments'
+        ? (installmentsPaid >= installmentsTotal ? 'paid' : installmentsPaid > 0 ? 'partial' : 'unpaid')
+        : paymentStatusRaw;
       const normalizedPaymentStatus = serviceType === 'free_session' ? null : paymentStatus;
       const normalizedPaymentMode = serviceType === 'free_session' ? null : paymentMode;
       const normalizedInstallmentsTotal = serviceType === 'free_session' ? 0 : installmentsTotal;

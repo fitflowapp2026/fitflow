@@ -2553,16 +2553,40 @@
         gap: 0;
         padding: 0 14px 0;
         border-bottom: 1px solid rgba(255,255,255,0.09);
-        margin: 0 0 0;
       }
       .calendar-head div {
-        text-align: center;
-        font-size: 0.7rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 8px 2px;
+        font-size: 0.60rem;
         font-weight: 800;
-        color: rgba(255,255,255,0.52);
+        color: rgba(255,255,255,0.50);
         letter-spacing: 0.10em;
         text-transform: uppercase;
-        padding: 7px 0 6px;
+        line-height: 1;
+        background: rgba(255,255,255,0.035);
+        border-right: 1px solid rgba(255,255,255,0.09);
+      }
+      .calendar-head div:last-child {
+        border-right: 0;
+      }
+      /* Rounded top corners on month header to match weekly grid card */
+      .calendar-head {
+        border-radius: 16px 16px 0 0;
+        border: 1px solid rgba(255,255,255,0.09);
+        border-bottom: 1px solid rgba(255,255,255,0.09);
+        overflow: hidden;
+        margin: 0 14px;
+        padding: 0;
+      }
+      .calendar-grid.ios-month-grid {
+        border-radius: 0 0 16px 16px;
+        border: 1px solid rgba(255,255,255,0.09);
+        border-top: 0;
+        overflow: hidden;
+        margin: 0 14px;
+        padding: 0 0 4px;
       }
 
       /* ── Weekly view mobile: 7-column time grid ─────────────── */
@@ -2677,9 +2701,6 @@
       .calendar-grid {
         grid-template-columns: repeat(7, minmax(0,1fr));
         gap: 0;
-        border-top: 1px solid rgba(255,255,255,0.09);
-        border-bottom: 1px solid rgba(255,255,255,0.09);
-        padding: 0 14px 6px;
         background: transparent;
       }
       .calendar-grid.ios-month-grid .day-cell {

@@ -2551,14 +2551,128 @@
         display: grid;
         grid-template-columns: repeat(7, minmax(0, 1fr));
         gap: 0;
-        padding: 0 14px 8px;
+        padding: 0 14px 0;
+        border-bottom: 1px solid rgba(255,255,255,0.09);
+        margin: 0 0 0;
       }
       .calendar-head div {
         text-align: center;
-        font-size: 0.78rem;
+        font-size: 0.7rem;
         font-weight: 800;
-        color: rgba(255,255,255,0.68);
-        letter-spacing: 0.06em;
+        color: rgba(255,255,255,0.52);
+        letter-spacing: 0.10em;
+        text-transform: uppercase;
+        padding: 7px 0 6px;
+      }
+
+      /* ── Weekly view mobile: 7-column time grid ─────────────── */
+      .week-grid-mobile {
+        display: grid;
+        grid-template-columns: 32px repeat(7, minmax(0, 1fr));
+        border: 1px solid rgba(255,255,255,0.09);
+        border-radius: 16px;
+        overflow: hidden;
+        background: rgba(255,255,255,0.015);
+      }
+      .wgm-corner {
+        border-right: 1px solid rgba(255,255,255,0.09);
+        border-bottom: 1px solid rgba(255,255,255,0.09);
+        background: rgba(255,255,255,0.025);
+      }
+      .wgm-head {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 3px;
+        padding: 7px 2px;
+        border-right: 1px solid rgba(255,255,255,0.09);
+        border-bottom: 1px solid rgba(255,255,255,0.09);
+        background: rgba(255,255,255,0.035);
+      }
+      .wgm-letter {
+        font-size: 0.60rem;
+        font-weight: 800;
+        letter-spacing: 0.10em;
+        color: rgba(255,255,255,0.50);
+        text-transform: uppercase;
+        line-height: 1;
+      }
+      .wgm-num {
+        font-size: 0.8rem;
+        font-weight: 800;
+        color: rgba(255,255,255,0.85);
+        width: 22px;
+        height: 22px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        line-height: 1;
+      }
+      .wgm-num-today {
+        background: var(--accent);
+        color: #fff;
+      }
+      .wgm-time {
+        font-size: 0.55rem;
+        font-weight: 700;
+        color: rgba(255,255,255,0.40);
+        border-right: 1px solid rgba(255,255,255,0.09);
+        border-bottom: 1px solid rgba(255,255,255,0.09);
+        background: rgba(255,255,255,0.018);
+        padding: 5px 2px 0;
+        text-align: center;
+        min-height: 54px;
+        display: flex;
+        align-items: flex-start;
+        justify-content: center;
+      }
+      .wgm-cell {
+        border-right: 1px solid rgba(255,255,255,0.09);
+        border-bottom: 1px solid rgba(255,255,255,0.09);
+        min-height: 54px;
+        padding: 2px;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .wgm-cell:active {
+        background: rgba(229,9,20,0.06);
+      }
+      .wgm-pill {
+        width: 100%;
+        flex: 1;
+        border: 0;
+        border-radius: 5px;
+        padding: 3px 3px;
+        text-align: left;
+        background: rgba(229,9,20,0.80);
+        color: #fff;
+        cursor: pointer;
+        min-height: 42px;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        justify-content: flex-start;
+      }
+      .wgm-pill.status-done    { background: rgba(29,185,84,0.80); }
+      .wgm-pill.status-cancelled { background: rgba(239,68,68,0.55); text-decoration: line-through; }
+      .wgm-pill.duo            { background: rgba(59,130,246,0.80); }
+      .wgm-pill-name {
+        font-size: 0.56rem;
+        font-weight: 700;
+        line-height: 1.15;
+        overflow: hidden;
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        word-break: break-word;
+      }
+      .wgm-pill-time {
+        font-size: 0.52rem;
+        opacity: 0.80;
+        line-height: 1;
       }
       .calendar-grid {
         grid-template-columns: repeat(7, minmax(0,1fr));
@@ -2653,7 +2767,7 @@
 
       /* Agenda week: compatta senza scroll orizzontale */
       .agenda-week-grid { min-width: 0; overflow: visible; }
-      .agenda-wrap { overflow-x: visible; }
+      .agenda-wrap { overflow-x: visible; padding-left: 14px; padding-right: 14px; }
       .agenda-mobile-week-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .management-grid { grid-template-columns: 1fr; }
 
@@ -6899,42 +7013,58 @@ function applyReportFilter() {
       const isMobile = window.innerWidth <= 580;
 
       if (isMobile) {
-        el.agendaWrap.innerHTML = `
-          <div class="agenda-mobile-week-grid">
-            ${hours.map(time => {
-              const hourLessons = weekDays.flatMap(day => {
-                const iso = toISO(day);
-                return state.lessons
-                  .filter(item => item.date === iso && item.time.slice(0, 2) === time.slice(0, 2))
-                  .sort((a, b) => a.time.localeCompare(b.time))
-                  .map(lesson => ({ lesson, iso, day }));
-              });
-              return `
-                <div class="agenda-mobile-hour">
-                  <div class="agenda-mobile-hour-top">
-                    <div class="agenda-mobile-hour-label">${time}</div>
-                    <div class="agenda-mobile-hour-count">${hourLessons.length ? `${hourLessons.length} lez.` : 'libero'}</div>
-                  </div>
-                  <div class="agenda-mobile-hour-list">
-                    ${hourLessons.length ? hourLessons.slice(0, 4).map(({ lesson, iso, day }) => `
-                      <button type="button" class="agenda-mobile-entry status-${lesson.status}" data-lesson-id="${lesson.id}">
-                        <strong>${escapeHtml(day.toLocaleDateString('it-IT', { weekday: 'short' }).replace('.', '').toUpperCase())} • ${escapeHtml(getLessonDisplayTitle(lesson))}</strong>
-                        <span>${lesson.time} · ${escapeHtml(formatDateShort(iso))}</span>
-                      </button>
-                    `).join('') : `<button type="button" class="agenda-mobile-entry empty" data-open-day="${toISO(weekDays[0])}">Nessuna lezione</button>`}
-                    ${hourLessons.length > 4 ? `<div class="calendar-more">+${hourLessons.length - 4} altre</div>` : ''}
-                  </div>
-                </div>
-              `;
-            }).join('')}
-          </div>
-        `;
-        el.agendaWrap.querySelectorAll('[data-open-day]').forEach(node => node.addEventListener('click', () => {
-          state.selectedDay = node.getAttribute('data-open-day');
-          state.calendarView = 'day';
-          saveState();
-          renderAll();
-        }));
+        const DAY_LETTERS_WEEK = ['L','M','M','G','V','S','D'];
+        const todayISOStr = todayISO();
+
+        let weekHtml = '<div class="week-grid-mobile">';
+
+        /* ── Corner cell ── */
+        weekHtml += '<div class="wgm-corner"></div>';
+
+        /* ── Day header cells ── */
+        weekDays.forEach(day => {
+          const iso = toISO(day);
+          const isToday = iso === todayISOStr;
+          const letter = DAY_LETTERS_WEEK[(day.getDay() + 6) % 7];
+          weekHtml += `<div class="wgm-head">
+            <div class="wgm-letter">${letter}</div>
+            <div class="wgm-num${isToday ? ' wgm-num-today' : ''}">${day.getDate()}</div>
+          </div>`;
+        });
+
+        /* ── Hour rows ── */
+        hours.forEach(time => {
+          /* Time label */
+          weekHtml += `<div class="wgm-time">${time}</div>`;
+          /* Day cells */
+          weekDays.forEach(day => {
+            const iso = toISO(day);
+            const slotLessons = state.lessons
+              .filter(item => item.date === iso && item.time.slice(0, 2) === time.slice(0, 2))
+              .sort((a, b) => a.time.localeCompare(b.time));
+            if (slotLessons.length) {
+              const pills = slotLessons.map(lesson => `
+                <button type="button" class="wgm-pill status-${lesson.status}${lesson.duoGroupId ? ' duo' : ''}" data-lesson-id="${lesson.id}">
+                  <span class="wgm-pill-name">${escapeHtml(getLessonDisplayTitle(lesson))}</span>
+                  <span class="wgm-pill-time">${lesson.time}</span>
+                </button>
+              `).join('');
+              weekHtml += `<div class="wgm-cell wgm-cell-busy">${pills}</div>`;
+            } else {
+              weekHtml += `<div class="wgm-cell" data-add-slot="${iso}|${time}"></div>`;
+            }
+          });
+        });
+
+        weekHtml += '</div>';
+        el.agendaWrap.innerHTML = weekHtml;
+
+        el.agendaWrap.querySelectorAll('[data-add-slot]').forEach(cell => {
+          cell.addEventListener('click', () => {
+            const [iso, time] = cell.getAttribute('data-add-slot').split('|');
+            addLessonFromDaySlot(iso, time);
+          });
+        });
         el.agendaWrap.querySelectorAll('[data-lesson-id]').forEach(button => button.addEventListener('click', () => {
           openLessonModal(button.getAttribute('data-lesson-id'));
         }));

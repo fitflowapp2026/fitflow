@@ -510,6 +510,24 @@
     .lesson-pill.duo { border-color: rgba(59,130,246,0.32); background: rgba(59,130,246,0.10); }
     .lesson-pill.duo.status-done { border-color: rgba(29,185,84,0.24); background: rgba(29,185,84,0.14); }
     .lesson-pill.duo.status-cancelled { border-color: rgba(239,68,68,0.26); background: rgba(239,68,68,0.16); }
+    /* ── Righe avvisi compatte nei modal ── */
+    .ops-alert-row {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 10px; padding: 9px 12px;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 12px; font-size: 0.86rem;
+    }
+    .ops-alert-row.payment { border-color: rgba(239,68,68,0.22); }
+    .ops-alert-row.renewal { border-color: rgba(245,158,11,0.22); }
+    .ops-alert-row.followup { border-color: rgba(255,255,255,0.10); }
+    .ops-alert-info { display: flex; align-items: center; gap: 8px; min-width: 0; }
+    .ops-alert-icon { font-size: 1rem; flex-shrink: 0; }
+    .ops-alert-name { font-weight: 700; font-size: 0.88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ops-alert-text { font-size: 0.78rem; color: rgba(255,255,255,0.55); margin-top: 1px; }
+    .ops-alert-actions { display: flex; gap: 6px; flex-shrink: 0; }
+    #operazioniModalContent, #atRiskModalContent {
+      max-height: 62vh; overflow-y: auto; padding-right: 2px;
+    }
     .duo-badge { display:inline-flex; align-items:center; gap:6px; background:rgba(59,130,246,0.13); border:1px solid rgba(59,130,246,0.28); color:#c8dcff; border-radius:999px; padding:8px 13px; font-size:0.86rem; font-weight:700; }
     .duo-section { display:grid; gap:10px; padding:14px; background:rgba(59,130,246,0.06); border:1px solid rgba(59,130,246,0.14); border-radius:16px; }
     .duo-section-title { font-size:0.78rem; text-transform:uppercase; letter-spacing:0.08em; color:rgba(255,255,255,0.55); font-weight:700; }
@@ -2711,7 +2729,6 @@
         </div>
         <div class="hero-insights" id="heroInsights"></div>
         <div class="hero-stats" id="heroStats"></div>
-        <div class="ops-board" id="opsBoard"></div>
         <div class="alert-strip" id="alertStrip" style="display:none"></div>
       </div>
       <div class="hero-right">
@@ -2973,6 +2990,20 @@
           </label>
         </div></div>
               </form>
+    </div>
+  </div>
+
+  <!-- ── MODAL: Completamento lezioni ─────────────────────── -->
+  <div class="modal-backdrop" id="completamentoModalBackdrop">
+    <div class="modal narrow" role="dialog" aria-modal="true" aria-labelledby="completamentoModalTitle">
+      <div class="modal-top">
+        <div>
+          <h3 class="modal-title" id="completamentoModalTitle">Completamento</h3>
+          <div class="muted small" id="completamentoModalSub">Lezioni del mese</div>
+        </div>
+        <button class="btn btn-ghost btn-small" data-close="completamentoModalBackdrop">Chiudi</button>
+      </div>
+      <div id="completamentoModalContent" style="display:grid;gap:8px;max-height:60vh;overflow-y:auto;padding-right:4px;"></div>
     </div>
   </div>
 
@@ -3507,7 +3538,8 @@
       googleBlockingBusyKey: '',
       pendingAdd: null,
       pendingTimeValue: '',
-      reportOpenedOnce: false
+      reportOpenedOnce: false,
+      dismissedAlerts: []
     };
 
     const derived = {
@@ -4008,7 +4040,8 @@
         plans: state.plans,
         lessons: state.lessons,
         selectedClientId: state.selectedClientId,
-        viewDate: toISO(state.viewDate)
+        viewDate: toISO(state.viewDate),
+        dismissedAlerts: state.dismissedAlerts || []
       };
     }
 
@@ -4237,6 +4270,7 @@
       invalidateDerivedData();
       state.selectedClientId = parsed.selectedClientId || null;
       state.viewDate = parsed.viewDate ? startOfMonth(fromISO(parsed.viewDate)) : startOfMonth(new Date());
+      state.dismissedAlerts = Array.isArray(parsed.dismissedAlerts) ? parsed.dismissedAlerts : [];
 
       let normalizedPlans = false;
       state.plans.forEach(plan => {
@@ -4979,7 +5013,11 @@
           alerts.push({ type: 'followup', clientId: client.id, text: 'Free session da ricontattare', when: client.createdAt || today });
         }
       });
-      return alerts.sort((a, b) => String(a.when).localeCompare(String(b.when)));
+      const dismissed = Array.isArray(state.dismissedAlerts) ? state.dismissedAlerts : [];
+      return alerts
+        .map((a, i) => ({ ...a, alertId: `${a.type}_${a.clientId}_${a.when || i}` }))
+        .filter(a => !dismissed.includes(a.alertId))
+        .sort((a, b) => String(a.when).localeCompare(String(b.when)));
     }
 
 
@@ -5200,6 +5238,7 @@
     function openModal(id, trigger = document.activeElement) {
       if (id === 'operazioniModalBackdrop') renderOperazioniModal();
       if (id === 'atRiskModalBackdrop') renderAtRiskModal();
+      if (id === 'completamentoModalBackdrop') renderCompletamentoModal();
       const backdrop = document.getElementById(id);
       if (!backdrop) return;
       activeModalTrigger = trigger instanceof HTMLElement ? trigger : activeModalTrigger;
@@ -5828,8 +5867,7 @@ function applyReportFilter() {
       el.heroInsights.innerHTML = [
         { key: 'Incasso mese', value: formatCurrency(snapshot.revenue), sub: `Mese prec. ${formatCurrency(previous.revenue || 0)}`, extra: `<span class="trend ${revTrend}">${revTrendIcon} ${revTrendLabel}</span>`, cls: 'revenue-card' },
         { key: 'Sessioni oggi', value: todayLessons, sub: todayLessons ? 'Operatività in agenda' : 'Giornata libera', cls: '' },
-        { key: 'Clienti a rischio', value: atRisk, sub: atRisk ? 'Pagamenti o rinnovi aperti' : 'Nessun rischio critico', cls: `risk-card${atRisk ? ' has-risk' : ''} stat-box-clickable`, clickId: 'heroRischioInsight' },
-        { key: 'Prossima lezione', value: upcomingHeroLesson ? getClientFullName(getClient(upcomingHeroLesson.clientId)) : 'Agenda libera', sub: upcomingHeroLesson ? `${formatDateFancy(upcomingHeroLesson.date)} · ${upcomingHeroLesson.time}` : 'Nessuna sessione imminente', cls: '' }
+        { key: 'Clienti a rischio', value: atRisk, sub: atRisk ? 'Pagamenti o rinnovi aperti' : 'Nessun rischio critico', cls: `risk-card${atRisk ? ' has-risk' : ''} stat-box-clickable`, clickId: 'heroRischioInsight' }
       ].map(item => `
         <div class="hero-insight${item.cls ? ' ' + item.cls : ''}"${item.clickId ? ` id="${item.clickId}" role="button" tabindex="0"` : ''}>
           <div class="k">${item.key}</div>
@@ -5844,12 +5882,15 @@ function applyReportFilter() {
         rischioInsight.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openModal('atRiskModalBackdrop'); } });
       }
 
+      const prossimaVal = upcomingHeroLesson ? getClientFullName(getClient(upcomingHeroLesson.clientId)) : 'Agenda libera';
+      const prossimaSub = upcomingHeroLesson ? `${formatDateFancy(upcomingHeroLesson.date)} · ${upcomingHeroLesson.time}` : 'Nessuna sessione imminente';
       el.heroStats.innerHTML = [
         { label: 'Base clienti', value: getManagedClients().length, sub: `${snapshot.newClients} nuovi nel mese` },
-        { label: 'Completamento', value: `${completionRate}%`, sub: `${snapshot.done} svolte • ${snapshot.cancelled} annullate` },
-        { label: 'Operazioni', value: alerts.length, sub: urgentAlerts ? `${urgentAlerts} urgenti` : 'Nessun avviso urgente', id: 'heroAlertToggle' }
+        { label: 'Completamento', value: `${completionRate}%`, sub: `${snapshot.done} svolte • ${snapshot.cancelled} annullate`, id: 'heroCompletamentoToggle' },
+        { label: 'Operazioni', value: alerts.length, sub: urgentAlerts ? `${urgentAlerts} urgenti` : 'Nessun avviso urgente', id: 'heroAlertToggle' },
+        { label: 'Prossima lezione', value: prossimaVal, sub: prossimaSub, id: 'heroProssimaToggle' }
       ].map(item => `
-        <div class="stat-box${item.id ? ' stat-box-clickable' : ''}" ${item.id ? `id="${item.id}" role="button" tabindex="0" title="Apri avvisi operativi"` : ''}>
+        <div class="stat-box${item.id ? ' stat-box-clickable' : ''}" ${item.id ? `id="${item.id}" role="button" tabindex="0"` : ''}>
           <div class="label">${item.label}</div>
           <div class="value">${item.value}</div>
           <div class="sub">${item.sub}</div>
@@ -5858,12 +5899,58 @@ function applyReportFilter() {
       const toggleBtn = document.getElementById('heroAlertToggle');
       if (toggleBtn) {
         toggleBtn.addEventListener('click', () => openModal('operazioniModalBackdrop'));
-        toggleBtn.addEventListener('keydown', event => {
-          if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openModal('operazioniModalBackdrop'); }
-        });
+        toggleBtn.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openModal('operazioniModalBackdrop'); } });
+      }
+      const completamentoBtn = document.getElementById('heroCompletamentoToggle');
+      if (completamentoBtn) {
+        completamentoBtn.addEventListener('click', () => openModal('completamentoModalBackdrop'));
+        completamentoBtn.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openModal('completamentoModalBackdrop'); } });
+      }
+      const prossimaBtn = document.getElementById('heroProssimaToggle');
+      if (prossimaBtn && upcomingHeroLesson) {
+        const openDay = () => {
+          state.selectedDay = upcomingHeroLesson.date;
+          state.viewDate = startOfMonth(fromISO(upcomingHeroLesson.date));
+          state.calendarView = 'day';
+          saveState(); renderAll();
+        };
+        prossimaBtn.addEventListener('click', openDay);
+        prossimaBtn.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDay(); } });
       }
     }
 
+
+    /* ── Modal completamento lezioni ─────────────────── */
+    function renderCompletamentoModal() {
+      const el_content = document.getElementById('completamentoModalContent');
+      const el_sub = document.getElementById('completamentoModalSub');
+      if (!el_content) return;
+      const monthDate = state.viewDate;
+      const lessons = state.lessons.filter(item => sameMonth(fromISO(item.date), monthDate));
+      const done = lessons.filter(l => l.status === 'done');
+      const cancelled = lessons.filter(l => l.status === 'cancelled');
+      const scheduled = lessons.filter(l => l.status === 'scheduled');
+      if (el_sub) el_sub.textContent = `${formatMonthLabel(monthDate)} · ${done.length} svolte · ${cancelled.length} annullate`;
+      if (!lessons.length) {
+        el_content.innerHTML = '<div style="padding:10px 0;color:rgba(255,255,255,0.55);font-size:0.88rem;">Nessuna lezione in questo mese.</div>';
+        return;
+      }
+      const rows = [...done, ...scheduled, ...cancelled];
+      el_content.innerHTML = rows.map(lesson => {
+        const client = getClient(lesson.clientId);
+        const statusIcon = lesson.status === 'done' ? '✓' : lesson.status === 'cancelled' ? '✕' : '·';
+        const statusCls = lesson.status === 'done' ? 'color:#1db954' : lesson.status === 'cancelled' ? 'color:#ef4444;opacity:.7' : 'color:rgba(255,255,255,.55)';
+        return `<div class="ops-alert-row" style="cursor:default;">
+          <div class="ops-alert-info">
+            <span class="ops-alert-icon" style="${statusCls};font-weight:900;">${statusIcon}</span>
+            <div>
+              <div class="ops-alert-name">${escapeHtml(getClientFullName(client) || 'Cliente')}</div>
+              <div class="ops-alert-text">${escapeHtml(formatDateFancy(lesson.date))} · ${escapeHtml(lesson.time)}</div>
+            </div>
+          </div>
+        </div>`;
+      }).join('');
+    }
 
     /* ── Modal avvisi operativi ───────────────────────── */
     function renderOperazioniModal() {
@@ -5871,17 +5958,25 @@ function applyReportFilter() {
       if (!el_content) return;
       const alerts = getAlerts();
       if (!alerts.length) {
-        el_content.innerHTML = '<div class="alert-chip"><strong>Nessun avviso operativo</strong><span>Tutto sotto controllo.</span></div>';
+        el_content.innerHTML = '<div style="padding:10px 0;color:rgba(255,255,255,0.55);font-size:0.88rem;">Nessun avviso operativo — tutto sotto controllo.</div>';
         return;
       }
       el_content.innerHTML = alerts.map(alert => {
         const client = getClient(alert.clientId);
-        const typeLabel = alert.type === 'renewal' ? '🔄 Rinnovo' : alert.type === 'payment' ? '💰 Pagamento' : alert.type === 'followup' ? '📞 Follow-up' : '⚠️ Avviso';
+        const typeLabel = alert.type === 'renewal' ? '🔄' : alert.type === 'payment' ? '💰' : alert.type === 'followup' ? '📞' : '⚠️';
         const tone = alert.type === 'payment' ? 'payment' : alert.type === 'renewal' ? 'renewal' : 'followup';
-        return `<div class="alert-chip ${tone}">
-          <strong>${escapeHtml(typeLabel)} — ${escapeHtml(getClientFullName(client) || 'Cliente')}</strong>
-          <span>${escapeHtml(alert.text || '')}</span>
-          ${client ? `<button class="btn btn-ghost btn-small" style="margin-top:6px;width:fit-content;" data-ops-client="${client.id}">Apri cliente</button>` : ''}
+        return `<div class="ops-alert-row ${tone}" data-alert-row="${escapeHtml(alert.alertId)}">
+          <div class="ops-alert-info">
+            <span class="ops-alert-icon">${typeLabel}</span>
+            <div>
+              <div class="ops-alert-name">${escapeHtml(getClientFullName(client) || 'Cliente')}</div>
+              <div class="ops-alert-text">${escapeHtml(alert.text || '')}</div>
+            </div>
+          </div>
+          <div class="ops-alert-actions">
+            ${client ? `<button class="btn btn-ghost btn-small" data-ops-client="${client.id}">Apri</button>` : ''}
+            <button class="btn btn-ghost btn-small" data-dismiss-alert="${escapeHtml(alert.alertId)}" title="Chiudi avviso">✕</button>
+          </div>
         </div>`;
       }).join('');
       el_content.querySelectorAll('[data-ops-client]').forEach(btn => {
@@ -5891,6 +5986,16 @@ function applyReportFilter() {
           closeModal('operazioniModalBackdrop');
         });
       });
+      el_content.querySelectorAll('[data-dismiss-alert]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const id = btn.getAttribute('data-dismiss-alert');
+          if (!Array.isArray(state.dismissedAlerts)) state.dismissedAlerts = [];
+          if (!state.dismissedAlerts.includes(id)) state.dismissedAlerts.push(id);
+          saveState(true);
+          renderHero();
+          renderOperazioniModal();
+        });
+      });
     }
 
     /* ── Modal clienti a rischio ───────────────────────── */
@@ -5898,8 +6003,10 @@ function applyReportFilter() {
       const el_content = document.getElementById('atRiskModalContent');
       if (!el_content) return;
       const unpaidClients = state.clients.filter(c => isManagedClient(c) && (c.paymentStatus || 'unpaid') !== 'paid');
+      const titleEl = document.getElementById('atRiskModalTitle');
+      if (titleEl) titleEl.textContent = unpaidClients.length ? `Clienti a rischio (${unpaidClients.length})` : 'Clienti a rischio';
       if (!unpaidClients.length) {
-        el_content.innerHTML = '<div class="alert-chip check"><strong>Tutto saldato</strong><span>Nessun incasso aperto.</span></div>';
+        el_content.innerHTML = '<div style="padding:10px 0;color:rgba(255,255,255,0.55);font-size:0.88rem;">Nessun incasso aperto — tutto saldato.</div>';
         return;
       }
       el_content.innerHTML = unpaidClients.map(client => {
@@ -5909,10 +6016,15 @@ function applyReportFilter() {
           : '';
         const plan = getActivePlan(client.id);
         const pkg = getPackage(plan?.packageId);
-        return `<div class="alert-chip payment" style="display:grid;gap:8px;">
-          <strong>${escapeHtml(getClientFullName(client))}</strong>
-          <span>${escapeHtml(statusLabel)}${modeLabel}${pkg ? ` · ${escapeHtml(pkg.name)}` : ''}</span>
-          <button class="btn btn-ghost btn-small" style="width:fit-content;" data-risk-client="${client.id}">Apri cliente</button>
+        return `<div class="ops-alert-row payment">
+          <div class="ops-alert-info">
+            <span class="ops-alert-icon">💰</span>
+            <div>
+              <div class="ops-alert-name">${escapeHtml(getClientFullName(client))}</div>
+              <div class="ops-alert-text">${escapeHtml(statusLabel)}${modeLabel}${pkg ? ` · ${escapeHtml(pkg.name)}` : ''}</div>
+            </div>
+          </div>
+          <button class="btn btn-ghost btn-small" data-risk-client="${client.id}">Apri</button>
         </div>`;
       }).join('');
       el_content.querySelectorAll('[data-risk-client]').forEach(btn => {
@@ -7505,7 +7617,7 @@ function renderClientFormStickySummary() {
       try { autoCompleteElapsedLessons(); } catch(e) { console.error(e); }
       renderHero();
       renderHeroGreeting();
-      renderOperationalBoard();
+      // opsBoard rimosso
       renderSelectedClient();
       renderAlerts();
       renderClientList();

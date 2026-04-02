@@ -2712,7 +2712,7 @@
         <div class="hero-insights" id="heroInsights"></div>
         <div class="hero-stats" id="heroStats"></div>
         <div class="ops-board" id="opsBoard"></div>
-        <div class="alert-strip" id="alertStrip"></div>
+        <div class="alert-strip" id="alertStrip" style="display:none"></div>
       </div>
       <div class="hero-right">
         <div class="selected-card" id="selectedClientCard"></div>
@@ -2973,6 +2973,34 @@
           </label>
         </div></div>
               </form>
+    </div>
+  </div>
+
+  <!-- ── MODAL: Avvisi operativi ───────────────────────────── -->
+  <div class="modal-backdrop" id="operazioniModalBackdrop">
+    <div class="modal narrow" role="dialog" aria-modal="true" aria-labelledby="operazioniModalTitle">
+      <div class="modal-top">
+        <div>
+          <h3 class="modal-title" id="operazioniModalTitle">Avvisi operativi</h3>
+          <div class="muted small">Rinnovi, pagamenti e follow-up</div>
+        </div>
+        <button class="btn btn-ghost btn-small" data-close="operazioniModalBackdrop">Chiudi</button>
+      </div>
+      <div id="operazioniModalContent" style="display:grid;gap:10px;"></div>
+    </div>
+  </div>
+
+  <!-- ── MODAL: Clienti a rischio ───────────────────────────── -->
+  <div class="modal-backdrop" id="atRiskModalBackdrop">
+    <div class="modal narrow" role="dialog" aria-modal="true" aria-labelledby="atRiskModalTitle">
+      <div class="modal-top">
+        <div>
+          <h3 class="modal-title" id="atRiskModalTitle">Clienti a rischio</h3>
+          <div class="muted small">Incassi aperti da saldare</div>
+        </div>
+        <button class="btn btn-ghost btn-small" data-close="atRiskModalBackdrop">Chiudi</button>
+      </div>
+      <div id="atRiskModalContent" style="display:grid;gap:10px;"></div>
     </div>
   </div>
 
@@ -5009,6 +5037,7 @@
         })
         .sort((a, b) => planStats(getActivePlan(a.id)).remaining - planStats(getActivePlan(b.id)).remaining)[0];
       const followup = alerts.find(item => item.type === 'followup');
+      const unpaidCount = state.clients.filter(c => isManagedClient(c) && (c.paymentStatus || 'unpaid') !== 'paid').length;
       return [
         upcomingLesson ? {
           tone: 'info',
@@ -5027,51 +5056,18 @@
           meta: 'Nuova prenotazione',
           action: 'new-client'
         },
-        unpaid ? {
+        unpaidCount > 0 ? {
           tone: 'danger',
-          label: 'Incasso aperto',
-          value: getClientFullName(unpaid),
-          sub: getPaymentStatusLabel(unpaid.paymentStatus || 'unpaid'),
-          meta: 'Apri cliente',
-          action: 'open-client',
-          clientId: unpaid.id
+          label: 'Clienti a rischio',
+          value: `${unpaidCount} client${unpaidCount === 1 ? 'e' : 'i'}`,
+          sub: 'Pagamenti non saldati',
+          meta: 'Apri lista',
+          action: 'open-at-risk'
         } : {
           tone: 'good',
-          label: 'Incasso aperto',
+          label: 'Clienti a rischio',
           value: 'Tutto saldato',
-          sub: 'Nessun cliente scoperto',
-          meta: 'OK',
-          action: 'noop'
-        },
-        expiring ? {
-          tone: 'warn',
-          label: 'Rinnovo da proporre',
-          value: getClientFullName(expiring),
-          sub: `${planStats(getActivePlan(expiring.id)).remaining} lezioni residue`,
-          meta: 'Apri rinnovo',
-          action: 'renew',
-          clientId: expiring.id
-        } : {
-          tone: 'good',
-          label: 'Rinnovi',
-          value: 'Sotto controllo',
-          sub: 'Nessun pacchetto vicino a zero',
-          meta: 'OK',
-          action: 'noop'
-        },
-        followup ? {
-          tone: 'warn',
-          label: 'Follow-up',
-          value: getClientFullName(getClient(followup.clientId)) || 'Da richiamare',
-          sub: followup.text,
-          meta: 'Apri cliente',
-          action: 'open-client',
-          clientId: followup.clientId
-        } : {
-          tone: 'good',
-          label: 'Follow-up',
-          value: 'Nessun ricontatto',
-          sub: 'Pipeline pulita',
+          sub: 'Nessun incasso aperto',
           meta: 'OK',
           action: 'noop'
         }
@@ -5116,6 +5112,11 @@
       }
       if (action === 'new-client') {
         openNewClientModal(button);
+        return;
+      }
+      if (action === 'open-at-risk') {
+        renderAtRiskModal();
+        openModal('atRiskModalBackdrop');
         return;
       }
     }
@@ -5197,6 +5198,8 @@
       }
     }
     function openModal(id, trigger = document.activeElement) {
+      if (id === 'operazioniModalBackdrop') renderOperazioniModal();
+      if (id === 'atRiskModalBackdrop') renderAtRiskModal();
       const backdrop = document.getElementById(id);
       if (!backdrop) return;
       activeModalTrigger = trigger instanceof HTMLElement ? trigger : activeModalTrigger;
@@ -5810,7 +5813,6 @@ function applyReportFilter() {
       const completionRate = snapshot.done + snapshot.cancelled ? Math.round((snapshot.done / (snapshot.done + snapshot.cancelled)) * 100) : 0;
       const todayLessons = state.lessons.filter(item => item.date === todayISO() && item.status !== 'cancelled').length;
       const atRisk = alerts.filter(item => item.type === 'payment' || item.type === 'renewal').length;
-      const freeSlots7d = countFreeSlots(7);
       const previous = getMonthSnapshot(addMonths(state.viewDate, -1));
 
       /* Revenue trend */
@@ -5819,26 +5821,35 @@ function applyReportFilter() {
       const revTrendLabel = revDelta === 0 ? '≈ invariato' : `${revDelta > 0 ? '+' : ''}${formatCurrency(revDelta)} vs mese prec.`;
       const revTrendIcon = revTrend === 'up' ? '↑' : revTrend === 'down' ? '↓' : '→';
 
+      const upcomingHeroLesson = state.lessons
+        .filter(item => item.status === 'scheduled' && `${item.date}T${item.time}` >= `${todayISO()}T00:00`)
+        .sort((a, b) => `${a.date}T${a.time}`.localeCompare(`${b.date}T${b.time}`))[0] || null;
+
       el.heroInsights.innerHTML = [
         { key: 'Incasso mese', value: formatCurrency(snapshot.revenue), sub: `Mese prec. ${formatCurrency(previous.revenue || 0)}`, extra: `<span class="trend ${revTrend}">${revTrendIcon} ${revTrendLabel}</span>`, cls: 'revenue-card' },
         { key: 'Sessioni oggi', value: todayLessons, sub: todayLessons ? 'Operatività in agenda' : 'Giornata libera', cls: '' },
-        { key: 'Clienti a rischio', value: atRisk, sub: atRisk ? 'Pagamenti o rinnovi aperti' : 'Nessun rischio critico', cls: `risk-card${atRisk ? ' has-risk' : ''}` },
-        { key: 'Slot liberi 7 giorni', value: freeSlots7d, sub: 'Capacità prenotabile', cls: '' }
+        { key: 'Clienti a rischio', value: atRisk, sub: atRisk ? 'Pagamenti o rinnovi aperti' : 'Nessun rischio critico', cls: `risk-card${atRisk ? ' has-risk' : ''} stat-box-clickable`, clickId: 'heroRischioInsight' },
+        { key: 'Prossima lezione', value: upcomingHeroLesson ? getClientFullName(getClient(upcomingHeroLesson.clientId)) : 'Agenda libera', sub: upcomingHeroLesson ? `${formatDateFancy(upcomingHeroLesson.date)} · ${upcomingHeroLesson.time}` : 'Nessuna sessione imminente', cls: '' }
       ].map(item => `
-        <div class="hero-insight${item.cls ? ' ' + item.cls : ''}">
+        <div class="hero-insight${item.cls ? ' ' + item.cls : ''}"${item.clickId ? ` id="${item.clickId}" role="button" tabindex="0"` : ''}>
           <div class="k">${item.key}</div>
           <div class="v">${item.value}</div>
           <div class="s">${item.sub}</div>
           ${item.extra || ''}
         </div>
       `).join('');
+      const rischioInsight = document.getElementById('heroRischioInsight');
+      if (rischioInsight) {
+        rischioInsight.addEventListener('click', () => openModal('atRiskModalBackdrop'));
+        rischioInsight.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openModal('atRiskModalBackdrop'); } });
+      }
 
       el.heroStats.innerHTML = [
         { label: 'Base clienti', value: getManagedClients().length, sub: `${snapshot.newClients} nuovi nel mese` },
         { label: 'Completamento', value: `${completionRate}%`, sub: `${snapshot.done} svolte • ${snapshot.cancelled} annullate` },
-        { label: 'Operazioni', value: alerts.length, sub: urgentAlerts ? `${urgentAlerts} urgenti` : `${alerts.filter(item => item.type === 'followup').length} follow-up`, id: 'heroAlertToggle' }
+        { label: 'Operazioni', value: alerts.length, sub: urgentAlerts ? `${urgentAlerts} urgenti` : 'Nessun avviso urgente', id: 'heroAlertToggle' }
       ].map(item => `
-        <div class="stat-box${item.id ? ' stat-box-clickable' : ''}" ${item.id ? `id="${item.id}" role="button" tabindex="0" aria-expanded="true" title="Clicca per vedere gli avvisi"` : ''}>
+        <div class="stat-box${item.id ? ' stat-box-clickable' : ''}" ${item.id ? `id="${item.id}" role="button" tabindex="0" title="Apri avvisi operativi"` : ''}>
           <div class="label">${item.label}</div>
           <div class="value">${item.value}</div>
           <div class="sub">${item.sub}</div>
@@ -5846,20 +5857,72 @@ function applyReportFilter() {
       `).join('');
       const toggleBtn = document.getElementById('heroAlertToggle');
       if (toggleBtn) {
-        toggleBtn.addEventListener('click', () => {
-          const isHidden = el.alertStrip.style.display === 'none';
-          el.alertStrip.style.display = isHidden ? 'grid' : 'none';
-          toggleBtn.setAttribute('aria-expanded', String(isHidden));
-        });
+        toggleBtn.addEventListener('click', () => openModal('operazioniModalBackdrop'));
         toggleBtn.addEventListener('keydown', event => {
-          if (event.key === 'Enter' || event.key === ' ') {
-            event.preventDefault();
-            toggleBtn.click();
-          }
+          if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openModal('operazioniModalBackdrop'); }
         });
       }
     }
 
+
+    /* ── Modal avvisi operativi ───────────────────────── */
+    function renderOperazioniModal() {
+      const el_content = document.getElementById('operazioniModalContent');
+      if (!el_content) return;
+      const alerts = getAlerts();
+      if (!alerts.length) {
+        el_content.innerHTML = '<div class="alert-chip"><strong>Nessun avviso operativo</strong><span>Tutto sotto controllo.</span></div>';
+        return;
+      }
+      el_content.innerHTML = alerts.map(alert => {
+        const client = getClient(alert.clientId);
+        const typeLabel = alert.type === 'renewal' ? '🔄 Rinnovo' : alert.type === 'payment' ? '💰 Pagamento' : alert.type === 'followup' ? '📞 Follow-up' : '⚠️ Avviso';
+        const tone = alert.type === 'payment' ? 'payment' : alert.type === 'renewal' ? 'renewal' : 'followup';
+        return `<div class="alert-chip ${tone}">
+          <strong>${escapeHtml(typeLabel)} — ${escapeHtml(getClientFullName(client) || 'Cliente')}</strong>
+          <span>${escapeHtml(alert.text || '')}</span>
+          ${client ? `<button class="btn btn-ghost btn-small" style="margin-top:6px;width:fit-content;" data-ops-client="${client.id}">Apri cliente</button>` : ''}
+        </div>`;
+      }).join('');
+      el_content.querySelectorAll('[data-ops-client]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          focusClient(btn.getAttribute('data-ops-client'));
+          saveState(); renderAll();
+          closeModal('operazioniModalBackdrop');
+        });
+      });
+    }
+
+    /* ── Modal clienti a rischio ───────────────────────── */
+    function renderAtRiskModal() {
+      const el_content = document.getElementById('atRiskModalContent');
+      if (!el_content) return;
+      const unpaidClients = state.clients.filter(c => isManagedClient(c) && (c.paymentStatus || 'unpaid') !== 'paid');
+      if (!unpaidClients.length) {
+        el_content.innerHTML = '<div class="alert-chip check"><strong>Tutto saldato</strong><span>Nessun incasso aperto.</span></div>';
+        return;
+      }
+      el_content.innerHTML = unpaidClients.map(client => {
+        const statusLabel = getPaymentStatusLabel(client.paymentStatus || 'unpaid');
+        const modeLabel = client.paymentMode === 'installments'
+          ? ` · Rate ${client.installmentsPaid || 0}/${client.installmentsTotal || 2}`
+          : '';
+        const plan = getActivePlan(client.id);
+        const pkg = getPackage(plan?.packageId);
+        return `<div class="alert-chip payment" style="display:grid;gap:8px;">
+          <strong>${escapeHtml(getClientFullName(client))}</strong>
+          <span>${escapeHtml(statusLabel)}${modeLabel}${pkg ? ` · ${escapeHtml(pkg.name)}` : ''}</span>
+          <button class="btn btn-ghost btn-small" style="width:fit-content;" data-risk-client="${client.id}">Apri cliente</button>
+        </div>`;
+      }).join('');
+      el_content.querySelectorAll('[data-risk-client]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          focusClient(btn.getAttribute('data-risk-client'));
+          saveState(); renderAll();
+          closeModal('atRiskModalBackdrop');
+        });
+      });
+    }
 
     function renderOperationalBoard() {
       if (!el.opsBoard) return;
@@ -5956,23 +6019,6 @@ function applyReportFilter() {
             `).join('')}
           </div>
         </div>
-        <div class="section-block">
-          <div class="timeline-title">Prossima azione</div>
-          <div class="quick-actions-grid">
-            <button class="quick-action-btn" type="button" id="quickBookTodayBtn">
-              <strong>Prenota oggi</strong>
-              <span>Usa l'orario preferito se libero</span>
-            </button>
-            <button class="quick-action-btn" type="button" id="quickBookTomorrowBtn">
-              <strong>Prenota domani</strong>
-              <span>1 tap, poi aggiorna l'agenda</span>
-            </button>
-            <button class="quick-action-btn" type="button" id="openClientDayBtn">
-              <strong>Apri giorno</strong>
-              <span>Vai sulla prossima data utile</span>
-            </button>
-          </div>
-        </div>
         <div class="inline-actions">
           <button class="btn btn-soft btn-small" id="editClientBtn">Modifica</button>
           <button class="btn btn-primary btn-small" id="renewClientBtn">Rinnova</button>
@@ -6015,11 +6061,6 @@ function applyReportFilter() {
             <div class="small muted">Avanzamento percorso</div>
             <div class="progress" style="margin-top:8px;"><span style="width:${stats.progress}%"></span></div>
           </div>
-          <div class="quick-actions-grid" style="margin-top:4px;">
-            <button class="quick-action-btn" type="button" id="mobileQuickBookTodayBtn"><strong>Prenota oggi</strong><span>1 tap</span></button>
-            <button class="quick-action-btn" type="button" id="mobileQuickBookTomorrowBtn"><strong>Prenota domani</strong><span>1 tap</span></button>
-            <button class="quick-action-btn" type="button" id="mobileOpenClientDayBtn"><strong>Apri giorno</strong><span>Vai in agenda</span></button>
-          </div>
           <div class="mobile-selected-actions">
             <button class="btn btn-soft btn-small" id="mobileEditClientBtn" type="button">Modifica cliente</button>
             <button class="btn btn-primary btn-small" id="mobileRenewClientBtn" type="button">Rinnova pacchetto</button>
@@ -6055,15 +6096,9 @@ function applyReportFilter() {
         saveState();
         renderAll();
       };
-      document.getElementById('quickBookTodayBtn').addEventListener('click', () => quickBookSelectedClient(0));
-      document.getElementById('quickBookTomorrowBtn').addEventListener('click', () => quickBookSelectedClient(1));
-      document.getElementById('openClientDayBtn').addEventListener('click', openDayForClient);
       if (document.getElementById('mobileCopyAppointmentsBtn')) document.getElementById('mobileCopyAppointmentsBtn').addEventListener('click', copyAppointments);
       if (document.getElementById('mobileEditClientBtn')) document.getElementById('mobileEditClientBtn').addEventListener('click', () => renderClientModal(client));
       if (document.getElementById('mobileRenewClientBtn')) document.getElementById('mobileRenewClientBtn').addEventListener('click', openRenewModal);
-      if (document.getElementById('mobileQuickBookTodayBtn')) document.getElementById('mobileQuickBookTodayBtn').addEventListener('click', () => quickBookSelectedClient(0));
-      if (document.getElementById('mobileQuickBookTomorrowBtn')) document.getElementById('mobileQuickBookTomorrowBtn').addEventListener('click', () => quickBookSelectedClient(1));
-      if (document.getElementById('mobileOpenClientDayBtn')) document.getElementById('mobileOpenClientDayBtn').addEventListener('click', openDayForClient);
     }
 
     function renderAlerts() {

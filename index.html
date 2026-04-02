@@ -7167,7 +7167,7 @@ function applyReportFilter() {
           <div class="day-cell ${isOther ? 'other-month' : ''} ${isToday ? 'today' : ''} ${iso === state.selectedDay ? 'selected-day' : ''}" data-date="${iso}">
             <div class="day-top">
               <div class="day-top-main">
-                <div class="day-weekday">${weekdayLetter}</div>
+                ${isMobileMonth ? '' : `<div class="day-weekday">${weekdayLetter}</div>`}
                 <div class="day-number">${date.getDate()}</div>
               </div>
               <button class="day-add" data-add-date="${iso}" title="Apri giorno">＋</button>
@@ -7812,6 +7812,17 @@ function applyReportFilter() {
           <div class="inline-actions"><button class="btn btn-soft btn-small" data-report-client="${client.id}">Apri</button></div>
         </div>`;
       }).join('') : '<div class="muted">Nessun inserimento</div>';
+
+      const renderTypeSection = (rows = []) => rows.length ? `
+        <div class="summary-list">
+          ${rows.map(row => `
+            <div class="summary-row">
+              <span>${escapeHtml(String(row.label || ''))}</span>
+              <span class="tag ${escapeHtml(String(row.badgeClass || ''))}">${escapeHtml(String(row.value ?? '—'))}</span>
+            </div>
+          `).join('')}
+        </div>
+      ` : '<div class="muted">Nessun dato disponibile</div>';
 
       el.reportNewClients.innerHTML = renderClientRows(monthClients, 'nuovo');
       el.reportTopPackages.innerHTML = packageRows.length ? packageRows.slice(0, 8).map(([name, count]) => `<div class="summary-row"><span>${escapeHtml(name)}</span><span class="tag gold">${count}</span></div>`).join('') : '<div class="muted">Nessun movimento commerciale</div>';

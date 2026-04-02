@@ -473,9 +473,22 @@
 
     .day-top {
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       justify-content: space-between;
       gap: 8px;
+    }
+    .day-top-main {
+      display: grid;
+      gap: 4px;
+      justify-items: start;
+    }
+    .day-weekday {
+      font-size: 0.68rem;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.52);
+      line-height: 1;
     }
 
     .day-number {
@@ -1096,6 +1109,107 @@
     .agenda-inline-pill {
       width: 100%;
       text-align: left;
+    }
+
+    .agenda-mobile-week-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .agenda-mobile-hour {
+      min-height: 120px;
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.03));
+      padding: 10px;
+      display: grid;
+      gap: 8px;
+      align-content: start;
+    }
+    .agenda-mobile-hour-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .agenda-mobile-hour-label {
+      font-size: 0.92rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+    }
+    .agenda-mobile-hour-count {
+      font-size: 0.72rem;
+      font-weight: 800;
+      border-radius: 999px;
+      padding: 4px 8px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.05);
+      color: var(--muted);
+    }
+    .agenda-mobile-hour-list {
+      display: grid;
+      gap: 6px;
+    }
+    .agenda-mobile-entry {
+      width: 100%;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      padding: 8px;
+      background: rgba(255,255,255,0.04);
+      color: var(--text);
+      text-align: left;
+      display: grid;
+      gap: 2px;
+      min-height: 54px;
+    }
+    .agenda-mobile-entry strong {
+      font-size: 0.76rem;
+      line-height: 1.15;
+    }
+    .agenda-mobile-entry span {
+      color: rgba(255,255,255,0.68);
+      font-size: 0.72rem;
+      line-height: 1.15;
+    }
+    .agenda-mobile-entry.empty {
+      align-items: center;
+      justify-items: center;
+      color: var(--muted);
+      border-style: dashed;
+      min-height: 54px;
+    }
+    .management-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+    .management-list {
+      display: grid;
+      gap: 10px;
+    }
+    .management-card {
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.04);
+      padding: 12px;
+      display: grid;
+      gap: 8px;
+    }
+    .management-card-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .management-card-title {
+      font-size: 0.92rem;
+      font-weight: 800;
+      line-height: 1.2;
+    }
+    .management-card-meta {
+      color: var(--muted);
+      font-size: 0.8rem;
+      line-height: 1.2;
     }
 
     .mini-card, .package-card, .report-card, .summary-list {
@@ -2537,9 +2651,11 @@
       .segmented { width: 100%; justify-content: stretch; }
       .seg-btn { flex: 1; text-align: center; padding: 10px 8px; font-size: 0.82rem; }
 
-      /* Agenda week: scroll horizontally */
-      .agenda-week-grid { overflow-x: auto; -webkit-overflow-scrolling: touch; min-width: 700px; }
-      .agenda-wrap { overflow-x: auto; }
+      /* Agenda week: compatta senza scroll orizzontale */
+      .agenda-week-grid { min-width: 0; overflow: visible; }
+      .agenda-wrap { overflow-x: visible; }
+      .agenda-mobile-week-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .management-grid { grid-template-columns: 1fr; }
 
       /* Panels padding */
       .panel-head, .panel-body, .calendar-toolbar,
@@ -2765,7 +2881,7 @@
           Cloud
         </button>
         <button class="btn btn-soft" id="openPackagesBtn" aria-label="Gestisci pacchetti">Pacchetti</button>
-        <button class="btn btn-soft" id="openReportBtn" aria-label="Apri resoconto">Resoconto</button>
+        <button class="btn btn-soft" id="openReportBtn" aria-label="Apri resoconto">Gestionale</button>
         <button class="btn btn-primary" id="openClientBtn" aria-label="Aggiungi nuovo cliente">+ Cliente</button>
       </div>
       <!-- Mobile-only right side of topbar -->
@@ -3335,7 +3451,7 @@
     <div class="modal" role="dialog" aria-modal="true">
       <div class="modal-top">
         <div>
-          <h3 class="modal-title">Resoconto mensile</h3>
+          <h3 class="modal-title">Gestionale mensile</h3>
           <div class="muted small" id="reportMonthLabel"></div>
         </div></div>
         <div class="section-block"><div class="section-title">Azioni</div><div class="inline-actions">
@@ -3349,7 +3465,8 @@
       <div class="inline-actions" id="reportFilterBar" style="margin-bottom:12px;flex-wrap:wrap;">
         <button class="btn btn-soft btn-small active" type="button" data-report-filter="all">Tutto</button>
         <button class="btn btn-ghost btn-small" type="button" data-report-filter="free_session">FREE SESSION</button>
-        <button class="btn btn-ghost btn-small" type="button" data-report-filter="personal">PERSONAL</button>
+        <button class="btn btn-ghost btn-small" type="button" data-report-filter="pack99">PACK99</button>
+        <button class="btn btn-ghost btn-small" type="button" data-report-filter="personal">CLIENTI</button>
         <button class="btn btn-ghost btn-small" type="button" data-report-filter="outstanding">DA INCASSARE</button>
         <button class="btn btn-ghost btn-small" type="button" data-report-filter="installments">RATE APERTE</button>
       </div>
@@ -3361,11 +3478,11 @@
 
       <div class="package-grid">
         <div class="summary-list">
-          <strong>Clienti nuovi</strong>
+          <strong>Inseriti nel mese</strong>
           <div id="reportNewClients"></div>
         </div>
         <div class="summary-list">
-          <strong>Pacchetti più venduti</strong>
+          <strong>Movimenti commerciali</strong>
           <div id="reportTopPackages"></div>
         </div>
       </div>
@@ -3375,9 +3492,20 @@
           <strong>FREE SESSION</strong>
           <div id="reportFreeSession"></div>
         </div>
+        <div class="summary-list" id="reportSectionPack99">
+          <strong>PACK99</strong>
+          <div id="reportPack99"></div>
+        </div>
+      </div>
+
+      <div class="package-grid">
         <div class="summary-list" id="reportSectionPersonal">
-          <strong>PERSONAL</strong>
+          <strong>CLIENTI / PERSONAL</strong>
           <div id="reportPersonal"></div>
+        </div>
+        <div class="summary-list">
+          <strong>Conversioni da free session</strong>
+          <div id="reportFollowups"></div>
         </div>
       </div>
 
@@ -3398,8 +3526,8 @@
           <div id="reportCancelRanking"></div>
         </div>
         <div class="summary-list">
-          <strong>Follow-up da fare</strong>
-          <div id="reportFollowups"></div>
+          <strong>Promemoria mese</strong>
+          <div id="reportMoodTextPanel"></div>
         </div>
       </div>
     </div>
@@ -3766,6 +3894,7 @@
       reportFilterBar: document.getElementById('reportFilterBar'),
       reportMoodTitle: document.getElementById('reportMoodTitle'),
       reportMoodText: document.getElementById('reportMoodText'),
+      reportMoodTextPanel: document.getElementById('reportMoodTextPanel'),
       reportNewClients: document.getElementById('reportNewClients'),
       reportTopPackages: document.getElementById('reportTopPackages'),
       reportFreeSession: document.getElementById('reportFreeSession'),
@@ -5959,6 +6088,7 @@ function applyReportFilter() {
   const filter = state.reportFilter || 'all';
   const toggle = (node, show) => { if (node) node.style.display = show ? '' : 'none'; };
   toggle(el.reportSectionFreeSession, filter === 'all' || filter === 'free_session');
+  toggle(el.reportSectionPack99, filter === 'all' || filter === 'pack99');
   toggle(el.reportSectionPersonal, filter === 'all' || filter === 'personal');
   toggle(el.reportSectionOutstanding, filter === 'all' || filter === 'outstanding');
   toggle(el.reportSectionInstallments, filter === 'all' || filter === 'installments');
@@ -6766,6 +6896,51 @@ function applyReportFilter() {
       const monday = addDays(anchorDate, -((anchorDate.getDay() + 6) % 7));
       const weekDays = Array.from({ length: 7 }, (_, index) => addDays(monday, index));
       const hours = Array.from({ length: 15 }, (_, index) => `${String(index + 7).padStart(2, '0')}:00`);
+      const isMobile = window.innerWidth <= 580;
+
+      if (isMobile) {
+        el.agendaWrap.innerHTML = `
+          <div class="agenda-mobile-week-grid">
+            ${hours.map(time => {
+              const hourLessons = weekDays.flatMap(day => {
+                const iso = toISO(day);
+                return state.lessons
+                  .filter(item => item.date === iso && item.time.slice(0, 2) === time.slice(0, 2))
+                  .sort((a, b) => a.time.localeCompare(b.time))
+                  .map(lesson => ({ lesson, iso, day }));
+              });
+              return `
+                <div class="agenda-mobile-hour">
+                  <div class="agenda-mobile-hour-top">
+                    <div class="agenda-mobile-hour-label">${time}</div>
+                    <div class="agenda-mobile-hour-count">${hourLessons.length ? `${hourLessons.length} lez.` : 'libero'}</div>
+                  </div>
+                  <div class="agenda-mobile-hour-list">
+                    ${hourLessons.length ? hourLessons.slice(0, 4).map(({ lesson, iso, day }) => `
+                      <button type="button" class="agenda-mobile-entry status-${lesson.status}" data-lesson-id="${lesson.id}">
+                        <strong>${escapeHtml(day.toLocaleDateString('it-IT', { weekday: 'short' }).replace('.', '').toUpperCase())} • ${escapeHtml(getLessonDisplayTitle(lesson))}</strong>
+                        <span>${lesson.time} · ${escapeHtml(formatDateShort(iso))}</span>
+                      </button>
+                    `).join('') : `<button type="button" class="agenda-mobile-entry empty" data-open-day="${toISO(weekDays[0])}">Nessuna lezione</button>`}
+                    ${hourLessons.length > 4 ? `<div class="calendar-more">+${hourLessons.length - 4} altre</div>` : ''}
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        `;
+        el.agendaWrap.querySelectorAll('[data-open-day]').forEach(node => node.addEventListener('click', () => {
+          state.selectedDay = node.getAttribute('data-open-day');
+          state.calendarView = 'day';
+          saveState();
+          renderAll();
+        }));
+        el.agendaWrap.querySelectorAll('[data-lesson-id]').forEach(button => button.addEventListener('click', () => {
+          openLessonModal(button.getAttribute('data-lesson-id'));
+        }));
+        return;
+      }
+
       el.agendaWrap.innerHTML = `
         <div class="agenda-week-grid">
           <div class="agenda-week-day"></div>
@@ -6987,10 +7162,14 @@ function applyReportFilter() {
         const isToday = iso === todayISO();
         const visibleLessons = dayLessons.slice(0, isMobileMonth ? 1 : 2);
         const hiddenLessons = Math.max(0, dayLessons.length - visibleLessons.length);
+        const weekdayLetter = ['D','L','M','M','G','V','S'][date.getDay()];
         cells.push(`
           <div class="day-cell ${isOther ? 'other-month' : ''} ${isToday ? 'today' : ''} ${iso === state.selectedDay ? 'selected-day' : ''}" data-date="${iso}">
             <div class="day-top">
-              <div class="day-number">${date.getDate()}</div>
+              <div class="day-top-main">
+                <div class="day-weekday">${weekdayLetter}</div>
+                <div class="day-number">${date.getDate()}</div>
+              </div>
               <button class="day-add" data-add-date="${iso}" title="Apri giorno">＋</button>
             </div>
             <div class="day-events">
@@ -7517,7 +7696,18 @@ function applyReportFilter() {
       const done = lessons.filter(item => item.status === 'done').length;
       const cancelled = lessons.filter(item => item.status === 'cancelled').length;
       const scheduled = lessons.filter(item => item.status === 'scheduled').length;
-      const newClients = getManagedClients().filter(client => sameMonth(new Date(client.createdAt || new Date()), monthDate));
+      const monthClients = state.clients.filter(client => sameMonth(new Date(client.createdAt || new Date()), monthDate));
+      const freeClients = monthClients.filter(client => getClientServiceType(client) === 'free_session');
+      const pack99Plans = state.plans.filter(plan => sameMonth(new Date(plan.createdAt || new Date()), monthDate) && isPack99Package(getPackage(plan.packageId)));
+      const pack99ClientIds = new Set(pack99Plans.map(plan => plan.clientId));
+      const pack99Clients = state.clients.filter(client => pack99ClientIds.has(client.id));
+      const personalClients = monthClients.filter(client => getClientServiceType(client) !== 'free_session');
+      const convertedClients = state.clients.filter(client => {
+        const firstPersonalPlan = state.plans.find(plan => plan.clientId === client.id && (plan.planType || plan.type || 'personal') === 'personal');
+        if (!firstPersonalPlan || !sameMonth(new Date(firstPersonalPlan.createdAt || new Date()), monthDate)) return false;
+        const hadFree = (client.freeSessionDone === true) || !!state.lessons.find(lesson => lesson.clientId === client.id && (lesson.lessonType || lesson.type) === 'free_session');
+        return hadFree;
+      });
       const renewals = state.plans.filter(plan => plan.saleType === 'renewal' && sameMonth(new Date(plan.createdAt || new Date()), monthDate));
       const soldPlans = state.plans.filter(plan => sameMonth(new Date(plan.createdAt || new Date()), monthDate));
       const packageCounts = new Map();
@@ -7546,8 +7736,6 @@ function applyReportFilter() {
         cancelCounts.set(key, (cancelCounts.get(key) || 0) + 1);
       });
       const cancelRows = [...cancelCounts.entries()].sort((a, b) => b[1] - a[1]);
-      const followups = getAlerts().filter(item => item.type === 'followup');
-      const renewalAlerts = getAlerts().filter(item => item.type === 'renew');
       const completionRate = done + cancelled ? Math.round((done / (done + cancelled)) * 100) : 0;
       const mood = completionRate >= 85 ? { title: 'Mese forte', text: `Completamento ${completionRate}%` } : completionRate >= 65 ? { title: 'Mese stabile', text: `Completamento ${completionRate}%` } : { title: 'Mese da rivedere', text: `Completamento ${completionRate}%` };
       const cancelRate = done + cancelled ? Math.round((cancelled / (done + cancelled)) * 100) : 0;
@@ -7559,7 +7747,7 @@ function applyReportFilter() {
       const soldPackages = soldPlans.map(plan => getPackage(plan.packageId)).filter(Boolean);
       const avgPackageLessons = soldPackages.length ? Math.round(soldPackages.reduce((sum, pkg) => sum + Number(pkg.lessonsTotal || 0), 0) / soldPackages.length) : 0;
       const monthClientIds = new Set(soldPlans.map(plan => plan.clientId));
-      const monthPaymentClients = getManagedClients().filter(client => monthClientIds.has(client.id));
+      const monthPaymentClients = state.clients.filter(client => monthClientIds.has(client.id));
       const paidClients = monthPaymentClients.filter(client => client.paymentStatus === 'paid').length;
       const outstandingClients = monthPaymentClients.filter(client => client.paymentStatus !== 'paid').length;
       const activeInstallments = monthPaymentClients.filter(client => client.paymentMode === 'installments' && Number(client.installmentsPaid || 0) < Number(client.installmentsTotal || 1)).length;
@@ -7578,25 +7766,17 @@ function applyReportFilter() {
       const personalCompleted = monthLessonsByType.personal.filter(item => item.status === 'done').length;
       const personalScheduled = monthLessonsByType.personal.filter(item => item.status === 'scheduled').length;
       const personalCancelled = monthLessonsByType.personal.filter(item => item.status === 'cancelled').length;
-      const convertedFromFree = getManagedClients().filter(client => {
-        const isConverted = (client.outcome === 'converted') || (client.packagePurchased === true) || !!state.plans.find(plan => plan.clientId === client.id && 'personal' === (plan.planType || plan.type || 'personal'));
-        const hadFree = (client.freeSessionDone === true) || !!state.lessons.find(lesson => lesson.clientId === client.id && (lesson.lessonType || lesson.type) === 'free_session');
-        return hadFree && isConverted;
-      }).length;
 
       const previousSnapshot = getMonthSnapshot(addMonths(monthDate, -1));
       el.reportStats.innerHTML = [
-        { label: 'Nuovi clienti', value: newClients.length, note: 'Acquisizione del mese', ...getDeltaMeta(newClients.length, previousSnapshot.newClients) },
+        { label: 'Inseriti nel mese', value: monthClients.length, note: 'Tutti i clienti creati nel mese', ...getDeltaMeta(monthClients.length, previousSnapshot.newClients) },
+        { label: 'Free session', value: freeClients.length, note: 'Lead entrati come prova', ...getDeltaMeta(freeClients.length, 0) },
+        { label: 'Pack99', value: pack99Clients.length, note: 'Clienti con pack99 venduto nel mese', ...getDeltaMeta(pack99Clients.length, 0) },
+        { label: 'Convertiti', value: convertedClients.length, note: 'Da free session a cliente', ...getDeltaMeta(convertedClients.length, 0) },
         { label: 'Rinnovi', value: renewals.length, note: 'Clienti riattivati', ...getDeltaMeta(renewals.length, 0) },
-        { label: 'Totale lezioni mese', value: totalMonthlyLessons, note: 'Volume operativo', ...getDeltaMeta(totalMonthlyLessons, previousSnapshot.total) },
-        { label: 'Lezioni svolte', value: done, note: 'Erogazione effettiva', ...getDeltaMeta(done, previousSnapshot.done) },
+        { label: 'Totale lezioni', value: totalMonthlyLessons, note: 'Volume operativo del mese', ...getDeltaMeta(totalMonthlyLessons, previousSnapshot.total) },
         { label: 'Saldo mese', value: formatCurrency(monthlyBalance), note: 'Ricavo realizzato', ...getDeltaMeta(monthlyBalance, previousSnapshot.revenue) },
-        { label: 'Tasso annulli', value: `${cancelRate}%`, note: 'Da mantenere basso', ...getDeltaMeta(cancelRate, previousSnapshot.done + previousSnapshot.cancelled ? Math.round((previousSnapshot.cancelled / (previousSnapshot.done + previousSnapshot.cancelled)) * 100) : 0, true) },
-        { label: 'Clienti inattivi', value: inactiveClients.length, note: 'Da riattivare', ...getDeltaMeta(inactiveClients.length, inactiveClients.length, true) },
-        { label: 'Pacchetto medio', value: avgPackageLessons ? `${avgPackageLessons} lez.` : '—', note: 'Taglio commerciale', ...getDeltaMeta(avgPackageLessons, avgPackageLessons) },
-        { label: 'Pagati', value: paidClients, note: 'Cash collected', ...getDeltaMeta(paidClients, 0) },
-        { label: 'Da incassare', value: outstandingClients, note: 'Revenue aperto', ...getDeltaMeta(outstandingClients, 0, true) },
-        { label: 'Rate aperte', value: activeInstallments, note: 'Piani rateali attivi', ...getDeltaMeta(activeInstallments, 0, true) }
+        { label: 'Tasso annulli', value: `${cancelRate}%`, note: 'Da mantenere basso', ...getDeltaMeta(cancelRate, previousSnapshot.done + previousSnapshot.cancelled ? Math.round((previousSnapshot.cancelled / (previousSnapshot.done + previousSnapshot.cancelled)) * 100) : 0, true) }
       ].map(item => `
         <div class="report-card">
           <div class="muted small">${item.label}</div>
@@ -7606,13 +7786,36 @@ function applyReportFilter() {
         </div>
       `).join('');
 
-      el.reportMoodTitle.textContent = mood.title;
-      el.reportMoodText.textContent = `${mood.text} • Programmate ancora ${scheduled} • Saldo mese ${formatCurrency(monthlyBalance)} • Rate aperte ${activeInstallments}`;
+      el.reportMoodTitle.textContent = 'Gestionale del mese';
+      el.reportMoodText.textContent = `${mood.text} • Inseriti ${monthClients.length} • Conversioni ${convertedClients.length} • Saldo ${formatCurrency(monthlyBalance)}`;
+      if (el.reportMoodTextPanel) {
+        el.reportMoodTextPanel.innerHTML = [
+          { label: 'Pagati', value: paidClients },
+          { label: 'Da incassare', value: outstandingClients },
+          { label: 'Rate aperte', value: activeInstallments },
+          { label: 'Clienti inattivi', value: inactiveClients.length },
+          { label: 'Pacchetto medio', value: avgPackageLessons ? `${avgPackageLessons} lez.` : '—' }
+        ].map(item => `<div class="summary-row"><span>${escapeHtml(item.label)}</span><span class="tag">${escapeHtml(String(item.value))}</span></div>`).join('');
+      }
 
-      const renderTypeSection = (stats) => stats.length ? stats.map(item => `<div class="summary-row"><span>${escapeHtml(item.label)}</span><span class="tag">${escapeHtml(String(item.value))}</span></div>`).join('') : '<div class="muted">Nessun dato</div>';
+      const renderClientRows = (clients, badgeLabel, badgeClass = '') => clients.length ? clients.map(client => {
+        const activePlan = getActivePlan(client.id);
+        const pkg = getPackage(activePlan?.packageId);
+        return `<div class="management-card">
+          <div class="management-card-head">
+            <div>
+              <div class="management-card-title">${escapeHtml(getClientFullName(client))}</div>
+              <div class="management-card-meta">${escapeHtml(client.phone || client.email || 'Scheda cliente')} ${pkg ? `• ${escapeHtml(pkg.name || '')}` : ''}</div>
+            </div>
+            <span class="tag ${badgeClass}">${escapeHtml(badgeLabel)}</span>
+          </div>
+          <div class="inline-actions"><button class="btn btn-soft btn-small" data-report-client="${client.id}">Apri</button></div>
+        </div>`;
+      }).join('') : '<div class="muted">Nessun inserimento</div>';
 
-      el.reportNewClients.innerHTML = newClients.length ? newClients.map(client => `<div class="summary-row"><span>${escapeHtml(getClientFullName(client))}</span><span class="tag">nuovo</span></div>`).join('') : '<div class="muted">Nessun nuovo cliente</div>';
-      el.reportTopPackages.innerHTML = packageRows.length ? packageRows.slice(0, 6).map(([name, count]) => `<div class="summary-row"><span>${escapeHtml(name)}</span><span class="tag gold">${count}</span></div>`).join('') : '<div class="muted">Nessuna vendita</div>';
+      el.reportNewClients.innerHTML = renderClientRows(monthClients, 'nuovo');
+      el.reportTopPackages.innerHTML = packageRows.length ? packageRows.slice(0, 8).map(([name, count]) => `<div class="summary-row"><span>${escapeHtml(name)}</span><span class="tag gold">${count}</span></div>`).join('') : '<div class="muted">Nessun movimento commerciale</div>';
+
       const freeBalance = monthLessonsByType.free_session.filter(item => item.status === 'done').reduce((sum, lesson) => {
         const plan = getPlan(lesson.planId);
         return sum + getPackageUnitValue(getPackage(plan?.packageId));
@@ -7622,21 +7825,23 @@ function applyReportFilter() {
         return sum + getPackageUnitValue(getPackage(plan?.packageId));
       }, 0);
 
-      el.reportFreeSession.innerHTML = renderTypeSection([
+      el.reportFreeSession.innerHTML = renderClientRows(freeClients, 'free', 'blue') + renderTypeSection([
         { label: 'Svolte', value: freeCompleted },
         { label: 'Programmate', value: freeScheduled },
         { label: 'Annullate', value: freeCancelled },
-        { label: 'Clienti entrati', value: convertedFromFree },
-        { label: 'Saldo mese', value: formatCurrency(freeBalance) },
-        { label: 'Da ricontattare', value: state.clients.filter(client => getClientServiceType(client) === 'free_session' && client.conversionStatus === 'follow_up').length }
+        { label: 'Saldo mese', value: formatCurrency(freeBalance) }
       ]);
-      el.reportPersonal.innerHTML = renderTypeSection([
+      el.reportPack99.innerHTML = renderClientRows(pack99Clients, 'pack99', 'gold') + renderTypeSection([
+        { label: 'Pack99 venduti', value: pack99Plans.length },
+        { label: 'Clienti coinvolti', value: pack99Clients.length },
+        { label: 'Lezioni personal', value: personalCompleted },
+        { label: 'Saldo personal', value: formatCurrency(personalBalance) }
+      ]);
+      el.reportPersonal.innerHTML = renderClientRows(personalClients, 'cliente', 'green') + renderTypeSection([
         { label: 'Percorsi venduti', value: monthPlansByType.personal.length },
         { label: 'Lezioni svolte', value: personalCompleted },
         { label: 'Programmate', value: personalScheduled },
-        { label: 'Annullate', value: personalCancelled },
-        { label: 'Saldo mese', value: formatCurrency(personalBalance) },
-        { label: 'Saldati', value: monthPaymentClients.filter(client => client.serviceType === 'personal' && client.paymentStatus === 'paid').length }
+        { label: 'Annullate', value: personalCancelled }
       ]);
       el.reportOutstanding.innerHTML = renderTypeSection(monthPaymentClients.filter(client => client.paymentStatus !== 'paid').map(client => ({
         label: `${getClientFullName(client)} · ${getPaymentStatusLabel(client.paymentStatus)}`,
@@ -7648,8 +7853,8 @@ function applyReportFilter() {
       })));
       applyReportFilter();
       el.reportCancelRanking.innerHTML = cancelRows.length ? cancelRows.slice(0, 8).map(([name, count]) => `<div class="summary-row"><span>${escapeHtml(name)}</span><span class="tag red">${count}</span></div>`).join('') : '<div class="muted">Nessun annullamento</div>';
-      el.reportFollowups.innerHTML = followups.length ? followups.slice(0, 8).map(item => `<div class="summary-row"><span>${escapeHtml(item.text)}</span><button class="btn btn-soft btn-small" data-report-client="${item.clientId}">Apri</button></div>`).join('') : '<div class="muted">Nessun follow-up</div>';
-      el.reportFollowups.querySelectorAll('[data-report-client]').forEach(button => {
+      el.reportFollowups.innerHTML = convertedClients.length ? convertedClients.map(client => `<div class="summary-row"><span>${escapeHtml(getClientFullName(client))}</span><button class="btn btn-soft btn-small" data-report-client="${client.id}">Apri</button></div>`).join('') : '<div class="muted">Nessuna conversione da free session</div>';
+      document.querySelectorAll('[data-report-client]').forEach(button => {
         button.addEventListener('click', () => {
           selectClient(button.getAttribute('data-report-client'));
           closeModal('reportModalBackdrop');

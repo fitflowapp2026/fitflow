@@ -3232,6 +3232,7 @@
         </label>
         <div class="section-block"><div class="section-title">Azioni</div><div class="inline-actions">
           <button class="btn btn-primary" type="submit">Conferma rinnovo</button>
+          <button class="btn btn-ghost btn-small" type="button" id="closeWithoutRenewBtn">Chiudi senza rinnovo</button>
         </div></div>
       </form>
     </div>
@@ -4803,10 +4804,12 @@
       const effective = lessons.filter(item => item.status !== 'cancelled');
       const firstLesson = effective.map(item => item.date).sort()[0] || null;
       const nextLesson = lessons.filter(item => item.status !== 'cancelled' && item.date >= todayISO()).sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`))[0] || null;
-      const total = Number(pkg?.lessonsTotal || 0);
+      const base = Number(pkg?.lessonsTotal || 0);
+      const carryOver = Number(plan?.carryOverLessons || 0);
+      const total = base + carryOver;
       const remaining = Math.max(total - done, 0);
       const progress = total ? Math.min(100, Math.round((done / total) * 100)) : 0;
-      return { total, done, remaining, firstLesson, nextLesson, progress, cancelled };
+      return { total, done, remaining, firstLesson, nextLesson, progress, cancelled, carryOver };
     }
 
     function clientHistoryStats(clientId) {
@@ -7236,11 +7239,16 @@ function applyReportFilter() {
       const lastLesson = getLessonsForClient(client.id).filter(item => item.status !== 'cancelled').map(item => item.date).sort().slice(-1)[0];
       el.renewStartDate.value = lastLesson || todayISO();
 
+      const oldPlanForPreview = getActivePlan(client.id);
+      const oldStatsForPreview = oldPlanForPreview ? planStats(oldPlanForPreview) : { remaining: 0 };
+      const carryPreview = Math.max(0, oldStatsForPreview.remaining || 0);
+
       const syncPrice = () => {
         const pkg = getPackage(el.renewPackage.value);
         const defaultPrice = Number(client.packagePrice || pkg?.totalPrice || 0);
         if (el.renewPrice && !el.renewPrice._touched) el.renewPrice.value = defaultPrice;
-        if (el.renewPriceHint) el.renewPriceHint.textContent = `Default pacchetto: ${formatCurrency(defaultPrice)}`;
+        const carryNote = carryPreview > 0 ? ` · +${carryPreview} lezioni riportate` : '';
+        if (el.renewPriceHint) el.renewPriceHint.textContent = `Default: ${formatCurrency(defaultPrice)}${carryNote}`;
         el.renewPreview.innerHTML = buildPackageSummary(pkg, Number(el.renewPrice?.value || defaultPrice));
       };
       syncPrice();
@@ -8066,6 +8074,12 @@ function renderClientFormStickySummary() {
       const client = getClient(state.selectedClientId);
       const pkg = getPackage(el.renewPackage.value);
       if (!client || !pkg) return;
+
+      // Calcola le lezioni rimanenti dal piano attuale da riportare
+      const oldPlan = getActivePlan(client.id);
+      const oldStats = oldPlan ? planStats(oldPlan) : { remaining: 0 };
+      const carryOver = Math.max(0, oldStats.remaining || 0);
+
       const newPlanId = uid('plan');
       state.plans.push({
         id: newPlanId,
@@ -8076,22 +8090,65 @@ function renderClientFormStickySummary() {
         saleType: 'renewal',
         planType: 'personal',
         totalPrice: Number(el.renewPrice?.value ?? client.packagePrice ?? pkg.totalPrice ?? 0),
+        carryOverLessons: carryOver,   // lezioni riportate dal pacchetto precedente
         createdAt: new Date().toISOString()
       });
+
+      // Resetta sempre il pagamento per il nuovo pacchetto
+      client.paymentStatus = 'unpaid';
+      if (!client.paymentMode) client.paymentMode = 'single';
+
       if (getClientServiceType(client) === 'free_session') {
         client.serviceType = 'personal';
         client.packagePurchased = true;
         client.conversionStatus = 'path_started';
-        if (!client.paymentStatus || client.paymentStatus === 'paid') client.paymentStatus = 'unpaid';
-        if (!client.paymentMode) client.paymentMode = 'single';
       }
+
+      // Dismetti gli alert vecchi di rinnovo e pagamento per questo cliente
+      if (!Array.isArray(state.dismissedAlerts)) state.dismissedAlerts = [];
+      ['renewal', 'payment'].forEach(type => {
+        // Rimuovi qualsiasi alert precedente di questo tipo per il cliente
+        state.dismissedAlerts = state.dismissedAlerts.filter(id => !id.startsWith(`${type}_${client.id}_`));
+      });
+
       ensureClientHistoryBuckets(client);
-      client.renewalHistory.push({ id: uid('renewhist'), createdAt: new Date().toISOString(), packageId: pkg.id, packageName: pkg.name, startDate: el.renewStartDate.value });
+      client.renewalHistory.push({
+        id: uid('renewhist'),
+        createdAt: new Date().toISOString(),
+        packageId: pkg.id,
+        packageName: pkg.name,
+        startDate: el.renewStartDate.value,
+        carryOverLessons: carryOver
+      });
       client.activePlanId = newPlanId;
-      saveState();
+      saveState(true);
       renderAll();
       closeModal('renewModalBackdrop');
-      showToast('Rinnovo registrato.', 'ok');
+      const carryMsg = carryOver > 0 ? ` (+ ${carryOver} lezioni riportate)` : '';
+      showToast(`Rinnovo registrato${carryMsg}.`, 'ok');
+    });
+
+    // "Chiudi senza rinnovo": rimuove gli alert di pagamento/rinnovo senza creare un nuovo piano
+    document.getElementById('closeWithoutRenewBtn')?.addEventListener('click', () => {
+      const client = getClient(state.selectedClientId);
+      if (!client) return;
+      showConfirm(
+        'Chiudi senza rinnovo',
+        `Verranno rimossi gli avvisi di pagamento e rinnovo per ${getClientFullName(client)}. Il pacchetto attuale resta invariato.`,
+        () => {
+          // Segna il pagamento come risolto
+          client.paymentStatus = 'paid';
+          // Rimuovi alert precedenti di questo cliente
+          if (!Array.isArray(state.dismissedAlerts)) state.dismissedAlerts = [];
+          state.dismissedAlerts = state.dismissedAlerts.filter(id =>
+            !id.startsWith(`payment_${client.id}_`) && !id.startsWith(`renewal_${client.id}_`)
+          );
+          saveState(true);
+          renderAll();
+          closeModal('renewModalBackdrop');
+          showToast('Pacchetto chiuso — avvisi rimossi.', 'ok');
+        }
+      );
     });
 
     document.addEventListener('visibilitychange', () => {

@@ -6460,21 +6460,29 @@ function applyReportFilter() {
           <div class="day-lessons-wrap" ${dayLessons.length ? '' : 'hidden'}>
             <div class="day-slots-title">Lezioni fissate</div>
             <div class="day-detail-list" id="agendaDayLessonList">
-              ${dayLessons.map(lesson => {
-                const statusText = lesson.status === 'done' ? 'Svolta' : lesson.status === 'cancelled' ? 'Annullata' : 'Programmata';
-                return `
-                  <button class="day-lesson-item" data-lesson-id="${lesson.id}">
-                    <div class="day-lesson-main">
-                      <strong>${escapeHtml(getLessonDisplayTitle(lesson) || 'Cliente')}</strong>
-                      <div class="day-lesson-meta">${lesson.time} • ${lesson.duration || 60} min${lesson.note ? ` • ${escapeHtml(lesson.note)}` : ''}</div>
-                    </div>
-                    <div class="day-lesson-side">
-                      <span class="day-status-chip status-${lesson.status}">${statusText}</span>
-                      <span class="muted small">Apri</span>
-                    </div>
-                  </button>
-                `;
-              }).join('')}
+              ${(() => {
+                const seenGroups = new Set();
+                return dayLessons.filter(lesson => {
+                  if (!lesson.duoGroupId) return true;
+                  if (seenGroups.has(lesson.duoGroupId)) return false;
+                  seenGroups.add(lesson.duoGroupId);
+                  return true;
+                }).map(lesson => {
+                  const statusText = lesson.status === 'done' ? 'Svolta' : lesson.status === 'cancelled' ? 'Annullata' : 'Programmata';
+                  return `
+                    <button class="day-lesson-item" data-lesson-id="${lesson.id}">
+                      <div class="day-lesson-main">
+                        <strong>${escapeHtml(getLessonDisplayTitle(lesson) || 'Cliente')}</strong>
+                        <div class="day-lesson-meta">${lesson.time} • ${lesson.duration || 60} min${lesson.note ? ` • ${escapeHtml(lesson.note)}` : ''}</div>
+                      </div>
+                      <div class="day-lesson-side">
+                        <span class="day-status-chip status-${lesson.status}">${statusText}</span>
+                        <span class="muted small">Apri</span>
+                      </div>
+                    </button>
+                  `;
+                }).join('');
+              })()}
             </div>
             ${dayLessons.length ? '' : '<div class="day-empty">Nessuna lezione fissata in questa giornata.</div>'}
           </div>
@@ -6713,7 +6721,15 @@ function applyReportFilter() {
         el.dayLessonList.innerHTML = '';
         return;
       }
-      el.dayLessonList.innerHTML = dayLessons.map(lesson => {
+      // Nei DUO mostra solo la lezione "primaria" (la prima del gruppo per id)
+      const seenDuoGroups = new Set();
+      const dayLessonsDeduped = dayLessons.filter(lesson => {
+        if (!lesson.duoGroupId) return true;
+        if (seenDuoGroups.has(lesson.duoGroupId)) return false;
+        seenDuoGroups.add(lesson.duoGroupId);
+        return true;
+      });
+      el.dayLessonList.innerHTML = dayLessonsDeduped.map(lesson => {
         const client = getClient(lesson.clientId);
         const statusText = lesson.status === 'done' ? 'Svolta' : lesson.status === 'cancelled' ? 'Annullata' : 'Programmata';
         return `

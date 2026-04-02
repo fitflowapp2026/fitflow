@@ -5610,41 +5610,6 @@ function pushClientPaymentSnapshot(client, reason = 'update') {
       }
     }
 
-  ensureClientHistoryBuckets(client);
-  const paymentRows = [...client.paymentHistory].slice().reverse();
-  el.clientPaymentHistory.innerHTML = paymentRows.length ? paymentRows.map(item => {
-    const extra = item.paymentMode === 'installments' ? ` · RATE ${Number(item.installmentsPaid || 0)}/${Number(item.installmentsTotal || 1)}` : '';
-    return `<div class="summary-row"><span>${escapeHtml(formatSnapshotDate(item.createdAt))} · ${escapeHtml(getPaymentStatusLabel(item.paymentStatus))} · ${escapeHtml(getPaymentModeLabel(item.paymentMode))}${extra}</span><span class="tag">${escapeHtml(item.reason === 'create' ? 'iniziale' : 'update')}</span></div>`;
-  }).join('') : '<div class="muted">Nessun pagamento registrato</div>';
-
-  const planRows = state.plans
-    .filter(plan => plan.clientId === client.id && plan.saleType === 'renewal')
-    .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
-    .map(plan => {
-      const pkg = getPackage(plan.packageId);
-      return {
-        date: plan.createdAt || plan.startDate,
-        label: `${pkg?.name || 'Pacchetto'} · dal ${formatDateFancy(plan.startDate)}`
-      };
-    });
-
-  const manualRows = [...client.renewalHistory].slice().reverse().map(item => ({
-    date: item.createdAt,
-    label: `${item.packageName || 'Pacchetto'} · dal ${formatDateFancy(item.startDate)}`
-  }));
-
-  const merged = [...manualRows, ...planRows].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
-  const seen = new Set();
-  const finalRows = merged.filter(item => {
-    const key = `${item.date}|${item.label}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-
-  el.clientRenewalHistory.innerHTML = finalRows.length ? finalRows.map(item => `<div class="summary-row"><span>${escapeHtml(formatSnapshotDate(item.date))} · ${escapeHtml(item.label)}</span><span class="tag">rinnovo</span></div>`).join('') : '<div class="muted">Nessun rinnovo registrato</div>';
-  }
-
 function renderClientAppointments(client = null) {
   const show = !!client;
   if (el.clientAppointmentsWrap) el.clientAppointmentsWrap.hidden = !show;

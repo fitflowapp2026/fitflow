@@ -2664,6 +2664,7 @@
           <button class="filter-chip" type="button" data-drawer-filter="urgent" aria-pressed="false">Urgenti</button>
           <button class="filter-chip" type="button" data-drawer-filter="expiring" aria-pressed="false">In scadenza</button>
           <button class="filter-chip" type="button" data-drawer-filter="unpaid" aria-pressed="false">Non saldati</button>
+          <button class="filter-chip" type="button" data-drawer-filter="free_session" aria-pressed="false">Free session</button>
         </div>
         <div class="client-list" id="clientListDrawer"></div>
         <div class="inline-actions">
@@ -2754,6 +2755,7 @@
               <button class="filter-chip" type="button" data-client-filter="urgent" aria-pressed="false">Urgenti</button>
               <button class="filter-chip" type="button" data-client-filter="expiring" aria-pressed="false">In scadenza</button>
               <button class="filter-chip" type="button" data-client-filter="unpaid" aria-pressed="false">Non saldati</button>
+              <button class="filter-chip" type="button" data-client-filter="free_session" aria-pressed="false">Free session</button>
             </div>
             <div class="client-list" id="clientList"></div>
             <div class="inline-actions">
@@ -3913,9 +3915,10 @@
     }
 
     function getDefaultSelectedClientId(preferredId = null) {
+      if (preferredId && state.clients.some(client => client.id === preferredId)) return preferredId;
       const managedClients = getManagedClients();
-      if (preferredId && managedClients.some(client => client.id === preferredId)) return preferredId;
-      return managedClients[0]?.id || null;
+      if (managedClients.length) return managedClients[0].id;
+      return state.clients[0]?.id || null;
     }
 
     function getTodayLessonBreakdown(date = todayISO()) {
@@ -4303,7 +4306,7 @@
       });
 
       if (!state.packages.length) state.packages = seedPackages();
-      if (!state.selectedClientId || !isManagedClient(getClient(state.selectedClientId))) state.selectedClientId = getDefaultSelectedClientId(state.selectedClientId);
+      if (!state.selectedClientId || !getClient(state.selectedClientId)) state.selectedClientId = getDefaultSelectedClientId(state.selectedClientId);
       if (normalizedPlans) saveLocalState();
     }
 
@@ -4335,7 +4338,7 @@
         }
       }
       if (!state.packages.length) state.packages = seedPackages();
-      if (!state.selectedClientId || !isManagedClient(getClient(state.selectedClientId))) state.selectedClientId = getDefaultSelectedClientId(state.selectedClientId);
+      if (!state.selectedClientId || !getClient(state.selectedClientId)) state.selectedClientId = getDefaultSelectedClientId(state.selectedClientId);
     }
 
     async function hydrateStateFromCloud() {
@@ -6431,13 +6434,15 @@ function applyReportFilter() {
 
     function renderClientList() {
       const q = state.search.trim().toLowerCase();
-      const clients = getManagedClients().filter(client => {
+      const clients = state.clients.filter(client => {
         const urgency = getClientUrgency(client);
-        const matchesQuery = !q || getClientFullName(client).toLowerCase().includes(q) || String(client.notes || '').toLowerCase().includes(q) || serviceTypeLabel(getClientServiceType(client)).toLowerCase().includes(q);
+        const serviceType = getClientServiceType(client);
+        const matchesQuery = !q || getClientFullName(client).toLowerCase().includes(q) || String(client.notes || '').toLowerCase().includes(q) || serviceTypeLabel(serviceType).toLowerCase().includes(q);
         if (!matchesQuery) return false;
-        if (state.clientFilter === 'urgent') return urgency.level === 'bad' || urgency.level === 'warn';
-        if (state.clientFilter === 'expiring') return urgency.remaining <= 3;
-        if (state.clientFilter === 'unpaid') return (client.paymentStatus || 'unpaid') !== 'paid';
+        if (state.clientFilter === 'urgent') return isManagedClient(client) && (urgency.level === 'bad' || urgency.level === 'warn');
+        if (state.clientFilter === 'expiring') return isManagedClient(client) && urgency.remaining > 0 && urgency.remaining <= 3;
+        if (state.clientFilter === 'unpaid') return isManagedClient(client) && (client.paymentStatus || 'unpaid') !== 'paid';
+        if (state.clientFilter === 'free_session') return serviceType === 'free_session';
         return true;
       });
       const sortedClients = clients.slice().sort((a, b) => {
@@ -8026,7 +8031,7 @@ function renderClientFormStickySummary() {
       };
       state.clients.unshift(clientPayload);
       state.plans.push(planPayload);
-      state.selectedClientId = serviceType === 'free_session' ? getDefaultSelectedClientId() : clientId;
+      state.selectedClientId = clientId;
       saveState(true);
       let plannedCount = 0;
       if (scheduleMode === 'same' && fixedTime && fixedDays.length) {

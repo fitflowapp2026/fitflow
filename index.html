@@ -2,16 +2,29 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
   <meta http-equiv="X-Content-Type-Options" content="nosniff" />
   <meta name="color-scheme" content="dark" />
   <meta name="description" content="FitFlow — Gestione clienti e calendario per personal trainer" />
-  <meta name="theme-color" content="#e50914" />
+  <meta name="theme-color" content="#141414" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="FitFlow" />
   <meta name="mobile-web-app-capable" content="yes" />
   <link rel="manifest" href="manifest.json" />
+  <!-- PWA: icona Home screen iOS — genera icon-180.png dalla tua icona -->
+  <link rel="apple-touch-icon" sizes="180x180" href="icon-180.png" />
+  <link rel="apple-touch-icon" sizes="152x152" href="icon-152.png" />
+  <link rel="apple-touch-icon" sizes="120x120" href="icon-120.png" />
+  <!-- PWA: splash screen iOS per i modelli più comuni -->
+  <link rel="apple-touch-startup-image" media="screen and (device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3)" href="splash-430x932.png" />
+  <link rel="apple-touch-startup-image" media="screen and (device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3)" href="splash-393x852.png" />
+  <link rel="apple-touch-startup-image" media="screen and (device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3)" href="splash-390x844.png" />
+  <link rel="apple-touch-startup-image" media="screen and (device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3)" href="splash-375x812.png" />
+  <!-- Font Inter da Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
   <title>FitFlow — Gestione Clienti</title>
   <style>
     :root {
@@ -37,7 +50,24 @@
 
     * { box-sizing: border-box; }
     html, body { margin: 0; min-height: 100%; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: radial-gradient(circle at top, #1f1f1f 0%, #141414 55%, #090909 100%); color: var(--text); }
-    body { padding: 16px; }
+    body {
+      padding: 16px;
+      /* Blocca pull-to-refresh Safari che ricarica la pagina */
+      overscroll-behavior-y: none;
+    }
+    /* Rimuove il flash grigio/blu al tap su iOS */
+    * { -webkit-tap-highlight-color: transparent; }
+    /* Impedisce il menu contestuale sul long-press (testo, immagini) */
+    body, .btn, .bnav-btn, .client-row, .stat-box, .hero, .panel, .card, .alert-chip, .day-lesson {
+      -webkit-touch-callout: none;
+    }
+    /* Impedisce la selezione accidentale di testo su elementi UI */
+    .btn, .bnav-btn, .client-row, .stat-box, .hero, .panel,
+    .alert-chip, .day-lesson, .filter-chip, .topbar, .bottom-nav,
+    .panel-head, .panel-title, .eyebrow, .brand {
+      user-select: none;
+      -webkit-user-select: none;
+    }
     body.modal-scroll-lock {
       position: fixed;
       inset: 0;
@@ -4165,6 +4195,10 @@
       el.toast.classList.add('show');
       clearTimeout(showToast._t);
       showToast._t = setTimeout(() => el.toast.classList.remove('show'), durations[type] || 2200);
+      /* Haptic: pulse breve su ok, doppio su errore */
+      if (type === 'ok') haptic(8);
+      else if (type === 'error') haptic([10, 60, 10]);
+      else if (type === 'warn') haptic(20);
     }
 
     function formatNumberMax2(value) {
@@ -5647,6 +5681,17 @@
       bodyScrollLockY = 0;
     }
 
+    /* ── Haptic feedback leggero (Android) ─────────────────────── */
+    function haptic(ms = 8) {
+      try { if (navigator.vibrate) navigator.vibrate(ms); } catch(e) {}
+    }
+
+    /* ── Dynamic theme-color per status bar iOS ─────────────────── */
+    const _themeColorMeta = document.querySelector('meta[name="theme-color"]');
+    function setThemeColor(color) {
+      if (_themeColorMeta) _themeColorMeta.setAttribute('content', color);
+    }
+
     function openModal(id, trigger = document.activeElement) {
       if (id === 'operazioniModalBackdrop') renderOperazioniModal();
       if (id === 'atRiskModalBackdrop') renderAtRiskModal();
@@ -5656,6 +5701,8 @@
       activeModalTrigger = trigger instanceof HTMLElement ? trigger : activeModalTrigger;
       backdrop.classList.add('open');
       lockBodyScroll();
+      setThemeColor('#0b0b0b');
+      haptic(6);
       const modal = backdrop.querySelector('.modal');
       if (modal) {
         if (!modal.hasAttribute('tabindex')) modal.setAttribute('tabindex', '-1');
@@ -5670,6 +5717,9 @@
       if (!backdrop) return;
       backdrop.classList.remove('open');
       unlockBodyScroll();
+      if (!document.querySelector('.modal-backdrop.open')) {
+        setThemeColor('#141414');
+      }
       if (!document.querySelector('.modal-backdrop.open') && activeModalTrigger && document.body.contains(activeModalTrigger)) {
         activeModalTrigger.focus();
       }

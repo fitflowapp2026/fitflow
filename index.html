@@ -154,6 +154,12 @@
       min-width: 0;
     }
 
+    /* content-visibility: browser salta il rendering di ciò che è fuori schermo */
+    .calendar-wrap, .ops-board {
+      content-visibility: auto;
+      contain-intrinsic-size: 0 500px;
+    }
+
     .topbar {
       display: flex;
       align-items: center;
@@ -391,6 +397,28 @@
       color: #fff;
     }
 
+    @keyframes card-in {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes shimmer {
+      from { background-position: -200% 0; }
+      to   { background-position:  200% 0; }
+    }
+    .skeleton-card {
+      border-radius: 18px;
+      padding: 14px;
+      display: grid;
+      gap: 10px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.05);
+    }
+    .skeleton-line {
+      border-radius: 6px;
+      background: linear-gradient(90deg, rgba(255,255,255,0.06) 25%, rgba(255,255,255,0.12) 50%, rgba(255,255,255,0.06) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s ease infinite;
+    }
     .client-card {
       background: linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.022));
       border: 1px solid rgba(255,255,255,0.05);
@@ -400,6 +428,8 @@
       display: grid;
       gap: 10px;
       transition: transform 120ms ease, border-color 120ms ease, background 120ms ease, box-shadow 120ms ease;
+      animation: card-in 280ms cubic-bezier(0.22,1,0.36,1) both;
+      animation-delay: calc(var(--i, 0) * 40ms);
     }
     .client-card:hover { transform: translateY(-1px); border-color: rgba(229,9,20,0.26); }
     .client-card.active {
@@ -770,6 +800,12 @@
       z-index: 60;
     }
     .modal-backdrop.open { display: flex; }
+    .modal-backdrop.open .modal {
+      will-change: transform, opacity;
+    }
+    .sidebar-drawer.open {
+      will-change: transform;
+    }
 
     .modal {
       width: min(980px, 100%);
@@ -3232,15 +3268,15 @@
         <input type="hidden" id="clientPlanId" />
         <div class="section-block"><div class="section-title">Identità</div><div class="form-grid-2">
           <label>Nome
-            <input id="clientName" type="text" placeholder="Nome" required />
+            <input id="clientName" type="text" placeholder="Nome" required autocapitalize="words" autocorrect="off" autocomplete="given-name" enterkeyhint="next" />
           </label>
           <label>Cognome
-            <input id="clientSurname" type="text" placeholder="Cognome" required />
+            <input id="clientSurname" type="text" placeholder="Cognome" required autocapitalize="words" autocorrect="off" autocomplete="family-name" enterkeyhint="next" />
           </label>
         </div>
         <div class="form-grid-2">
           <label>Email cliente
-            <input id="clientEmail" type="email" placeholder="email@cliente.com" />
+            <input id="clientEmail" type="email" placeholder="email@cliente.com" autocomplete="email" autocapitalize="none" autocorrect="off" enterkeyhint="next" />
           </label>
           <label>Invia appuntamenti calendario
             <select id="clientSendCalendarInvite">
@@ -3265,7 +3301,7 @@
             <select id="clientPackage" required></select>
           </label>
           <label id="clientPackagePriceLabel">Prezzo cliente (€)
-            <input id="clientPackagePrice" type="number" min="0" step="0.01" value="0" />
+            <input id="clientPackagePrice" type="number" min="0" step="0.01" value="0" inputmode="decimal" enterkeyhint="next" />
           </label>
           <label id="clientFreeSessionDoneLabel">Free session già fatta
             <select id="clientFreeSessionDone">
@@ -3306,10 +3342,10 @@
         </div>
         <div class="form-grid-2" id="clientInstallmentsRow" hidden>
           <label>Rate totali
-            <input id="clientInstallmentsTotal" type="number" min="2" step="1" value="2" />
+            <input id="clientInstallmentsTotal" type="number" min="2" step="1" value="2" inputmode="numeric" enterkeyhint="next" />
           </label>
           <label>Rate pagate
-            <input id="clientInstallmentsPaid" type="number" min="0" step="1" value="0" />
+            <input id="clientInstallmentsPaid" type="number" min="0" step="1" value="0" inputmode="numeric" enterkeyhint="next" />
           </label>
         </div>
         <div class="mini-card" id="packagePreview"></div></div>
@@ -3348,7 +3384,7 @@
             </select>
           </label>
           <label>Note
-            <input id="clientNotes" type="text" placeholder="Note rapide" />
+            <input id="clientNotes" type="text" placeholder="Note rapide" autocapitalize="sentences" enterkeyhint="done" />
           </label>
         </div></div>
               </form>
@@ -5701,7 +5737,11 @@
       activeModalTrigger = trigger instanceof HTMLElement ? trigger : activeModalTrigger;
       backdrop.classList.add('open');
       lockBodyScroll();
-      setThemeColor('#0b0b0b');
+      /* Theme color contestuale per tipo di modal */
+      const dangerModals = ['confirmModalBackdrop'];
+      const isDanger = dangerModals.includes(id) ||
+        backdrop.querySelector('.btn-danger') !== null;
+      setThemeColor(isDanger ? '#1a0505' : '#0b0b0b');
       haptic(6);
       const modal = backdrop.querySelector('.modal');
       if (modal) {
@@ -6257,6 +6297,14 @@ function copyAppointmentsToClipboard() {
     showToast('Nessun appuntamento da copiare.');
     return;
   }
+  /* Web Share API — apre il foglio nativo iOS (WhatsApp, Mail, AirDrop…) */
+  if (navigator.share) {
+    navigator.share({ title: 'Appuntamenti FitFlow', text })
+      .then(() => showToast('Appuntamenti condivisi!', 'ok'))
+      .catch(err => { if (err.name !== 'AbortError') showToast('Condivisione annullata.'); });
+    return;
+  }
+  /* Fallback clipboard */
   navigator.clipboard.writeText(text).then(() => {
     showToast('Appuntamenti copiati!', 'ok');
   }).catch(() => {
@@ -6779,6 +6827,12 @@ function applyReportFilter() {
       const copyAppointments = () => {
         const text = buildAppointmentsText(client.id);
         if (!text) { showToast('Nessun appuntamento da copiare.'); return; }
+        if (navigator.share) {
+          navigator.share({ title: `Appuntamenti ${getClientFullName(client)}`, text })
+            .then(() => showToast('Appuntamenti condivisi!', 'ok'))
+            .catch(err => { if (err.name !== 'AbortError') showToast('Condivisione annullata.'); });
+          return;
+        }
         navigator.clipboard.writeText(text).then(() => {
           showToast('Appuntamenti copiati!', 'ok');
         }).catch(() => {
@@ -6863,14 +6917,14 @@ function applyReportFilter() {
     }
 
     function buildClientListMarkup(sortedClients) {
-      return sortedClients.map(client => {
+      return sortedClients.map((client, idx) => {
         const activePlan = getActivePlan(client.id);
         const pkg = getPackage(activePlan?.packageId);
         const packageName = getClientOfferLabel(client, activePlan, pkg);
         const urgency = getClientUrgency(client);
         const revenue = activePlan ? formatCurrency(getPlanTotalPrice(activePlan, pkg, client)) : '—';
         return `
-          <div class="client-card ${client.id === state.selectedClientId ? 'active' : ''}" data-client-id="${client.id}" tabindex="0" role="button" aria-label="Apri cliente ${escapeHtml(getClientFullName(client))}">
+          <div class="client-card ${client.id === state.selectedClientId ? 'active' : ''}" data-client-id="${client.id}" tabindex="0" role="button" aria-label="Apri cliente ${escapeHtml(getClientFullName(client))}" style="--i:${Math.min(idx, 12)}">>
             <div class="client-meta-row">
               <div style="display:flex;gap:10px;align-items:center;min-width:0;flex:1 1 auto;">
                 <div class="avatar">${escapeHtml(initials(getClientFullName(client)))}</div>
@@ -6903,6 +6957,26 @@ function applyReportFilter() {
           </div>
         `;
       }).join('');
+    }
+
+    function showClientSkeletons(count = 5) {
+      const html = Array.from({ length: count }, () => `
+        <div class="skeleton-card">
+          <div style="display:flex;gap:10px;align-items:center;">
+            <div class="skeleton-line" style="width:40px;height:40px;border-radius:50%;flex-shrink:0;"></div>
+            <div style="flex:1;display:grid;gap:7px;">
+              <div class="skeleton-line" style="height:13px;width:65%;"></div>
+              <div class="skeleton-line" style="height:11px;width:40%;"></div>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+            <div class="skeleton-line" style="height:11px;"></div>
+            <div class="skeleton-line" style="height:11px;"></div>
+          </div>
+        </div>`).join('');
+      if (el.clientList) el.clientList.innerHTML = html;
+      const drawerList = document.getElementById('clientListDrawer');
+      if (drawerList) drawerList.innerHTML = html;
     }
 
     function renderClientList() {
@@ -8085,11 +8159,24 @@ function applyReportFilter() {
         lessons: state.lessons
       };
       const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const filename = `fitflow-backup-${todayISO()}.json`;
+      /* Web Share API con file — AirDrop, iCloud Drive, Mail… */
+      if (navigator.share && navigator.canShare && navigator.canShare({ files: [new File([blob], filename, { type: 'application/json' })] })) {
+        const file = new File([blob], filename, { type: 'application/json' });
+        navigator.share({ title: 'FitFlow Backup', files: [file] })
+          .then(() => showToast('Backup condiviso!', 'ok'))
+          .catch(err => { if (err.name !== 'AbortError') fallbackDownload(blob, filename); });
+        return;
+      }
+      fallbackDownload(blob, filename);
+    }
+
+    function fallbackDownload(blob, filename) {
       const url = URL.createObjectURL(blob);
       try {
         const a = document.createElement('a');
         a.href = url;
-        a.download = `fitflow-backup-${todayISO()}.json`;
+        a.download = filename;
         document.body.appendChild(a);
         a.click();
         a.remove();
@@ -9266,6 +9353,8 @@ function renderClientFormStickySummary() {
       loadStateLocal();
       resetPackageForm();
       el.clientStartDate.value = todayISO();
+      /* Mostra skeleton subito mentre si caricano i dati */
+      showClientSkeletons(6);
       
       /* 1. Carica le credenziali dal ponte Netlify */
       await loadRemoteConfig();
@@ -9315,6 +9404,7 @@ function renderClientFormStickySummary() {
       updateGoogleUi();
       renderHeroGreeting();
       initDebouncedSearch();
+      initFormKeyboardNav();
 
       /* ── PWA: register Service Worker ────────────────────── */
       if ('serviceWorker' in navigator) {
@@ -9443,6 +9533,51 @@ function renderClientFormStickySummary() {
 
       /* Patch renderClientList to also populate drawer */
       const _origRenderAll = window._renderAllOrig || null;
+    })();
+
+    /* ── Navigazione automatica tra campi form con tasto Enter ── */
+    function initFormKeyboardNav() {
+      document.addEventListener('keydown', e => {
+        if (e.key !== 'Enter') return;
+        const el = e.target;
+        if (!['INPUT', 'SELECT'].includes(el.tagName)) return;
+        if (el.tagName === 'SELECT') return;
+        if (el.getAttribute('enterkeyhint') === 'done') { el.blur(); return; }
+        e.preventDefault();
+        const form = el.closest('form');
+        if (!form) return;
+        const focusable = Array.from(form.querySelectorAll('input:not([type=hidden]):not([disabled]), select:not([disabled]), textarea:not([disabled])'));
+        const idx = focusable.indexOf(el);
+        if (idx >= 0 && idx < focusable.length - 1) {
+          focusable[idx + 1].focus();
+        } else {
+          el.blur();
+        }
+      });
+    }
+
+    /* ── Swipe orizzontale sul calendario per cambiare periodo ── */
+    (function initCalendarSwipe() {
+      const calWrap = document.querySelector('.calendar-wrap');
+      if (!calWrap) return;
+      let startX = 0, startY = 0, moved = false;
+      calWrap.addEventListener('touchstart', e => {
+        startX = e.touches[0].clientX;
+        startY = e.touches[0].clientY;
+        moved = false;
+      }, { passive: true });
+      calWrap.addEventListener('touchmove', e => {
+        const dx = Math.abs(e.touches[0].clientX - startX);
+        const dy = Math.abs(e.touches[0].clientY - startY);
+        if (dx > dy && dx > 8) moved = true;
+      }, { passive: true });
+      calWrap.addEventListener('touchend', e => {
+        if (!moved) return;
+        const dx = e.changedTouches[0].clientX - startX;
+        if (Math.abs(dx) < 50) return;
+        haptic(6);
+        moveCalendar(dx < 0 ? 1 : -1);
+      }, { passive: true });
     })();
 
     /* ── Service Worker background sync message handler ─── */

@@ -9646,19 +9646,24 @@ function renderClientFormStickySummary() {
     async function refreshUnreadMessages() {
       if (!cloud.user || !cloud.client || cloud.allowLocalOnly) return;
       try {
-        const edgeUrl = getPortalEdgeUrl();
-        if (!edgeUrl) return;
+        /* Query singola su Supabase — le RLS filtrano automaticamente per user_id */
         const cfg = loadSupabaseConfig();
-        /* Raccoglie messaggi non letti da tutti i clienti */
-        let totalUnread = 0;
-        for (const client of state.clients) {
-          if (!client.shareToken) continue;
-          const data = await callPortalEdge(client.shareToken, 'get_data');
-          if (data?.messages) {
-            totalUnread += data.messages.filter(m => m.sender === 'client' && !m.read).length;
+        if (!cfg.url || !cfg.key) return;
+        const token = getAuthToken();
+        if (!token) return;
+        const res = await fetch(
+          `${cfg.url.replace(/\/$/, '')}/rest/v1/client_messages?sender=eq.client&read=eq.false&select=id`,
+          {
+            headers: {
+              'apikey': cfg.key,
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
           }
-        }
-        updateMsgBadges(totalUnread);
+        );
+        if (!res.ok) return;
+        const rows = await res.json();
+        updateMsgBadges(Array.isArray(rows) ? rows.length : 0);
       } catch(e) {}
     }
 
@@ -9706,63 +9711,129 @@ function renderClientFormStickySummary() {
           <input id="trainerReplyInput" type="text" placeholder="Rispondi al cliente…"
             autocapitalize="sentences" autocorrect="off" enterkeyhint="send"
             style="flex:1;padding:10px 14px;background:#151515;border:1px solid rgba(255,255,255,0.08);color:#fff;border-radius:14px;font:inherit;font-size:0.88rem;outline:none;" />
-          <button class="btn btn-primary btn-small" onclick="sendTrainerReply('${client.shareToken}')">Invia</button>
+          <button class="btn btn-primary btn-small" onclick="sendTrainerReply('${escapeHtml(client.shareToken)}')">Invia</button>
         </div>
       `;
 
-      const data = await callPortalEdge(client.shareToken, 'get_data');
+      /* Query diretta a Supabase — RLS filtra per user_id automaticamente */
+      const cfg = loadSupabaseConfig();
+      const token = getAuthToken();
       const indicator = document.getElementById('msgLoadingIndicator');
-      if (indicator) indicator.remove();
-
       const msgList = document.getElementById('trainerMsgList');
-      if (!msgList) return;
 
-      if (!data || data.error) {
-        msgList.innerHTML = `<div style="font-size:0.82rem;color:var(--muted);">Edge Function non raggiungibile — configura EDGE_URL in client.html e assicurati che la funzione sia deployata.</div>`;
-        return;
+      try {
+        const res = await fetch(
+          `${cfg.url.replace(/\/$/, '')}/rest/v1/client_messages?client_token=eq.${encodeURIComponent(client.shareToken)}&order=created_at.asc&select=*`,
+          {
+            headers: {
+              'apikey': cfg.key,
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+
+        if (indicator) indicator.remove();
+        if (!msgList) return;
+
+        if (!res.ok) {
+          msgList.innerHTML = `<div style="font-size:0.82rem;color:var(--muted);">Errore caricamento messaggi (${res.status}).</div>`;
+          return;
+        }
+
+        const messages = await res.json();
+
+        if (!Array.isArray(messages) || !messages.length) {
+          msgList.innerHTML = `<div style="font-size:0.82rem;color:var(--muted);">Nessun messaggio ancora.</div>`;
+          return;
+        }
+
+        msgList.innerHTML = messages.map(m => {
+          const isClient = m.sender === 'client';
+          const time = new Date(m.created_at).toLocaleString('it-IT', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+          const unreadDot = isClient && !m.read ? `<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--accent);margin-right:4px;flex-shrink:0;"></span>` : '';
+          const typeBadge = m.type === 'cancel_request'
+            ? `<span style="font-size:0.7rem;font-weight:700;padding:2px 7px;border-radius:6px;background:rgba(239,68,68,0.15);color:#ffb3b3;margin-right:6px;">Disdetta</span>`
+            : m.type === 'reschedule_request'
+            ? `<span style="font-size:0.7rem;font-weight:700;padding:2px 7px;border-radius:6px;background:rgba(245,158,11,0.15);color:var(--warn);margin-right:6px;">Spostamento</span>`
+            : '';
+          return `
+            <div style="display:flex;align-items:flex-start;gap:6px;padding:8px 10px;border-radius:12px;background:${isClient ? 'rgba(229,9,20,0.08)' : 'rgba(255,255,255,0.04)'};border:1px solid ${isClient ? 'rgba(229,9,20,0.18)' : 'rgba(255,255,255,0.06)'};">
+              ${unreadDot}
+              <div style="flex:1;min-width:0;">
+                ${typeBadge}
+                <span style="font-size:0.85rem;">${escapeHtml(m.text)}</span>
+                <div style="font-size:0.72rem;color:var(--muted);margin-top:3px;">${isClient ? 'Cliente' : 'Tu'} · ${time}</div>
+              </div>
+            </div>`;
+        }).join('');
+        msgList.scrollTop = msgList.scrollHeight;
+
+        /* Segna tutti i messaggi del cliente come letti */
+        await fetch(
+          `${cfg.url.replace(/\/$/, '')}/rest/v1/client_messages?client_token=eq.${encodeURIComponent(client.shareToken)}&sender=eq.client&read=eq.false`,
+          {
+            method: 'PATCH',
+            headers: {
+              'apikey': cfg.key,
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+              'Prefer': 'return=minimal'
+            },
+            body: JSON.stringify({ read: true })
+          }
+        );
+        /* Aggiorna badge dopo lettura */
+        refreshUnreadMessages();
+
+      } catch(e) {
+        if (indicator) indicator.remove();
+        if (msgList) msgList.innerHTML = `<div style="font-size:0.82rem;color:var(--muted);">Errore connessione.</div>`;
       }
-
-      const messages = data.messages ?? [];
-      if (!messages.length) {
-        msgList.innerHTML = `<div style="font-size:0.82rem;color:var(--muted);">Nessun messaggio ancora.</div>`;
-        return;
-      }
-
-      msgList.innerHTML = messages.map(m => {
-        const isClient = m.sender === 'client';
-        const time = new Date(m.created_at).toLocaleString('it-IT', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
-        const unreadDot = isClient && !m.read ? `<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--accent);margin-right:4px;flex-shrink:0;"></span>` : '';
-        const typeBadge = m.type === 'cancel_request'
-          ? `<span style="font-size:0.7rem;font-weight:700;padding:2px 7px;border-radius:6px;background:rgba(239,68,68,0.15);color:#ffb3b3;margin-right:6px;">Disdetta</span>`
-          : m.type === 'reschedule_request'
-          ? `<span style="font-size:0.7rem;font-weight:700;padding:2px 7px;border-radius:6px;background:rgba(245,158,11,0.15);color:var(--warn);margin-right:6px;">Spostamento</span>`
-          : '';
-        return `
-          <div style="display:flex;align-items:flex-start;gap:6px;padding:8px 10px;border-radius:12px;background:${isClient ? 'rgba(229,9,20,0.08)' : 'rgba(255,255,255,0.04)'};border:1px solid ${isClient ? 'rgba(229,9,20,0.18)' : 'rgba(255,255,255,0.06)'};">
-            ${unreadDot}
-            <div style="flex:1;min-width:0;">
-              ${typeBadge}
-              <span style="font-size:0.85rem;">${escapeHtml(m.text)}</span>
-              <div style="font-size:0.72rem;color:var(--muted);margin-top:3px;">${isClient ? 'Cliente' : 'Tu'} · ${time}</div>
-            </div>
-          </div>`;
-      }).join('');
-      msgList.scrollTop = msgList.scrollHeight;
     }
 
-    async function sendTrainerReply(token) {
+    async function sendTrainerReply(clientToken) {
       const input = document.getElementById('trainerReplyInput');
       const text = input?.value?.trim();
       if (!text) return;
       input.value = '';
       haptic(6);
-      const r = await callPortalEdge(token, 'trainer_reply', { text });
-      if (r?.ok) {
-        showToast('Risposta inviata!', 'ok');
-        const client = getClient(state.selectedClientId);
-        if (client) loadClientMessages(client);
-      } else {
-        showToast('Errore invio risposta.', 'error');
+
+      const cfg = loadSupabaseConfig();
+      const authToken = getAuthToken();
+      const client = getClient(state.selectedClientId);
+      if (!client || !cloud.user) { showToast('Errore: utente non trovato.', 'error'); return; }
+
+      try {
+        const res = await fetch(
+          `${cfg.url.replace(/\/$/, '')}/rest/v1/client_messages`,
+          {
+            method: 'POST',
+            headers: {
+              'apikey': cfg.key,
+              'Authorization': `Bearer ${authToken}`,
+              'Content-Type': 'application/json',
+              'Prefer': 'return=minimal'
+            },
+            body: JSON.stringify({
+              client_token: clientToken,
+              user_id: cloud.user.id,
+              client_id: client.id,
+              sender: 'trainer',
+              text,
+              type: 'message',
+              read: false
+            })
+          }
+        );
+        if (res.ok || res.status === 201) {
+          showToast('Risposta inviata!', 'ok');
+          loadClientMessages(client);
+        } else {
+          showToast('Errore invio risposta.', 'error');
+        }
+      } catch(e) {
+        showToast('Errore connessione.', 'error');
       }
     }
 

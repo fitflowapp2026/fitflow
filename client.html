@@ -579,25 +579,11 @@ async function init() {
 }
 
 async function markTrainerMsgsDelivered() {
-  try {
-    await fetch(
-      `${SUPA_URL}/rest/v1/client_messages?client_token=eq.${encodeURIComponent(token)}&sender=eq.trainer&delivered_at=is.null`,
-      { method: 'PATCH',
-        headers: { 'apikey': ANON_KEY, 'Authorization': `Bearer ${ANON_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-        body: JSON.stringify({ delivered_at: new Date().toISOString() }) }
-    );
-  } catch(e) {}
+  try { await api('mark_delivered'); } catch(e) {}
 }
 
 async function markTrainerMsgsRead() {
-  try {
-    await fetch(
-      `${SUPA_URL}/rest/v1/client_messages?client_token=eq.${encodeURIComponent(token)}&sender=eq.trainer&read=eq.false`,
-      { method: 'PATCH',
-        headers: { 'apikey': ANON_KEY, 'Authorization': `Bearer ${ANON_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-        body: JSON.stringify({ delivered_at: new Date().toISOString(), read: true }) }
-    );
-  } catch(e) {}
+  try { await api('mark_read'); } catch(e) {}
 }
 
 function initClientRealtime() {

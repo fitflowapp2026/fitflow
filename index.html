@@ -200,7 +200,10 @@
     }
     .msg-badge.show { opacity: 1; transform: scale(1); }
     .bnav-btn { position: relative; }
-    .topbar-mobile-right { position: relative; }
+    /* Nascosto su desktop — visibile solo su mobile via media query */
+    .topbar-mobile-right {
+      display: none;
+    }
 
     .btn {
       border: 0;
@@ -2498,7 +2501,28 @@
       .topbar-mobile-right {
         display: flex;
         align-items: center;
-        gap: 10px;
+        justify-content: center;
+        gap: 4px;
+      }
+      .topbar-mobile-right .btn {
+        width: 40px;
+        height: 40px;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+      }
+      .topbar-mobile-right .sync-badge {
+        width: 40px;
+        height: 40px;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.06);
+        font-size: 0.9rem;
       }
 
       /* Bottom nav */
@@ -3143,15 +3167,15 @@
       </div>
       <!-- Mobile-only right side of topbar -->
       <div class="topbar-mobile-right">
-        <span class="sync-badge" id="syncBadgeMobile" style="font-size:0.78rem;padding:6px 10px;">●</span>
-        <div style="position:relative;display:inline-flex;">
-          <button class="btn btn-ghost btn-small" id="openMessagesMobileBtn" style="padding:8px 12px;" aria-label="Messaggi clienti">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        <span class="sync-badge" id="syncBadgeMobile" aria-label="Stato sync">●</span>
+        <div style="position:relative;">
+          <button class="btn btn-ghost" id="openMessagesMobileBtn" aria-label="Messaggi clienti">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
           </button>
           <span class="msg-badge" id="msgBadgeMobileTopbar">0</span>
         </div>
-        <button class="btn btn-ghost btn-small" id="openAccountBtnMobile" style="padding:8px 12px;" aria-label="Account cloud">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
+        <button class="btn btn-ghost" id="openAccountBtnMobile" aria-label="Account cloud">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
         </button>
       </div>
     </header>
@@ -4903,11 +4927,20 @@
       if (!cloud.user) {
         resetGoogleState();
         updateSyncBadge(cloud.allowLocalOnly ? 'Solo cache locale' : 'Login richiesto');
+        /* Rimuovi canale realtime se logout */
+        if (_realtimeChannel && cloud.client) {
+          cloud.client.removeChannel(_realtimeChannel);
+          _realtimeChannel = null;
+        }
+        updateMsgBadges(0);
         renderAll();
         return;
       }
       await hydrateStateFromCloud();
       await refreshGoogleStatus();
+      /* Riavvia Realtime per il nuovo utente */
+      refreshUnreadMessages();
+      initRealtimeMessages();
       renderAll();
     }
 
@@ -9515,8 +9548,10 @@ function renderClientFormStickySummary() {
       renderHeroGreeting();
       initDebouncedSearch();
       initFormKeyboardNav();
-      initMessagePolling();
       initMessagesModal();
+      /* Prima carica il conteggio, poi avvia Realtime */
+      refreshUnreadMessages();
+      initRealtimeMessages();
 
       /* ── PWA: register Service Worker ────────────────────── */
       if ('serviceWorker' in navigator) {
@@ -9693,10 +9728,58 @@ function renderClientFormStickySummary() {
       } catch(e) {}
     }
 
-    /* Polling ogni 60 secondi */
+    /* Polling ogni 60 secondi — fallback se Realtime non disponibile */
     function initMessagePolling() {
       refreshUnreadMessages();
       setInterval(refreshUnreadMessages, 60000);
+    }
+
+    /* ── Supabase Realtime — notifica istantanea nuovi messaggi ── */
+    let _realtimeChannel = null;
+
+    function initRealtimeMessages() {
+      if (!cloud.client || !cloud.user || cloud.allowLocalOnly) return;
+
+      /* Rimuovi canale precedente se esiste */
+      if (_realtimeChannel) {
+        cloud.client.removeChannel(_realtimeChannel);
+        _realtimeChannel = null;
+      }
+
+      _realtimeChannel = cloud.client
+        .channel('client-messages-' + cloud.user.id)
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'client_messages',
+            filter: `user_id=eq.${cloud.user.id}`
+          },
+          (payload) => {
+            /* Arriva solo per messaggi di questo trainer */
+            if (payload.new?.sender === 'client') {
+              /* Aggiorna badge immediatamente */
+              refreshUnreadMessages();
+              /* Se il modal messaggi è aperto e mostra questo cliente, aggiorna la chat */
+              if (_activeMsgClientId && payload.new?.client_id === _activeMsgClientId) {
+                const client = getClient(_activeMsgClientId);
+                if (client) openMsgChat(client);
+              }
+              /* Vibrazione leggera come notifica */
+              haptic([10, 50, 10]);
+            }
+          }
+        )
+        .subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            console.log('[FitFlow] Realtime messaggi attivo.');
+          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+            console.warn('[FitFlow] Realtime non disponibile, uso polling.');
+            /* Fallback al polling se realtime fallisce */
+            initMessagePolling();
+          }
+        });
     }
 
     function getPortalEdgeUrl() {

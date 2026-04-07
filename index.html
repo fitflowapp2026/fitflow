@@ -9878,26 +9878,40 @@ function renderClientFormStickySummary() {
 
       _realtimeChannel = cloud.client
         .channel('client-messages-' + cloud.user.id)
-        .on(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'client_messages',
-            filter: `user_id=eq.${cloud.user.id}`
-          },
+        .on('postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'client_messages', filter: `user_id=eq.${cloud.user.id}` },
           (payload) => {
-            /* Arriva solo per messaggi di questo trainer */
             if (payload.new?.sender === 'client') {
-              /* Aggiorna badge immediatamente */
               refreshUnreadMessages();
-              /* Se il modal messaggi è aperto e mostra questo cliente, aggiorna la chat */
               if (_activeMsgClientId && payload.new?.client_id === _activeMsgClientId) {
                 const client = getClient(_activeMsgClientId);
                 if (client) openMsgChat(client);
               }
-              /* Vibrazione leggera come notifica */
               haptic([10, 50, 10]);
+            }
+          }
+        )
+        .on('postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'client_messages', filter: `user_id=eq.${cloud.user.id}` },
+          (payload) => {
+            /* Aggiorna spunte in tempo reale quando il cliente legge */
+            if (_activeMsgClientId) {
+              const msgEl = document.querySelector(`[data-msg-id="${payload.new?.id}"]`);
+              if (msgEl && payload.new?.sender === 'trainer') {
+                const tickContainer = msgEl.querySelector('svg');
+                if (tickContainer) {
+                  const gray = 'rgba(255,255,255,0.45)';
+                  const blue = '#53bdeb';
+                  const mkPath = (d, c) => `<path d="${d}" stroke="${c}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>`;
+                  const d1 = 'M1 4.5L4 7.5L9 2';
+                  const d2 = 'M5 4.5L8 7.5L13 2';
+                  if (payload.new.read) {
+                    tickContainer.innerHTML = mkPath(d1, blue) + mkPath(d2, blue);
+                  } else if (payload.new.delivered_at) {
+                    tickContainer.innerHTML = mkPath(d1, gray) + mkPath(d2, gray);
+                  }
+                }
+              }
             }
           }
         )
@@ -9987,30 +10001,13 @@ function renderClientFormStickySummary() {
           return;
         }
 
-        msgList.innerHTML = messages.map(m => {
-          const isClient = m.sender === 'client';
-          const time = new Date(m.created_at).toLocaleString('it-IT', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
-          const unreadDot = isClient && !m.read ? `<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--accent);margin-right:4px;flex-shrink:0;"></span>` : '';
-          const typeBadge = m.type === 'cancel_request'
-            ? `<span style="font-size:0.7rem;font-weight:700;padding:2px 7px;border-radius:6px;background:rgba(239,68,68,0.15);color:#ffb3b3;margin-right:6px;">Disdetta</span>`
-            : m.type === 'reschedule_request'
-            ? `<span style="font-size:0.7rem;font-weight:700;padding:2px 7px;border-radius:6px;background:rgba(245,158,11,0.15);color:var(--warn);margin-right:6px;">Spostamento</span>`
-            : '';
-          return `
-            <div style="display:flex;align-items:flex-start;gap:6px;padding:8px 10px;border-radius:12px;background:${isClient ? 'rgba(229,9,20,0.08)' : 'rgba(255,255,255,0.04)'};border:1px solid ${isClient ? 'rgba(229,9,20,0.18)' : 'rgba(255,255,255,0.06)'};">
-              ${unreadDot}
-              <div style="flex:1;min-width:0;">
-                ${typeBadge}
-                <span style="font-size:0.85rem;">${escapeHtml(m.text)}</span>
-                <div style="font-size:0.72rem;color:var(--muted);margin-top:3px;">${isClient ? 'Cliente' : 'Tu'} · ${time}</div>
-              </div>
-            </div>`;
-        }).join('');
+        msgList.innerHTML = messages.map(m => renderMsgBubble(m, m.sender === 'trainer')).join('');
         msgList.scrollTop = msgList.scrollHeight;
 
-        /* Segna tutti i messaggi del cliente come letti */
+        const now = new Date().toISOString();
+        /* Segna messaggi del cliente come delivered + read */
         await fetch(
-          `${cfg.url.replace(/\/$/, '')}/rest/v1/client_messages?client_token=eq.${encodeURIComponent(client.shareToken)}&sender=eq.client&read=eq.false`,
+          `${cfg.url.replace(/\/$/, '')}/rest/v1/client_messages?client_token=eq.${encodeURIComponent(client.shareToken)}&sender=eq.client`,
           {
             method: 'PATCH',
             headers: {
@@ -10019,7 +10016,7 @@ function renderClientFormStickySummary() {
               'Content-Type': 'application/json',
               'Prefer': 'return=minimal'
             },
-            body: JSON.stringify({ read: true })
+            body: JSON.stringify({ delivered_at: now, read: true })
           }
         );
         /* Aggiorna badge dopo lettura */
@@ -10149,6 +10146,46 @@ function renderClientFormStickySummary() {
       if (client) openMsgChat(client);
     }
 
+    /* ── Spunte stile WhatsApp ───────────────────────────────────
+       ✓  grigia  = inviato (inserito nel DB)
+       ✓✓ grigie  = consegnato (destinatario ha caricato la lista)
+       ✓✓ blu     = letto (destinatario ha aperto la chat)
+    ─────────────────────────────────────────────────────────── */
+    function renderTicks(m) {
+      /* Le spunte appaiono solo sui messaggi inviati da chi visualizza */
+      const gray = 'rgba(255,255,255,0.45)';
+      const blue = '#53bdeb';
+      const svg = (color1, color2) =>
+        `<svg width="14" height="9" viewBox="0 0 14 9" fill="none" style="flex-shrink:0;margin-left:3px;vertical-align:middle;" aria-hidden="true">
+          <path d="M1 4.5L4 7.5L9 2" stroke="${color1}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+          ${color2 ? `<path d="M5 4.5L8 7.5L13 2" stroke="${color2}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>` : ''}
+        </svg>`;
+      if (m.read)          return svg(blue, blue);        // ✓✓ blu
+      if (m.delivered_at)  return svg(gray, gray);        // ✓✓ grigie
+      return svg(gray, null);                             // ✓  grigia
+    }
+
+    function renderMsgBubble(m, isSender) {
+      const time = new Date(m.created_at).toLocaleString('it-IT', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+      const typeBadge = m.type === 'cancel_request'
+        ? `<span style="font-size:0.7rem;font-weight:700;padding:2px 7px;border-radius:6px;background:rgba(239,68,68,0.15);color:#ffb3b3;display:block;margin-bottom:3px;">Disdetta</span>`
+        : m.type === 'reschedule_request'
+        ? `<span style="font-size:0.7rem;font-weight:700;padding:2px 7px;border-radius:6px;background:rgba(245,158,11,0.15);color:var(--warn);display:block;margin-bottom:3px;">Spostamento</span>`
+        : '';
+      const ticks = isSender ? renderTicks(m) : '';
+      return `
+        <div style="display:flex;flex-direction:column;align-items:${isSender ? 'flex-end' : 'flex-start'};">
+          <div data-msg-id="${m.id}" style="max-width:85%;padding:9px 13px;border-radius:${isSender ? '16px 4px 16px 16px' : '4px 16px 16px 16px'};background:${isSender ? 'rgba(229,9,20,0.16)' : 'rgba(255,255,255,0.07)'};border:1px solid ${isSender ? 'rgba(229,9,20,0.25)' : 'rgba(255,255,255,0.08)'};">
+            ${typeBadge}
+            <span style="font-size:0.88rem;">${escapeHtml(m.text)}</span>
+            <div style="display:flex;align-items:center;justify-content:flex-end;gap:2px;margin-top:3px;">
+              <span style="font-size:0.68rem;color:rgba(255,255,255,0.45);">${time}</span>
+              ${ticks}
+            </div>
+          </div>
+        </div>`;
+    }
+
     async function openMsgChat(client) {
       _activeMsgClientToken = client.shareToken;
       _activeMsgClientId = client.id;
@@ -10183,30 +10220,16 @@ function renderClientFormStickySummary() {
         if (!Array.isArray(messages) || !messages.length) {
           chatList.innerHTML = `<div class="muted small">Nessun messaggio ancora.</div>`;
         } else {
-          chatList.innerHTML = messages.map(m => {
-            const isClient = m.sender === 'client';
-            const time = new Date(m.created_at).toLocaleString('it-IT', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
-            const typeBadge = m.type === 'cancel_request'
-              ? `<span style="font-size:0.7rem;font-weight:700;padding:2px 7px;border-radius:6px;background:rgba(239,68,68,0.15);color:#ffb3b3;display:block;margin-bottom:3px;">Disdetta</span>`
-              : m.type === 'reschedule_request'
-              ? `<span style="font-size:0.7rem;font-weight:700;padding:2px 7px;border-radius:6px;background:rgba(245,158,11,0.15);color:var(--warn);display:block;margin-bottom:3px;">Spostamento</span>`
-              : '';
-            return `
-              <div style="display:flex;flex-direction:column;align-items:${isClient ? 'flex-start' : 'flex-end'};">
-                <div style="max-width:85%;padding:9px 13px;border-radius:${isClient ? '4px 16px 16px 16px' : '16px 4px 16px 16px'};background:${isClient ? 'rgba(255,255,255,0.07)' : 'rgba(229,9,20,0.16)'};border:1px solid ${isClient ? 'rgba(255,255,255,0.08)' : 'rgba(229,9,20,0.25)'};">
-                  ${typeBadge}
-                  <span style="font-size:0.88rem;">${escapeHtml(m.text)}</span>
-                  <div style="font-size:0.7rem;color:var(--muted);margin-top:3px;">${isClient ? 'Cliente' : 'Tu'} · ${time}</div>
-                </div>
-              </div>`;
-          }).join('');
+          chatList.innerHTML = messages.map(m => renderMsgBubble(m, m.sender === 'trainer')).join('');
           chatList.scrollTop = chatList.scrollHeight;
         }
 
-        /* Segna come letti */
+        const now = new Date().toISOString();
+        /* Segna messaggi del cliente come delivered + read */
         await fetch(
-          `${cfg.url.replace(/\/$/, '')}/rest/v1/client_messages?client_token=eq.${encodeURIComponent(client.shareToken)}&sender=eq.client&read=eq.false`,
-          { method: 'PATCH', headers: { 'apikey': cfg.key, 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' }, body: JSON.stringify({ read: true }) }
+          `${cfg.url.replace(/\/$/, '')}/rest/v1/client_messages?client_token=eq.${encodeURIComponent(client.shareToken)}&sender=eq.client`,
+          { method: 'PATCH', headers: { 'apikey': cfg.key, 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+            body: JSON.stringify({ delivered_at: now, read: true }) }
         );
         refreshUnreadMessages();
 

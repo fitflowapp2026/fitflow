@@ -4167,6 +4167,22 @@
       return `${prefix}_${rand}_${Date.now().toString(36)}`;
     }
 
+    function generateShareToken() {
+      try {
+        const buf = new Uint8Array(18);
+        crypto.getRandomValues(buf);
+        return Array.from(buf, b => b.toString(36).padStart(2,'0')).join('').slice(0, 24);
+      } catch(e) {
+        return Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+      }
+    }
+
+    /* URL del portale cliente — adatta al tuo dominio */
+    function clientPortalUrl(token) {
+      const base = window.location.origin + window.location.pathname.replace('index.html','') + 'client.html';
+      return `${base}?t=${token}`;
+    }
+
     function pad(n) { return String(n).padStart(2, '0'); }
     function toISO(date) { return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`; }
     function fromISO(iso) {
@@ -4752,6 +4768,10 @@
       }
       if (!state.packages.length) state.packages = seedPackages();
       if (!state.selectedClientId || !getClient(state.selectedClientId)) state.selectedClientId = getDefaultSelectedClientId(state.selectedClientId);
+      /* Genera shareToken per clienti esistenti che non ce l'hanno */
+      let needsSave = false;
+      state.clients.forEach(c => { if (!c.shareToken) { c.shareToken = generateShareToken(); needsSave = true; } });
+      if (needsSave) saveLocalState();
     }
 
     async function hydrateStateFromCloud() {
@@ -6778,7 +6798,9 @@ function applyReportFilter() {
         <div class="inline-actions">
           <button class="btn btn-soft btn-small" id="editClientBtn">Modifica</button>
           <button class="btn btn-primary btn-small" id="renewClientBtn">Rinnova</button>
+          <button class="btn btn-soft btn-small" id="sharePortalBtn" title="Condividi portale cliente">🔗 Portale</button>
         </div>
+        <div id="clientMessagesPanel" style="display:none;margin-top:4px;"></div>
       `;
       if (el.mobileSelectedClientCard) {
         el.mobileSelectedClientCard.innerHTML = `
@@ -6820,6 +6842,7 @@ function applyReportFilter() {
           <div class="mobile-selected-actions">
             <button class="btn btn-soft btn-small" id="mobileEditClientBtn" type="button">Modifica cliente</button>
             <button class="btn btn-primary btn-small" id="mobileRenewClientBtn" type="button">Rinnova pacchetto</button>
+            <button class="btn btn-soft btn-small" id="mobileSharePortalBtn" type="button">🔗 Portale</button>
           </div>
         `;
       }
@@ -6853,6 +6876,25 @@ function applyReportFilter() {
       document.getElementById('mobilePaymentStatusTag')?.addEventListener('click', openPaymentQuickModal);
       document.getElementById('editClientBtn').addEventListener('click', () => renderClientModal(client));
       document.getElementById('renewClientBtn').addEventListener('click', openRenewModal);
+
+      /* Portale cliente — condividi link */
+      const sharePortalFn = () => {
+        if (!client.shareToken) { showToast('Token non trovato, modifica e salva il cliente.', 'warn'); return; }
+        const url = clientPortalUrl(client.shareToken);
+        if (navigator.share) {
+          navigator.share({ title: `FitFlow — Portale di ${getClientFullName(client)}`, url })
+            .catch(e => { if (e.name !== 'AbortError') navigator.clipboard.writeText(url).then(() => showToast('Link copiato!', 'ok')); });
+        } else {
+          navigator.clipboard.writeText(url).then(() => showToast('Link copiato!', 'ok'))
+            .catch(() => showToast('Link: ' + url));
+        }
+        haptic(8);
+      };
+      document.getElementById('sharePortalBtn')?.addEventListener('click', sharePortalFn);
+      document.getElementById('mobileSharePortalBtn')?.addEventListener('click', sharePortalFn);
+
+      /* Carica messaggi del cliente */
+      loadClientMessages(client);
       const nextAgendaDate = stats.nextLesson?.date || todayISO();
       const openDayForClient = () => {
         state.selectedDay = nextAgendaDate;
@@ -8664,6 +8706,7 @@ function renderClientFormStickySummary() {
         email: clientEmail,
         sendCalendarInvite,
         notes: el.clientNotes.value.trim(),
+        shareToken: generateShareToken(),
         serviceType,
         freeSessionDone,
         packagePurchased: serviceType === 'free_session' ? false : packagePurchased,
@@ -9536,6 +9579,104 @@ function renderClientFormStickySummary() {
     })();
 
     /* ── Navigazione automatica tra campi form con tasto Enter ── */
+    /* ═══════════════════════════════════════════════════════════
+       PORTALE CLIENTE — messaggi in arrivo (vista trainer)
+    ═══════════════════════════════════════════════════════════ */
+
+    /* Sostituisci con l'URL della tua Edge Function Supabase */
+    function getPortalEdgeUrl() {
+      const cfg = loadSupabaseConfig();
+      return cfg.url ? cfg.url.replace(/\/$/, '') + '/functions/v1/client-portal' : '';
+    }
+
+    async function callPortalEdge(token, action, payload = {}) {
+      const edgeUrl = getPortalEdgeUrl();
+      if (!edgeUrl) return null;
+      try {
+        const res = await fetch(edgeUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token, action, payload })
+        });
+        return await res.json();
+      } catch(e) { return null; }
+    }
+
+    async function loadClientMessages(client) {
+      const panel = document.getElementById('clientMessagesPanel');
+      if (!panel || !client.shareToken) return;
+
+      panel.style.display = 'block';
+      panel.innerHTML = `
+        <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);margin-bottom:8px;">
+          Messaggi dal cliente
+          <span id="msgLoadingIndicator" style="color:var(--warn);margin-left:6px;">caricamento…</span>
+        </div>
+        <div id="trainerMsgList" style="display:grid;gap:6px;max-height:220px;overflow-y:auto;"></div>
+        <div style="display:flex;gap:8px;margin-top:10px;">
+          <input id="trainerReplyInput" type="text" placeholder="Rispondi al cliente…"
+            autocapitalize="sentences" autocorrect="off" enterkeyhint="send"
+            style="flex:1;padding:10px 14px;background:#151515;border:1px solid rgba(255,255,255,0.08);color:#fff;border-radius:14px;font:inherit;font-size:0.88rem;outline:none;" />
+          <button class="btn btn-primary btn-small" onclick="sendTrainerReply('${client.shareToken}')">Invia</button>
+        </div>
+      `;
+
+      const data = await callPortalEdge(client.shareToken, 'get_data');
+      const indicator = document.getElementById('msgLoadingIndicator');
+      if (indicator) indicator.remove();
+
+      const msgList = document.getElementById('trainerMsgList');
+      if (!msgList) return;
+
+      if (!data || data.error) {
+        msgList.innerHTML = `<div style="font-size:0.82rem;color:var(--muted);">Edge Function non raggiungibile — configura EDGE_URL in client.html e assicurati che la funzione sia deployata.</div>`;
+        return;
+      }
+
+      const messages = data.messages ?? [];
+      if (!messages.length) {
+        msgList.innerHTML = `<div style="font-size:0.82rem;color:var(--muted);">Nessun messaggio ancora.</div>`;
+        return;
+      }
+
+      msgList.innerHTML = messages.map(m => {
+        const isClient = m.sender === 'client';
+        const time = new Date(m.created_at).toLocaleString('it-IT', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+        const unreadDot = isClient && !m.read ? `<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--accent);margin-right:4px;flex-shrink:0;"></span>` : '';
+        const typeBadge = m.type === 'cancel_request'
+          ? `<span style="font-size:0.7rem;font-weight:700;padding:2px 7px;border-radius:6px;background:rgba(239,68,68,0.15);color:#ffb3b3;margin-right:6px;">Disdetta</span>`
+          : m.type === 'reschedule_request'
+          ? `<span style="font-size:0.7rem;font-weight:700;padding:2px 7px;border-radius:6px;background:rgba(245,158,11,0.15);color:var(--warn);margin-right:6px;">Spostamento</span>`
+          : '';
+        return `
+          <div style="display:flex;align-items:flex-start;gap:6px;padding:8px 10px;border-radius:12px;background:${isClient ? 'rgba(229,9,20,0.08)' : 'rgba(255,255,255,0.04)'};border:1px solid ${isClient ? 'rgba(229,9,20,0.18)' : 'rgba(255,255,255,0.06)'};">
+            ${unreadDot}
+            <div style="flex:1;min-width:0;">
+              ${typeBadge}
+              <span style="font-size:0.85rem;">${escapeHtml(m.text)}</span>
+              <div style="font-size:0.72rem;color:var(--muted);margin-top:3px;">${isClient ? 'Cliente' : 'Tu'} · ${time}</div>
+            </div>
+          </div>`;
+      }).join('');
+      msgList.scrollTop = msgList.scrollHeight;
+    }
+
+    async function sendTrainerReply(token) {
+      const input = document.getElementById('trainerReplyInput');
+      const text = input?.value?.trim();
+      if (!text) return;
+      input.value = '';
+      haptic(6);
+      const r = await callPortalEdge(token, 'trainer_reply', { text });
+      if (r?.ok) {
+        showToast('Risposta inviata!', 'ok');
+        const client = getClient(state.selectedClientId);
+        if (client) loadClientMessages(client);
+      } else {
+        showToast('Errore invio risposta.', 'error');
+      }
+    }
+
     function initFormKeyboardNav() {
       document.addEventListener('keydown', e => {
         if (e.key !== 'Enter') return;

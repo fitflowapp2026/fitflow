@@ -4941,7 +4941,8 @@
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 15000);
       try {
-        const response = await fetch(`${GOOGLE_FN_BASE}/${path}`, {
+        const cacheBust = path === 'google-status' ? `?_=${Date.now()}` : '';
+        const response = await fetch(`${GOOGLE_FN_BASE}/${path}${cacheBust}`, {
           method,
           headers: {
             'Authorization': `Bearer ${token}`,

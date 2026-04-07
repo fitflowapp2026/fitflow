@@ -182,7 +182,25 @@
       align-items: center;
     }
 
-    .topbar-mobile-right { display: none; }
+    /* ── Badge messaggi non letti ───────────────────────────────── */
+    .msg-badge {
+      position: absolute;
+      top: -3px; right: -3px;
+      min-width: 17px; height: 17px;
+      background: var(--accent);
+      color: #fff;
+      font-size: 0.68rem; font-weight: 800;
+      border-radius: 99px;
+      display: flex; align-items: center; justify-content: center;
+      padding: 0 4px;
+      border: 2px solid var(--bg);
+      pointer-events: none;
+      opacity: 0; transform: scale(0.6);
+      transition: opacity 200ms, transform 200ms;
+    }
+    .msg-badge.show { opacity: 1; transform: scale(1); }
+    .bnav-btn { position: relative; }
+    .topbar-mobile-right { position: relative; }
 
     .btn {
       border: 0;
@@ -3085,14 +3103,24 @@
         </button>
         <button class="btn btn-soft" id="openPackagesBtn" aria-label="Gestisci pacchetti">Pacchetti</button>
         <button class="btn btn-soft" id="openReportBtn" aria-label="Apri resoconto">Gestionale</button>
+        <div style="position:relative;display:inline-flex;">
+          <button class="btn btn-soft" id="openMessagesBtn" aria-label="Messaggi clienti" style="display:inline-flex;align-items:center;gap:6px;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            Messaggi
+          </button>
+          <span class="msg-badge" id="msgBadgeDesktop">0</span>
+        </div>
         <button class="btn btn-primary" id="openClientBtn" aria-label="Aggiungi nuovo cliente">+ Cliente</button>
       </div>
       <!-- Mobile-only right side of topbar -->
       <div class="topbar-mobile-right">
         <span class="sync-badge" id="syncBadgeMobile" style="font-size:0.78rem;padding:6px 10px;">●</span>
-        <button class="btn btn-ghost btn-small" id="openAccountBtnMobile" style="padding:8px 12px;" aria-label="Account cloud">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
-        </button>
+        <div style="position:relative;display:inline-flex;">
+          <button class="btn btn-ghost btn-small" id="openAccountBtnMobile" style="padding:8px 12px;" aria-label="Account cloud">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
+          </button>
+        </div>
+        <span class="msg-badge" id="msgBadgeMobileTopbar">0</span>
       </div>
     </header>
 
@@ -3210,6 +3238,7 @@
           </svg>
         </span>
         <span class="bnav-label">Clienti</span>
+        <span class="msg-badge" id="msgBadgeBnav">0</span>
       </button>
       <button class="bnav-btn" id="bnavCalendario" type="button" aria-label="Agenda">
         <span class="bnav-icon" aria-hidden="true">
@@ -8489,6 +8518,18 @@ function renderClientFormStickySummary() {
     document.getElementById('openClientBtn').addEventListener('click', event => openNewClientModal(event.currentTarget));
     document.getElementById('openPackagesBtn').addEventListener('click', () => { renderPackages(); openModal('packagesModalBackdrop'); });
     document.getElementById('openReportBtn').addEventListener('click', () => { renderReport(); openModal('reportModalBackdrop'); });
+    document.getElementById('openMessagesBtn')?.addEventListener('click', () => {
+      /* Apre il primo cliente con messaggi non letti, o il primo cliente */
+      const clientWithMsg = state.clients.find(c => c.shareToken) || state.clients[0];
+      if (clientWithMsg) {
+        state.selectedClientId = clientWithMsg.id;
+        saveState();
+        renderAll();
+        /* Su mobile apre il drawer */
+        document.getElementById('sidebarDrawer')?.classList.add('open');
+        document.getElementById('drawerOverlay')?.classList.add('open');
+      }
+    });
     el.exportManagedXlsxBtn.addEventListener('click', exportManagedXlsx);
     document.getElementById('prevMonthBtn').addEventListener('click', () => moveCalendar(-1));
     document.getElementById('nextMonthBtn').addEventListener('click', () => moveCalendar(1));
@@ -9449,6 +9490,7 @@ function renderClientFormStickySummary() {
       renderHeroGreeting();
       initDebouncedSearch();
       initFormKeyboardNav();
+      initMessagePolling();
 
       /* ── PWA: register Service Worker ────────────────────── */
       if ('serviceWorker' in navigator) {
@@ -9585,6 +9627,47 @@ function renderClientFormStickySummary() {
     ═══════════════════════════════════════════════════════════ */
 
     /* Sostituisci con l'URL della tua Edge Function Supabase */
+    /* ═══════════════════════════════════════════════════════════
+       BADGE MESSAGGI NON LETTI — aggiorna tutti i badge
+    ═══════════════════════════════════════════════════════════ */
+    let _unreadMsgCount = 0;
+
+    function updateMsgBadges(count) {
+      _unreadMsgCount = count;
+      const ids = ['msgBadgeBnav', 'msgBadgeMobileTopbar', 'msgBadgeDesktop'];
+      ids.forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.textContent = count > 9 ? '9+' : String(count);
+        el.classList.toggle('show', count > 0);
+      });
+    }
+
+    async function refreshUnreadMessages() {
+      if (!cloud.user || !cloud.client || cloud.allowLocalOnly) return;
+      try {
+        const edgeUrl = getPortalEdgeUrl();
+        if (!edgeUrl) return;
+        const cfg = loadSupabaseConfig();
+        /* Raccoglie messaggi non letti da tutti i clienti */
+        let totalUnread = 0;
+        for (const client of state.clients) {
+          if (!client.shareToken) continue;
+          const data = await callPortalEdge(client.shareToken, 'get_data');
+          if (data?.messages) {
+            totalUnread += data.messages.filter(m => m.sender === 'client' && !m.read).length;
+          }
+        }
+        updateMsgBadges(totalUnread);
+      } catch(e) {}
+    }
+
+    /* Polling ogni 60 secondi */
+    function initMessagePolling() {
+      refreshUnreadMessages();
+      setInterval(refreshUnreadMessages, 60000);
+    }
+
     function getPortalEdgeUrl() {
       const cfg = loadSupabaseConfig();
       return cfg.url ? cfg.url.replace(/\/$/, '') + '/functions/v1/client-portal' : '';
@@ -9594,9 +9677,14 @@ function renderClientFormStickySummary() {
       const edgeUrl = getPortalEdgeUrl();
       if (!edgeUrl) return null;
       try {
+        const cfg = loadSupabaseConfig();
         const res = await fetch(edgeUrl, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': cfg.key || '',
+            'Authorization': 'Bearer ' + (cfg.key || '')
+          },
           body: JSON.stringify({ token, action, payload })
         });
         return await res.json();

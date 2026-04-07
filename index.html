@@ -7015,7 +7015,8 @@ function applyReportFilter() {
         <div class="inline-actions">
           <button class="btn btn-soft btn-small" id="editClientBtn">Modifica</button>
           <button class="btn btn-primary btn-small" id="renewClientBtn">Rinnova</button>
-          <button class="btn btn-soft btn-small" id="sharePortalBtn" title="Condividi portale cliente">🔗 Portale</button>
+          <button class="btn btn-soft btn-small" id="sharePortalBtn" title="Apri portale cliente">🔗 Portale</button>
+          <button class="btn btn-ghost btn-small" id="sharePortalLinkBtn" title="Condividi link portale">↗ Condividi</button>
         </div>
         <div id="clientMessagesPanel" style="display:none;margin-top:4px;"></div>
       `;
@@ -7060,6 +7061,7 @@ function applyReportFilter() {
             <button class="btn btn-soft btn-small" id="mobileEditClientBtn" type="button">Modifica cliente</button>
             <button class="btn btn-primary btn-small" id="mobileRenewClientBtn" type="button">Rinnova pacchetto</button>
             <button class="btn btn-soft btn-small" id="mobileSharePortalBtn" type="button">🔗 Portale</button>
+            <button class="btn btn-ghost btn-small" id="mobileSharePortalLinkBtn" type="button">↗ Condividi</button>
             <button class="btn btn-soft btn-small" id="mobileMsgClientBtn" type="button" style="position:relative;">
               💬 Messaggi
               <span class="msg-badge" id="msgBadgeClientCard" style="top:-6px;right:-6px;">0</span>
@@ -7098,9 +7100,16 @@ function applyReportFilter() {
       document.getElementById('editClientBtn').addEventListener('click', () => renderClientModal(client));
       document.getElementById('renewClientBtn').addEventListener('click', openRenewModal);
 
-      /* Portale cliente — condividi link */
+      /* Portale cliente — apre il portale + condividi link */
       const sharePortalFn = () => {
         if (!client.shareToken) { showToast('Token non trovato, modifica e salva il cliente.', 'warn'); return; }
+        const url = clientPortalUrl(client.shareToken);
+        /* Apre il portale in una nuova scheda */
+        window.open(url, '_blank');
+        haptic(8);
+      };
+      const sharePortalLinkFn = () => {
+        if (!client.shareToken) return;
         const url = clientPortalUrl(client.shareToken);
         if (navigator.share) {
           navigator.share({ title: `FitFlow — Portale di ${getClientFullName(client)}`, url })
@@ -7113,6 +7122,12 @@ function applyReportFilter() {
       };
       document.getElementById('sharePortalBtn')?.addEventListener('click', sharePortalFn);
       document.getElementById('mobileSharePortalBtn')?.addEventListener('click', sharePortalFn);
+      /* Tasto destro / long press → condivide il link */
+      document.getElementById('sharePortalBtn')?.addEventListener('contextmenu', e => { e.preventDefault(); sharePortalLinkFn(); });
+      document.getElementById('mobileSharePortalBtn')?.addEventListener('contextmenu', e => { e.preventDefault(); sharePortalLinkFn(); });
+      /* Bottoni condividi dedicati */
+      document.getElementById('sharePortalLinkBtn')?.addEventListener('click', sharePortalLinkFn);
+      document.getElementById('mobileSharePortalLinkBtn')?.addEventListener('click', sharePortalLinkFn);
 
       /* Carica messaggi del cliente */
       loadClientMessages(client);
@@ -9867,6 +9882,17 @@ function renderClientFormStickySummary() {
     /* ── Supabase Realtime — notifica istantanea nuovi messaggi ── */
     let _realtimeChannel = null;
 
+    /* Invia broadcast al canale del portale cliente */
+    function broadcastToClient(clientToken, event = 'new_message') {
+      if (!cloud.client || !clientToken) return;
+      try {
+        cloud.client
+          .channel(`portal-${clientToken}`)
+          .send({ type: 'broadcast', event, payload: { ts: Date.now() } })
+          .catch(() => {});
+      } catch(e) {}
+    }
+
     function initRealtimeMessages() {
       if (!cloud.client || !cloud.user || cloud.allowLocalOnly) return;
 
@@ -10065,6 +10091,8 @@ function renderClientFormStickySummary() {
         if (res.ok || res.status === 201) {
           showToast('Risposta inviata!', 'ok');
           loadClientMessages(client);
+          /* Broadcast al portale cliente — notifica istantanea */
+          broadcastToClient(clientToken, 'new_message');
         } else {
           showToast('Errore invio risposta.', 'error');
         }
@@ -10256,8 +10284,9 @@ function renderClientFormStickySummary() {
         });
         showToast('Risposta inviata!', 'ok');
         openMsgChat(client);
-        /* Aggiorna anche il pannello nella scheda cliente se aperto */
         loadClientMessages(client);
+        /* Broadcast al portale cliente — notifica istantanea */
+        broadcastToClient(_activeMsgClientToken, 'new_message');
       } catch(e) { showToast('Errore invio.', 'error'); }
     }
 

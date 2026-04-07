@@ -9,6 +9,37 @@
   <meta property="og:description" content="Agenda, pacchetti, incassi e portale cliente. Tutto in un'app salvabile sulla Home screen." />
   <meta property="og:type" content="website" />
   <title>FitFlow — L'app per Personal Trainer</title>
+
+  <!-- Redirect automatico se sessione attiva -->
+  <script>
+    (async function checkSession() {
+      try {
+        /* Carica config Supabase dallo stesso endpoint dell'app */
+        const cfgRes = await fetch('/api/config').catch(() => fetch('/.netlify/functions/config'));
+        if (!cfgRes?.ok) return;
+        const cfg = await cfgRes.json();
+        if (!cfg.supabaseUrl || !cfg.supabaseAnonKey) return;
+
+        /* Carica Supabase JS */
+        await new Promise((resolve, reject) => {
+          const s = document.createElement('script');
+          s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js';
+          s.onload = resolve; s.onerror = reject;
+          document.head.appendChild(s);
+        });
+
+        /* Controlla se c'è una sessione valida */
+        const sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+        const { data } = await sb.auth.getSession();
+        if (data?.session?.user) {
+          /* Utente loggato — redirect diretto all'app */
+          window.location.replace('app.html');
+        }
+      } catch(e) {
+        /* Qualsiasi errore: mostra la landing normalmente */
+      }
+    })();
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@700;800&display=swap" rel="stylesheet" />

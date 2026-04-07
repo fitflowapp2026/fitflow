@@ -601,60 +601,45 @@ async function markTrainerMsgsRead() {
 }
 
 function initClientRealtime() {
-  /* Carica Supabase JS dal CDN */
   const script = document.createElement('script');
   script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js';
   script.onload = () => {
     const sb = window.supabase.createClient(SUPA_URL, ANON_KEY);
-    sb.channel('client-portal-' + token)
-      .on('postgres_changes',
-        { event: '*', schema: 'public', table: 'client_messages',
-          filter: `client_token=eq.${token}` },
-        async (payload) => {
-          if (payload.new?.sender === 'trainer') {
-            /* Aggiorna chat se aperta */
-            const ml = document.getElementById('messages-list');
-            if (ml) {
-              const data = await api('get_data');
-              if (data?.messages) {
-                ml.innerHTML = data.messages.map(m => renderMessage(m)).join('');
-                ml.scrollTop = ml.scrollHeight;
-                /* Segna come delivered + read */
-                await markTrainerMsgsDelivered();
-                await markTrainerMsgsRead();
-              }
-            } else {
-              /* Chat non aperta — solo delivered */
-              await markTrainerMsgsDelivered();
-            }
-          } else if (payload.eventType === 'UPDATE' && payload.new?.sender === 'client') {
-            /* Aggiorna spunte messaggi cliente in tempo reale */
-            const bubble = document.querySelector(`[data-msg-id="${payload.new?.id}"]`);
-            if (bubble) {
-              const tickSvg = bubble.querySelector('svg');
-              if (tickSvg) {
-                const gray = 'rgba(255,255,255,0.45)', blue = '#53bdeb';
-                const p = (d, c) => `<path d="${d}" stroke="${c}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>`;
-                const d1 = 'M1 4.5L4 7.5L9 2', d2 = 'M5 4.5L8 7.5L13 2';
-                if (payload.new.read) tickSvg.innerHTML = p(d1,blue) + p(d2,blue);
-                else if (payload.new.delivered_at) tickSvg.innerHTML = p(d1,gray) + p(d2,gray);
-              }
-            }
-          }
+
+    /* Sottoscrivi al canale broadcast del portale — nessuna RLS richiesta */
+    sb.channel(`portal-${token}`)
+      .on('broadcast', { event: 'new_message' }, async () => {
+        /* Arriva un messaggio dal trainer — aggiorna la chat */
+        const ml = document.getElementById('messages-list');
+        const data = await api('get_data');
+        if (!data?.messages) return;
+        if (ml) {
+          ml.innerHTML = data.messages.map(m => renderMessage(m)).join('');
+          ml.scrollTop = ml.scrollHeight;
         }
-      )
-      .subscribe();
+        /* Segna come delivered */
+        await markTrainerMsgsDelivered();
+        /* Se la chat è visibile, segna come letto */
+        if (ml && ml.getBoundingClientRect().top < window.innerHeight) {
+          await markTrainerMsgsRead();
+        }
+      })
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('[FitFlow] Portale cliente Realtime attivo.');
+        }
+      });
+
+    /* Segna come letto quando scorre fino ai messaggi */
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting) { markTrainerMsgsRead(); observer.disconnect(); }
+      });
+    }, { threshold: 0.5 });
+    const msgSection = document.getElementById('messages-list');
+    if (msgSection) observer.observe(msgSection);
   };
   document.head.appendChild(script);
-
-  /* Segna come letto quando il cliente apre la sezione messaggi */
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach(e => {
-      if (e.isIntersecting) { markTrainerMsgsRead(); observer.disconnect(); }
-    });
-  }, { threshold: 0.5 });
-  const msgSection = document.getElementById('messages-list');
-  if (msgSection) observer.observe(msgSection);
 }
 
 init();

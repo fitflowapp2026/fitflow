@@ -3060,6 +3060,35 @@
   <!-- Mobile drawer overlay -->
   <div class="drawer-overlay" id="drawerOverlay"></div>
 
+  <!-- ── MODAL: Messaggi clienti ───────────────────────────── -->
+  <div class="modal-backdrop" id="messagesModalBackdrop">
+    <div class="modal narrow" role="dialog" aria-modal="true" aria-labelledby="messagesModalTitle" style="max-height:85vh;">
+      <div class="modal-top">
+        <div>
+          <h3 class="modal-title" id="messagesModalTitle">💬 Messaggi</h3>
+          <div class="muted small" id="messagesModalSub">Conversazioni con i clienti</div>
+        </div>
+        <button class="btn btn-ghost btn-small" data-close="messagesModalBackdrop">Chiudi</button>
+      </div>
+      <!-- Lista clienti con messaggi -->
+      <div id="messagesClientList" style="display:grid;gap:8px;overflow-y:auto;max-height:120px;"></div>
+      <!-- Chat del cliente selezionato -->
+      <div id="messagesChat" style="display:none;">
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 0 6px;border-top:1px solid rgba(255,255,255,0.07);">
+          <button class="btn btn-ghost btn-small" id="msgBackBtn">← Indietro</button>
+          <strong id="msgChatClientName" style="font-size:0.95rem;"></strong>
+        </div>
+        <div id="msgChatList" style="display:grid;gap:6px;max-height:300px;overflow-y:auto;padding:4px 0;"></div>
+        <div style="display:flex;gap:8px;margin-top:10px;">
+          <input id="msgChatInput" type="text" placeholder="Scrivi una risposta…"
+            autocapitalize="sentences" autocorrect="off" enterkeyhint="send"
+            style="flex:1;" />
+          <button class="btn btn-primary" id="msgChatSendBtn">Invia</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Mobile sidebar drawer -->
   <aside class="sidebar-drawer" id="sidebarDrawer">
     <div class="drawer-close-row">
@@ -3116,11 +3145,14 @@
       <div class="topbar-mobile-right">
         <span class="sync-badge" id="syncBadgeMobile" style="font-size:0.78rem;padding:6px 10px;">●</span>
         <div style="position:relative;display:inline-flex;">
-          <button class="btn btn-ghost btn-small" id="openAccountBtnMobile" style="padding:8px 12px;" aria-label="Account cloud">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
+          <button class="btn btn-ghost btn-small" id="openMessagesMobileBtn" style="padding:8px 12px;" aria-label="Messaggi clienti">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
           </button>
+          <span class="msg-badge" id="msgBadgeMobileTopbar">0</span>
         </div>
-        <span class="msg-badge" id="msgBadgeMobileTopbar">0</span>
+        <button class="btn btn-ghost btn-small" id="openAccountBtnMobile" style="padding:8px 12px;" aria-label="Account cloud">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
+        </button>
       </div>
     </header>
 
@@ -6873,6 +6905,10 @@ function applyReportFilter() {
             <button class="btn btn-soft btn-small" id="mobileEditClientBtn" type="button">Modifica cliente</button>
             <button class="btn btn-primary btn-small" id="mobileRenewClientBtn" type="button">Rinnova pacchetto</button>
             <button class="btn btn-soft btn-small" id="mobileSharePortalBtn" type="button">🔗 Portale</button>
+            <button class="btn btn-soft btn-small" id="mobileMsgClientBtn" type="button" style="position:relative;">
+              💬 Messaggi
+              <span class="msg-badge" id="msgBadgeClientCard" style="top:-6px;right:-6px;">0</span>
+            </button>
           </div>
         `;
       }
@@ -6936,6 +6972,7 @@ function applyReportFilter() {
       if (document.getElementById('mobileCopyAppointmentsBtn')) document.getElementById('mobileCopyAppointmentsBtn').addEventListener('click', copyAppointments);
       if (document.getElementById('mobileEditClientBtn')) document.getElementById('mobileEditClientBtn').addEventListener('click', () => renderClientModal(client));
       if (document.getElementById('mobileRenewClientBtn')) document.getElementById('mobileRenewClientBtn').addEventListener('click', openRenewModal);
+      if (document.getElementById('mobileMsgClientBtn')) document.getElementById('mobileMsgClientBtn').addEventListener('click', () => openMessagesModal(client.id));
     }
 
     function renderAlerts() {
@@ -8518,18 +8555,6 @@ function renderClientFormStickySummary() {
     document.getElementById('openClientBtn').addEventListener('click', event => openNewClientModal(event.currentTarget));
     document.getElementById('openPackagesBtn').addEventListener('click', () => { renderPackages(); openModal('packagesModalBackdrop'); });
     document.getElementById('openReportBtn').addEventListener('click', () => { renderReport(); openModal('reportModalBackdrop'); });
-    document.getElementById('openMessagesBtn')?.addEventListener('click', () => {
-      /* Apre il primo cliente con messaggi non letti, o il primo cliente */
-      const clientWithMsg = state.clients.find(c => c.shareToken) || state.clients[0];
-      if (clientWithMsg) {
-        state.selectedClientId = clientWithMsg.id;
-        saveState();
-        renderAll();
-        /* Su mobile apre il drawer */
-        document.getElementById('sidebarDrawer')?.classList.add('open');
-        document.getElementById('drawerOverlay')?.classList.add('open');
-      }
-    });
     el.exportManagedXlsxBtn.addEventListener('click', exportManagedXlsx);
     document.getElementById('prevMonthBtn').addEventListener('click', () => moveCalendar(-1));
     document.getElementById('nextMonthBtn').addEventListener('click', () => moveCalendar(1));
@@ -9491,6 +9516,7 @@ function renderClientFormStickySummary() {
       initDebouncedSearch();
       initFormKeyboardNav();
       initMessagePolling();
+      initMessagesModal();
 
       /* ── PWA: register Service Worker ────────────────────── */
       if ('serviceWorker' in navigator) {
@@ -9835,6 +9861,174 @@ function renderClientFormStickySummary() {
       } catch(e) {
         showToast('Errore connessione.', 'error');
       }
+    }
+
+    /* ── Modal messaggi — lista clienti + chat ───────────────── */
+    let _activeMsgClientToken = null;
+    let _activeMsgClientId = null;
+
+    async function openMessagesModal(preselectedClientId = null) {
+      renderMessagesClientList(preselectedClientId);
+      openModal('messagesModalBackdrop');
+      if (preselectedClientId) {
+        const client = getClient(preselectedClientId);
+        if (client?.shareToken) openMsgChat(client);
+      }
+    }
+
+    async function renderMessagesClientList(highlightId = null) {
+      const listEl = document.getElementById('messagesClientList');
+      const chatEl = document.getElementById('messagesChat');
+      if (!listEl) return;
+
+      const cfg = loadSupabaseConfig();
+      const token = getAuthToken();
+
+      /* Carica conteggio messaggi non letti per cliente */
+      let unreadByToken = {};
+      try {
+        const res = await fetch(
+          `${cfg.url.replace(/\/$/, '')}/rest/v1/client_messages?sender=eq.client&read=eq.false&select=client_token`,
+          { headers: { 'apikey': cfg.key, 'Authorization': `Bearer ${token}` } }
+        );
+        if (res.ok) {
+          const rows = await res.json();
+          rows.forEach(r => { unreadByToken[r.client_token] = (unreadByToken[r.client_token] || 0) + 1; });
+        }
+      } catch(e) {}
+
+      const clientsWithPortal = state.clients.filter(c => c.shareToken);
+      if (!clientsWithPortal.length) {
+        listEl.innerHTML = `<div class="muted small">Nessun cliente ha ancora il portale attivo.</div>`;
+        return;
+      }
+
+      listEl.innerHTML = clientsWithPortal.map(c => {
+        const unread = unreadByToken[c.shareToken] || 0;
+        return `
+          <div class="client-card" style="padding:12px 14px;cursor:pointer;--i:0;"
+            onclick="openMsgChatById('${c.id}')">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div class="avatar" style="width:36px;height:36px;font-size:0.8rem;">${escapeHtml(initials(getClientFullName(c)))}</div>
+              <div style="flex:1;min-width:0;">
+                <strong style="display:block;">${escapeHtml(getClientFullName(c))}</strong>
+                <div class="small muted">${unread > 0 ? `${unread} messaggio${unread > 1 ? 'i' : ''} non letto${unread > 1 ? 'i' : ''}` : 'Nessun messaggio non letto'}</div>
+              </div>
+              ${unread > 0 ? `<span style="min-width:22px;height:22px;border-radius:99px;background:var(--accent);color:#fff;font-size:0.72rem;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${unread}</span>` : ''}
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    function openMsgChatById(clientId) {
+      const client = getClient(clientId);
+      if (client) openMsgChat(client);
+    }
+
+    async function openMsgChat(client) {
+      _activeMsgClientToken = client.shareToken;
+      _activeMsgClientId = client.id;
+
+      const listEl = document.getElementById('messagesClientList');
+      const chatEl = document.getElementById('messagesChat');
+      const nameEl = document.getElementById('msgChatClientName');
+      const chatList = document.getElementById('msgChatList');
+      const sub = document.getElementById('messagesModalSub');
+
+      if (listEl) listEl.style.display = 'none';
+      if (chatEl) chatEl.style.display = 'block';
+      if (nameEl) nameEl.textContent = getClientFullName(client);
+      if (sub) sub.textContent = getClientFullName(client);
+      if (chatList) chatList.innerHTML = `<div class="muted small">Caricamento…</div>`;
+
+      const cfg = loadSupabaseConfig();
+      const token = getAuthToken();
+
+      try {
+        const res = await fetch(
+          `${cfg.url.replace(/\/$/, '')}/rest/v1/client_messages?client_token=eq.${encodeURIComponent(client.shareToken)}&order=created_at.asc&select=*`,
+          { headers: { 'apikey': cfg.key, 'Authorization': `Bearer ${token}` } }
+        );
+        const messages = res.ok ? await res.json() : [];
+
+        if (!chatList) return;
+        if (!Array.isArray(messages) || !messages.length) {
+          chatList.innerHTML = `<div class="muted small">Nessun messaggio ancora.</div>`;
+        } else {
+          chatList.innerHTML = messages.map(m => {
+            const isClient = m.sender === 'client';
+            const time = new Date(m.created_at).toLocaleString('it-IT', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+            const typeBadge = m.type === 'cancel_request'
+              ? `<span style="font-size:0.7rem;font-weight:700;padding:2px 7px;border-radius:6px;background:rgba(239,68,68,0.15);color:#ffb3b3;display:block;margin-bottom:3px;">Disdetta</span>`
+              : m.type === 'reschedule_request'
+              ? `<span style="font-size:0.7rem;font-weight:700;padding:2px 7px;border-radius:6px;background:rgba(245,158,11,0.15);color:var(--warn);display:block;margin-bottom:3px;">Spostamento</span>`
+              : '';
+            return `
+              <div style="display:flex;flex-direction:column;align-items:${isClient ? 'flex-start' : 'flex-end'};">
+                <div style="max-width:85%;padding:9px 13px;border-radius:${isClient ? '4px 16px 16px 16px' : '16px 4px 16px 16px'};background:${isClient ? 'rgba(255,255,255,0.07)' : 'rgba(229,9,20,0.16)'};border:1px solid ${isClient ? 'rgba(255,255,255,0.08)' : 'rgba(229,9,20,0.25)'};">
+                  ${typeBadge}
+                  <span style="font-size:0.88rem;">${escapeHtml(m.text)}</span>
+                  <div style="font-size:0.7rem;color:var(--muted);margin-top:3px;">${isClient ? 'Cliente' : 'Tu'} · ${time}</div>
+                </div>
+              </div>`;
+          }).join('');
+          chatList.scrollTop = chatList.scrollHeight;
+        }
+
+        /* Segna come letti */
+        await fetch(
+          `${cfg.url.replace(/\/$/, '')}/rest/v1/client_messages?client_token=eq.${encodeURIComponent(client.shareToken)}&sender=eq.client&read=eq.false`,
+          { method: 'PATCH', headers: { 'apikey': cfg.key, 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' }, body: JSON.stringify({ read: true }) }
+        );
+        refreshUnreadMessages();
+
+      } catch(e) {
+        if (chatList) chatList.innerHTML = `<div class="muted small">Errore caricamento.</div>`;
+      }
+    }
+
+    async function sendMsgChatReply() {
+      const input = document.getElementById('msgChatInput');
+      const text = input?.value?.trim();
+      if (!text || !_activeMsgClientToken || !_activeMsgClientId) return;
+      input.value = '';
+      haptic(6);
+      const cfg = loadSupabaseConfig();
+      const token = getAuthToken();
+      const client = getClient(_activeMsgClientId);
+      if (!client || !cloud.user) return;
+      try {
+        await fetch(`${cfg.url.replace(/\/$/, '')}/rest/v1/client_messages`, {
+          method: 'POST',
+          headers: { 'apikey': cfg.key, 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+          body: JSON.stringify({ client_token: _activeMsgClientToken, user_id: cloud.user.id, client_id: client.id, sender: 'trainer', text, type: 'message', read: false })
+        });
+        showToast('Risposta inviata!', 'ok');
+        openMsgChat(client);
+        /* Aggiorna anche il pannello nella scheda cliente se aperto */
+        loadClientMessages(client);
+      } catch(e) { showToast('Errore invio.', 'error'); }
+    }
+
+    function initMessagesModal() {
+      /* Bottone indietro nella chat */
+      document.getElementById('msgBackBtn')?.addEventListener('click', () => {
+        document.getElementById('messagesClientList').style.display = 'grid';
+        document.getElementById('messagesChat').style.display = 'none';
+        document.getElementById('messagesModalSub').textContent = 'Conversazioni con i clienti';
+        _activeMsgClientToken = null;
+        _activeMsgClientId = null;
+        renderMessagesClientList();
+      });
+      /* Bottone invia nella chat */
+      document.getElementById('msgChatSendBtn')?.addEventListener('click', sendMsgChatReply);
+      document.getElementById('msgChatInput')?.addEventListener('keydown', e => {
+        if (e.key === 'Enter') { e.preventDefault(); sendMsgChatReply(); }
+      });
+      /* Bottone messaggi mobile topbar */
+      document.getElementById('openMessagesMobileBtn')?.addEventListener('click', () => openMessagesModal());
+      /* Bottone messaggi desktop */
+      document.getElementById('openMessagesBtn')?.addEventListener('click', () => openMessagesModal());
     }
 
     function initFormKeyboardNav() {

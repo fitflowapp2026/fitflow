@@ -225,7 +225,7 @@
 const EDGE_URL = 'https://gnyakpvhbhzadqaggjba.supabase.co/functions/v1/client-portal';
 
 // Sostituisci con la tua anon key (Supabase → Settings → API → anon public)
-const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdueWFrcHZoYmh6YWRxYWdnamJhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4MTAzNTIsImV4cCI6MjA5MDM4NjM1Mn0.6cvQIV4kSS6DmKvISk2QLZo91VbpI6i0o7z_cMV3Ljc';
+const ANON_KEY = 'LA_TUA_ANON_KEY_QUI';
 
 // ── UTILS ────────────────────────────────────────────────────────
 const token = new URLSearchParams(window.location.search).get('t');
@@ -378,6 +378,16 @@ function renderApp(data) {
   if (ml) ml.scrollTop = ml.scrollHeight;
 }
 
+// ── LIMITI CANCELLAZIONE / SPOSTAMENTO ───────────────────────────
+const CANCEL_HOURS_LIMIT    = 48; // disdetta: almeno 48h prima
+const RESCHEDULE_HOURS_LIMIT = 24; // spostamento: almeno 24h prima
+
+function hoursUntilLesson(date, time) {
+  const [h, m] = (time || '00:00').split(':').map(Number);
+  const lessonDate = new Date(date + 'T' + String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0') + ':00');
+  return (lessonDate - Date.now()) / 3_600_000;
+}
+
 function renderLessonItem(l, past) {
   const d = fmtDateShort(l.date);
   const statusBadge = l.status === 'done'
@@ -386,11 +396,25 @@ function renderLessonItem(l, past) {
     ? `<span class="badge badge-red">Annullata</span>`
     : `<span class="badge badge-muted">${l.time}</span>`;
 
-  const actions = !past && l.status === 'scheduled' ? `
-    <div class="lesson-actions">
-      <button class="btn btn-ghost btn-sm" onclick="reqReschedule('${l.id}','${l.date}','${l.time}')">Sposta</button>
-      <button class="btn btn-danger btn-sm" onclick="reqCancel('${l.id}','${l.date}','${l.time}')">Disdici</button>
-    </div>` : '';
+  let actions = '';
+  if (!past && l.status === 'scheduled') {
+    const hours = hoursUntilLesson(l.date, l.time);
+    const canCancel    = hours >= CANCEL_HOURS_LIMIT;
+    const canReschedule = hours >= RESCHEDULE_HOURS_LIMIT;
+    const cancelTitle    = canCancel    ? '' : `Non puoi disdire a meno di ${CANCEL_HOURS_LIMIT}h dalla sessione`;
+    const rescheduleTitle = canReschedule ? '' : `Non puoi spostare a meno di ${RESCHEDULE_HOURS_LIMIT}h dalla sessione`;
+    actions = `
+      <div class="lesson-actions">
+        <button class="btn btn-ghost btn-sm"
+          ${canReschedule ? `onclick="reqReschedule('${l.id}','${l.date}','${l.time}')"` : 'disabled'}
+          title="${rescheduleTitle}"
+          style="${!canReschedule ? 'opacity:0.35;cursor:not-allowed;' : ''}">Sposta</button>
+        <button class="btn btn-danger btn-sm"
+          ${canCancel ? `onclick="reqCancel('${l.id}','${l.date}','${l.time}')"` : 'disabled'}
+          title="${cancelTitle}"
+          style="${!canCancel ? 'opacity:0.35;cursor:not-allowed;' : ''}">Disdici</button>
+      </div>`;
+  }
 
   return `
     <div class="lesson-item${past ? ' past' : ''}">
@@ -427,11 +451,16 @@ function renderMessage(m) {
 
 // ── AZIONI ───────────────────────────────────────────────────────
 function reqCancel(lessonId, lessonDate, lessonTime) {
+  if (hoursUntilLesson(lessonDate, lessonTime) < CANCEL_HOURS_LIMIT) {
+    showToast(`Disdetta non possibile: mancano meno di ${CANCEL_HOURS_LIMIT}h alla sessione.`);
+    return;
+  }
   vibrate(8);
   openModal(
     'Disdici sessione',
     `${fmtDate(lessonDate)} · ${lessonTime}`,
-    `<p style="font-size:0.88rem;color:var(--muted);margin:0;">Il tuo trainer riceverà una richiesta di disdetta. Sarà lui a confermarla.</p>`,
+    `<p style="font-size:0.88rem;color:var(--muted);margin:0;">Il tuo trainer riceverà una richiesta di disdetta. Sarà lui a confermarla.</p>
+     <p style="font-size:0.78rem;color:rgba(239,68,68,0.8);margin:8px 0 0;">Ricorda: puoi disdire fino a ${CANCEL_HOURS_LIMIT} ore prima della sessione.</p>`,
     async () => {
       const r = await api('cancel_request', { lessonId, lessonDate: fmtDate(lessonDate) });
       if (r.ok) { showToast('Richiesta inviata!'); refresh(); }
@@ -442,11 +471,16 @@ function reqCancel(lessonId, lessonDate, lessonTime) {
 }
 
 function reqReschedule(lessonId, lessonDate, lessonTime) {
+  if (hoursUntilLesson(lessonDate, lessonTime) < RESCHEDULE_HOURS_LIMIT) {
+    showToast(`Spostamento non possibile: mancano meno di ${RESCHEDULE_HOURS_LIMIT}h alla sessione.`);
+    return;
+  }
   vibrate(8);
   openModal(
     'Sposta sessione',
     `${fmtDate(lessonDate)} · ${lessonTime}`,
-    `<input class="modal-input" id="preferredDateInput" type="date" placeholder="Data preferita (opzionale)" min="${todayISO()}" />`,
+    `<input class="modal-input" id="preferredDateInput" type="date" placeholder="Data preferita (opzionale)" min="${todayISO()}" />
+     <p style="font-size:0.78rem;color:var(--muted);margin:6px 0 0;">Puoi richiedere lo spostamento fino a ${RESCHEDULE_HOURS_LIMIT} ore prima della sessione.</p>`,
     async () => {
       const preferredDate = document.getElementById('preferredDateInput')?.value;
       const r = await api('reschedule_request', {

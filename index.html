@@ -182,7 +182,93 @@
       align-items: center;
     }
 
-    /* ── Badge messaggi non letti ───────────────────────────────── */
+    /* ── Modal messaggi ─────────────────────────────────────────── */
+    .modal-messages {
+      width: min(860px, 100%);
+      max-height: min(82vh, 700px);
+      display: flex;
+      flex-direction: column;
+      padding: 22px;
+      gap: 0;
+    }
+    .modal-messages .modal-top { margin-bottom: 16px; flex-shrink: 0; }
+    .messages-modal-body {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 0;
+      flex: 1;
+      min-height: 0;
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 16px;
+      overflow: hidden;
+    }
+    .messages-sidebar {
+      display: grid;
+      align-content: start;
+      gap: 1px;
+      overflow-y: auto;
+      border-right: 1px solid rgba(255,255,255,0.07);
+      background: rgba(255,255,255,0.02);
+      padding: 8px;
+      gap: 6px;
+    }
+    .messages-chat-area {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+    .messages-chat-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+      flex-shrink: 0;
+    }
+    .messages-chat-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 14px 16px;
+      display: grid;
+      gap: 8px;
+      align-content: start;
+    }
+    .messages-chat-input-row {
+      display: flex;
+      gap: 8px;
+      padding: 12px 16px;
+      border-top: 1px solid rgba(255,255,255,0.07);
+      flex-shrink: 0;
+    }
+    .messages-chat-input-row input { flex: 1; }
+    .msg-client-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: background 120ms, border-color 120ms;
+    }
+    .msg-client-row:hover { background: rgba(255,255,255,0.05); }
+    .msg-client-row.has-unread { border-color: rgba(229,9,20,0.25); background: rgba(229,9,20,0.06); }
+    .msg-client-row.active { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.14); }
+
+    /* ── Bottoni topbar mobile — tutti 40×40px uguali ───────────── */
+    .topbar-mobile-right .btn,
+    .topbar-mobile-right .sync-badge {
+      width: 40px !important;
+      height: 40px !important;
+      min-width: 40px !important;
+      padding: 0 !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      border-radius: 50% !important;
+      background: rgba(255,255,255,0.06) !important;
+      font-size: 0.88rem;
+    }
     .msg-badge {
       position: absolute;
       top: -3px; right: -3px;
@@ -2463,6 +2549,19 @@
       transform: translateX(0);
     }
 
+    /* ── Desktop: modal messaggi side-by-side, bottone indietro nascosto ── */
+    @media (min-width: 581px) {
+      #messagesModalBackdrop .modal-messages {
+        min-height: 500px;
+      }
+      .messages-modal-body {
+        grid-template-columns: 260px 1fr;
+        height: 500px;
+      }
+      .messages-chat-area { display: flex !important; }
+      #msgBackBtn { display: none; }
+    }
+
     /* ── 1180px breakpoint ───────────────────────────────────── */
     @media (max-width: 1180px) {
       .hero, .layout, .package-grid, .report-grid { grid-template-columns: 1fr; }
@@ -2917,7 +3016,26 @@
       .lesson-pill { min-height: 40px; }
       .bnav-btn { min-height: 48px; }
 
-      /* Today strip: single row scrollable */
+      /* Modal messaggi — fullscreen su mobile */
+      #messagesModalBackdrop { align-items: stretch; padding: 0; }
+      #messagesModalBackdrop .modal-messages {
+        width: 100%;
+        max-height: 100dvh;
+        height: 100dvh;
+        border-radius: 0;
+        padding: calc(env(safe-area-inset-top) + 16px) 16px calc(env(safe-area-inset-bottom) + 16px);
+        border: 0;
+      }
+      #messagesModalBackdrop .modal-messages::before { display: none; }
+      .messages-modal-body {
+        grid-template-columns: 1fr;
+        height: 100%;
+      }
+      .messages-sidebar { border-right: 0; border-bottom: 1px solid rgba(255,255,255,0.07); max-height: none; }
+      /* Su mobile mostra lista O chat, non entrambe */
+      .messages-modal-body.show-chat .messages-sidebar { display: none; }
+      .messages-modal-body.show-chat .messages-chat-area { display: flex !important; }
+
       .today-strip-items { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 4px; }
       .today-lesson-chip { flex-shrink: 0; }
 
@@ -3086,28 +3204,32 @@
 
   <!-- ── MODAL: Messaggi clienti ───────────────────────────── -->
   <div class="modal-backdrop" id="messagesModalBackdrop">
-    <div class="modal narrow" role="dialog" aria-modal="true" aria-labelledby="messagesModalTitle" style="max-height:85vh;">
+    <div class="modal modal-messages" role="dialog" aria-modal="true" aria-labelledby="messagesModalTitle">
       <div class="modal-top">
         <div>
-          <h3 class="modal-title" id="messagesModalTitle">💬 Messaggi</h3>
+          <h3 class="modal-title" id="messagesModalTitle">Messaggi</h3>
           <div class="muted small" id="messagesModalSub">Conversazioni con i clienti</div>
         </div>
-        <button class="btn btn-ghost btn-small" data-close="messagesModalBackdrop">Chiudi</button>
-      </div>
-      <!-- Lista clienti con messaggi -->
-      <div id="messagesClientList" style="display:grid;gap:8px;overflow-y:auto;max-height:120px;"></div>
-      <!-- Chat del cliente selezionato -->
-      <div id="messagesChat" style="display:none;">
-        <div style="display:flex;align-items:center;gap:10px;padding:10px 0 6px;border-top:1px solid rgba(255,255,255,0.07);">
-          <button class="btn btn-ghost btn-small" id="msgBackBtn">← Indietro</button>
-          <strong id="msgChatClientName" style="font-size:0.95rem;"></strong>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <button class="btn btn-ghost btn-small" id="markAllReadBtn" style="display:none;font-size:0.78rem;">✓ Segna tutti letti</button>
+          <button class="btn btn-ghost btn-small" data-close="messagesModalBackdrop">Chiudi</button>
         </div>
-        <div id="msgChatList" style="display:grid;gap:6px;max-height:300px;overflow-y:auto;padding:4px 0;"></div>
-        <div style="display:flex;gap:8px;margin-top:10px;">
-          <input id="msgChatInput" type="text" placeholder="Scrivi una risposta…"
-            autocapitalize="sentences" autocorrect="off" enterkeyhint="send"
-            style="flex:1;" />
-          <button class="btn btn-primary" id="msgChatSendBtn">Invia</button>
+      </div>
+      <div class="messages-modal-body">
+        <!-- Lista clienti -->
+        <div class="messages-sidebar" id="messagesClientList"></div>
+        <!-- Chat -->
+        <div class="messages-chat-area" id="messagesChat" style="display:none;">
+          <div class="messages-chat-header">
+            <button class="btn btn-ghost btn-small" id="msgBackBtn">← Indietro</button>
+            <strong id="msgChatClientName"></strong>
+          </div>
+          <div id="msgChatList" class="messages-chat-list"></div>
+          <div class="messages-chat-input-row">
+            <input id="msgChatInput" type="text" placeholder="Scrivi una risposta…"
+              autocapitalize="sentences" autocorrect="off" enterkeyhint="send" />
+            <button class="btn btn-primary" id="msgChatSendBtn">Invia</button>
+          </div>
         </div>
       </div>
     </div>
@@ -8596,7 +8718,15 @@ function renderClientFormStickySummary() {
     window.addEventListener('resize', handleResize);
     document.getElementById('exportBtn').addEventListener('click', exportBackup);
     document.getElementById('importInput').addEventListener('change', event => importBackup(event.target.files?.[0]));
-    document.querySelectorAll('[data-close]').forEach(button => button.addEventListener('click', () => closeModal(button.getAttribute('data-close'))));
+    document.querySelectorAll('[data-close]').forEach(button => button.addEventListener('click', () => {
+      const id = button.getAttribute('data-close');
+      if (id === 'messagesModalBackdrop') {
+        document.querySelector('.messages-modal-body')?.classList.remove('show-chat');
+        _activeMsgClientToken = null;
+        _activeMsgClientId = null;
+      }
+      closeModal(id);
+    }));
     document.querySelectorAll('.modal-backdrop').forEach(backdrop => backdrop.addEventListener('click', event => { if (event.target === backdrop) closeModal(backdrop.id); }));
 
     document.querySelectorAll('[data-auth-tab]').forEach(button => {
@@ -9961,7 +10091,6 @@ function renderClientFormStickySummary() {
 
     async function renderMessagesClientList(highlightId = null) {
       const listEl = document.getElementById('messagesClientList');
-      const chatEl = document.getElementById('messagesChat');
       if (!listEl) return;
 
       const cfg = loadSupabaseConfig();
@@ -9982,23 +10111,35 @@ function renderClientFormStickySummary() {
 
       const clientsWithPortal = state.clients.filter(c => c.shareToken);
       if (!clientsWithPortal.length) {
-        listEl.innerHTML = `<div class="muted small">Nessun cliente ha ancora il portale attivo.</div>`;
+        listEl.innerHTML = `<div class="muted small" style="padding:12px;">Nessun cliente ha ancora il portale attivo.</div>`;
         return;
       }
 
-      listEl.innerHTML = clientsWithPortal.map(c => {
+      /* Ordina: non letti prima (più non letti = primo), poi alfabetico */
+      const sorted = clientsWithPortal.slice().sort((a, b) => {
+        const ua = unreadByToken[a.shareToken] || 0;
+        const ub = unreadByToken[b.shareToken] || 0;
+        if (ub !== ua) return ub - ua;
+        return getClientFullName(a).localeCompare(getClientFullName(b));
+      });
+
+      /* Mostra/nascondi bottone "Segna tutti letti" */
+      const totalUnread = Object.values(unreadByToken).reduce((s, v) => s + v, 0);
+      const markAllBtn = document.getElementById('markAllReadBtn');
+      if (markAllBtn) markAllBtn.style.display = totalUnread > 0 ? '' : 'none';
+
+      listEl.innerHTML = sorted.map(c => {
         const unread = unreadByToken[c.shareToken] || 0;
+        const isActive = c.id === _activeMsgClientId;
         return `
-          <div class="client-card" style="padding:12px 14px;cursor:pointer;--i:0;"
+          <div class="msg-client-row ${unread > 0 ? 'has-unread' : ''} ${isActive ? 'active' : ''}"
             onclick="openMsgChatById('${c.id}')">
-            <div style="display:flex;align-items:center;gap:10px;">
-              <div class="avatar" style="width:36px;height:36px;font-size:0.8rem;">${escapeHtml(initials(getClientFullName(c)))}</div>
-              <div style="flex:1;min-width:0;">
-                <strong style="display:block;">${escapeHtml(getClientFullName(c))}</strong>
-                <div class="small muted">${unread > 0 ? `${unread} messaggio${unread > 1 ? 'i' : ''} non letto${unread > 1 ? 'i' : ''}` : 'Nessun messaggio non letto'}</div>
-              </div>
-              ${unread > 0 ? `<span style="min-width:22px;height:22px;border-radius:99px;background:var(--accent);color:#fff;font-size:0.72rem;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${unread}</span>` : ''}
+            <div class="avatar" style="width:34px;height:34px;font-size:0.78rem;flex-shrink:0;">${escapeHtml(initials(getClientFullName(c)))}</div>
+            <div style="flex:1;min-width:0;">
+              <strong style="display:block;font-size:0.9rem;${unread > 0 ? '' : 'opacity:0.7'}">${escapeHtml(getClientFullName(c))}</strong>
+              <div style="font-size:0.75rem;color:var(--muted);">${unread > 0 ? `${unread} non letto${unread > 1 ? 'i' : ''}` : 'Nessun non letto'}</div>
             </div>
+            ${unread > 0 ? `<span style="min-width:20px;height:20px;border-radius:99px;background:var(--accent);color:#fff;font-size:0.7rem;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${unread}</span>` : ''}
           </div>`;
       }).join('');
     }
@@ -10012,17 +10153,21 @@ function renderClientFormStickySummary() {
       _activeMsgClientToken = client.shareToken;
       _activeMsgClientId = client.id;
 
-      const listEl = document.getElementById('messagesClientList');
+      const body = document.querySelector('.messages-modal-body');
       const chatEl = document.getElementById('messagesChat');
       const nameEl = document.getElementById('msgChatClientName');
       const chatList = document.getElementById('msgChatList');
       const sub = document.getElementById('messagesModalSub');
 
-      if (listEl) listEl.style.display = 'none';
-      if (chatEl) chatEl.style.display = 'block';
+      /* Mobile: show-chat class nasconde sidebar e mostra chat */
+      if (body) body.classList.add('show-chat');
+      if (chatEl) chatEl.style.display = 'flex';
       if (nameEl) nameEl.textContent = getClientFullName(client);
       if (sub) sub.textContent = getClientFullName(client);
-      if (chatList) chatList.innerHTML = `<div class="muted small">Caricamento…</div>`;
+      if (chatList) chatList.innerHTML = `<div class="muted small" style="padding:8px 0;">Caricamento…</div>`;
+
+      /* Aggiorna sidebar per evidenziare il cliente attivo */
+      renderMessagesClientList();
 
       const cfg = loadSupabaseConfig();
       const token = getAuthToken();
@@ -10094,24 +10239,50 @@ function renderClientFormStickySummary() {
     }
 
     function initMessagesModal() {
-      /* Bottone indietro nella chat */
+      /* Bottone indietro — mobile torna alla lista */
       document.getElementById('msgBackBtn')?.addEventListener('click', () => {
-        document.getElementById('messagesClientList').style.display = 'grid';
+        const body = document.querySelector('.messages-modal-body');
+        if (body) body.classList.remove('show-chat');
         document.getElementById('messagesChat').style.display = 'none';
         document.getElementById('messagesModalSub').textContent = 'Conversazioni con i clienti';
         _activeMsgClientToken = null;
         _activeMsgClientId = null;
         renderMessagesClientList();
       });
-      /* Bottone invia nella chat */
+
+      /* Bottone Segna tutti letti */
+      document.getElementById('markAllReadBtn')?.addEventListener('click', async () => {
+        const cfg = loadSupabaseConfig();
+        const token = getAuthToken();
+        try {
+          await fetch(
+            `${cfg.url.replace(/\/$/, '')}/rest/v1/client_messages?sender=eq.client&read=eq.false&user_id=eq.${cloud.user.id}`,
+            { method: 'PATCH', headers: { 'apikey': cfg.key, 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' }, body: JSON.stringify({ read: true }) }
+          );
+          refreshUnreadMessages();
+          renderMessagesClientList();
+          showToast('Tutti i messaggi segnati come letti.', 'ok');
+        } catch(e) { showToast('Errore.', 'error'); }
+      });
+
+      /* Bottone invia */
       document.getElementById('msgChatSendBtn')?.addEventListener('click', sendMsgChatReply);
       document.getElementById('msgChatInput')?.addEventListener('keydown', e => {
         if (e.key === 'Enter') { e.preventDefault(); sendMsgChatReply(); }
       });
-      /* Bottone messaggi mobile topbar */
+
+      /* Bottoni apertura modal */
       document.getElementById('openMessagesMobileBtn')?.addEventListener('click', () => openMessagesModal());
-      /* Bottone messaggi desktop */
       document.getElementById('openMessagesBtn')?.addEventListener('click', () => openMessagesModal());
+
+      /* Reset show-chat quando si chiude il modal */
+      document.getElementById('messagesModalBackdrop')?.addEventListener('click', e => {
+        if (e.target === e.currentTarget) {
+          document.querySelector('.messages-modal-body')?.classList.remove('show-chat');
+          _activeMsgClientToken = null;
+          _activeMsgClientId = null;
+        }
+      });
     }
 
     function initFormKeyboardNav() {

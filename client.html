@@ -221,11 +221,9 @@
 
 <script>
 // ── CONFIG ──────────────────────────────────────────────────────
-// Sostituisci con l'URL della tua Edge Function
-const EDGE_URL = 'https://gnyakpvhbhzadqaggjba.supabase.co/functions/v1/client-portal';
-
-// Sostituisci con la tua anon key (Supabase → Settings → API → anon public)
-const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdueWFrcHZoYmh6YWRxYWdnamJhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4MTAzNTIsImV4cCI6MjA5MDM4NjM1Mn0.6cvQIV4kSS6DmKvISk2QLZo91VbpI6i0o7z_cMV3Ljc';
+const EDGE_URL  = 'https://gnyakpvhbhzadqaggjba.supabase.co/functions/v1/client-portal';
+const ANON_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdueWFrcHZoYmh6YWRxYWdnamJhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4MTAzNTIsImV4cCI6MjA5MDM4NjM1Mn0.6cvQIV4kSS6DmKvISk2QLZo91VbpI6i0o7z_cMV3Ljc';
+const SUPA_URL  = 'https://gnyakpvhbhzadqaggjba.supabase.co';
 
 // ── UTILS ────────────────────────────────────────────────────────
 const token = new URLSearchParams(window.location.search).get('t');
@@ -431,6 +429,18 @@ function renderLessonItem(l, past) {
     </div>`;
 }
 
+// ── SPUNTE STILE WHATSAPP ────────────────────────────────────────
+function renderTicks(m) {
+  const gray = 'rgba(255,255,255,0.45)';
+  const blue = '#53bdeb';
+  const p = (d, c) => `<path d="${d}" stroke="${c}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>`;
+  const d1 = 'M1 4.5L4 7.5L9 2', d2 = 'M5 4.5L8 7.5L13 2';
+  const svg = (inner) => `<svg width="14" height="9" viewBox="0 0 14 9" fill="none" style="flex-shrink:0;margin-left:3px;vertical-align:middle;" aria-hidden="true">${inner}</svg>`;
+  if (m.read)         return svg(p(d1,blue) + p(d2,blue));
+  if (m.delivered_at) return svg(p(d1,gray) + p(d2,gray));
+  return svg(p(d1,gray));
+}
+
 function renderMessage(m) {
   const isClient = m.sender === 'client';
   const time = new Date(m.created_at).toLocaleString('it-IT', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
@@ -439,12 +449,16 @@ function renderMessage(m) {
     : m.type === 'reschedule_request'
     ? `<div class="message-type-badge">Richiesta spostamento</div>`
     : '';
+  const ticks = isClient ? renderTicks(m) : '';
   return `
     <div style="display:flex;flex-direction:column;${isClient ? 'align-items:flex-end' : 'align-items:flex-start'}">
-      <div class="message-bubble ${isClient ? 'from-client' : 'from-trainer'}">
+      <div class="message-bubble ${isClient ? 'from-client' : 'from-trainer'}" data-msg-id="${m.id}">
         ${typeBadge}
         ${escape(m.text)}
-        <div class="message-meta">${isClient ? 'Tu' : 'Trainer'} · ${time}</div>
+        <div class="message-meta" style="display:flex;align-items:center;justify-content:flex-end;gap:2px;">
+          <span>${isClient ? 'Tu' : 'Trainer'} · ${time}</span>
+          ${ticks}
+        </div>
       </div>
     </div>`;
 }
@@ -556,7 +570,91 @@ async function init() {
   }
 
   renderApp(data);
+
+  /* Segna messaggi del trainer come delivered al caricamento */
+  await markTrainerMsgsDelivered();
+
+  /* Avvia Realtime per messaggi in tempo reale */
+  initClientRealtime();
 }
+
+async function markTrainerMsgsDelivered() {
+  try {
+    await fetch(
+      `${SUPA_URL}/rest/v1/client_messages?client_token=eq.${encodeURIComponent(token)}&sender=eq.trainer&delivered_at=is.null`,
+      { method: 'PATCH',
+        headers: { 'apikey': ANON_KEY, 'Authorization': `Bearer ${ANON_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ delivered_at: new Date().toISOString() }) }
+    );
+  } catch(e) {}
+}
+
+async function markTrainerMsgsRead() {
+  try {
+    await fetch(
+      `${SUPA_URL}/rest/v1/client_messages?client_token=eq.${encodeURIComponent(token)}&sender=eq.trainer&read=eq.false`,
+      { method: 'PATCH',
+        headers: { 'apikey': ANON_KEY, 'Authorization': `Bearer ${ANON_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ delivered_at: new Date().toISOString(), read: true }) }
+    );
+  } catch(e) {}
+}
+
+function initClientRealtime() {
+  /* Carica Supabase JS dal CDN */
+  const script = document.createElement('script');
+  script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js';
+  script.onload = () => {
+    const sb = window.supabase.createClient(SUPA_URL, ANON_KEY);
+    sb.channel('client-portal-' + token)
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'client_messages',
+          filter: `client_token=eq.${token}` },
+        async (payload) => {
+          if (payload.new?.sender === 'trainer') {
+            /* Aggiorna chat se aperta */
+            const ml = document.getElementById('messages-list');
+            if (ml) {
+              const data = await api('get_data');
+              if (data?.messages) {
+                ml.innerHTML = data.messages.map(m => renderMessage(m)).join('');
+                ml.scrollTop = ml.scrollHeight;
+                /* Segna come delivered + read */
+                await markTrainerMsgsDelivered();
+                await markTrainerMsgsRead();
+              }
+            } else {
+              /* Chat non aperta — solo delivered */
+              await markTrainerMsgsDelivered();
+            }
+          } else if (payload.eventType === 'UPDATE' && payload.new?.sender === 'client') {
+            /* Aggiorna spunte messaggi cliente in tempo reale */
+            const bubble = document.querySelector(`[data-msg-id="${payload.new?.id}"]`);
+            if (bubble) {
+              const tickSvg = bubble.querySelector('svg');
+              if (tickSvg) {
+                const gray = 'rgba(255,255,255,0.45)', blue = '#53bdeb';
+                const p = (d, c) => `<path d="${d}" stroke="${c}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>`;
+                const d1 = 'M1 4.5L4 7.5L9 2', d2 = 'M5 4.5L8 7.5L13 2';
+                if (payload.new.read) tickSvg.innerHTML = p(d1,blue) + p(d2,blue);
+                else if (payload.new.delivered_at) tickSvg.innerHTML = p(d1,gray) + p(d2,gray);
+              }
+            }
+          }
+        }
+      )
+      .subscribe();
+  };
+  document.head.appendChild(script);
+
+  /* Segna come letto quando il cliente apre la sezione messaggi */
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) { markTrainerMsgsRead(); observer.disconnect(); }
+    });
+  }, { threshold: 0.5 });
+  const msgSection = document.getElementById('messages-list');
+  if (msgSection) observer.observe(msgSection);
 
 init();
 </script>

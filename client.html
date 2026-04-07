@@ -222,8 +222,10 @@
 <script>
 // ── CONFIG ──────────────────────────────────────────────────────
 // Sostituisci con l'URL della tua Edge Function
-// Es: https://XXXX.supabase.co/functions/v1/client-portal
 const EDGE_URL = 'https://gnyakpvhbhzadqaggjba.supabase.co/functions/v1/client-portal';
+
+// Sostituisci con la tua anon key (Supabase → Settings → API → anon public)
+const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdueWFrcHZoYmh6YWRxYWdnamJhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4MTAzNTIsImV4cCI6MjA5MDM4NjM1Mn0.6cvQIV4kSS6DmKvISk2QLZo91VbpI6i0o7z_cMV3Ljc';
 
 // ── UTILS ────────────────────────────────────────────────────────
 const token = new URLSearchParams(window.location.search).get('t');
@@ -247,7 +249,11 @@ function escape(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&l
 async function api(action, payload = {}) {
   const res = await fetch(EDGE_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': ANON_KEY,
+      'Authorization': 'Bearer ' + ANON_KEY
+    },
     body: JSON.stringify({ token, action, payload })
   });
   return res.json();

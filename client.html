@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="FitFlow Cliente" />
+  <meta name="theme-color" content="#141414" />
+  <meta name="color-scheme" content="dark" />
+  <link rel="apple-touch-icon" sizes="180x180" href="icon-180.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <title>FitFlow — Il tuo spazio</title>
+  <style>
+    :root {
+      --bg: #141414;
+      --panel: #1e1e1e;
+      --card: #252525;
+      --line: rgba(255,255,255,0.08);
+      --text: #ffffff;
+      --muted: #c8c5be;
+      --accent: #e50914;
+      --good: #1db954;
+      --warn: #f59e0b;
+      --bad: #ef4444;
+      --radius: 20px;
+      --radius-sm: 14px;
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body {
+      margin: 0; padding: 0; min-height: 100%;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, sans-serif;
+      background: #141414; color: var(--text);
+      overscroll-behavior-y: none;
+    }
+    body {
+      padding: calc(env(safe-area-inset-top) + 16px) 16px calc(env(safe-area-inset-bottom) + 32px);
+    }
+    button { cursor: pointer; font: inherit; }
+
+    /* ── TOPBAR ── */
+    .topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 0 20px;
+    }
+    .brand { font-size: 1.2rem; font-weight: 900; letter-spacing: 0.12em; color: var(--accent); }
+    .brand-sub { font-size: 0.72rem; font-weight: 500; color: var(--muted); letter-spacing: 0.06em; margin-top: 1px; }
+
+    /* ── GREETING ── */
+    .greeting { margin-bottom: 24px; }
+    .greeting-name { font-size: 1.8rem; font-weight: 800; letter-spacing: -0.04em; line-height: 1.1; }
+    .greeting-sub { font-size: 0.9rem; color: var(--muted); margin-top: 4px; }
+
+    /* ── CARD ── */
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 18px;
+      margin-bottom: 14px;
+    }
+    .card-title {
+      font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.1em; color: var(--muted); margin-bottom: 12px;
+    }
+
+    /* ── PACCHETTO ── */
+    .pkg-value { font-size: 2rem; font-weight: 800; letter-spacing: -0.04em; }
+    .pkg-sub { color: var(--muted); font-size: 0.88rem; margin-top: 2px; }
+    .progress {
+      height: 8px; border-radius: 99px; background: rgba(255,255,255,0.08);
+      overflow: hidden; margin: 14px 0 6px; position: relative;
+    }
+    .progress-bar {
+      height: 100%; border-radius: inherit;
+      background: linear-gradient(90deg, var(--accent), #ff4d57);
+      transition: width 0.6s cubic-bezier(0.22,1,0.36,1);
+    }
+    .progress-labels { display: flex; justify-content: space-between; font-size: 0.78rem; color: var(--muted); }
+    .pkg-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 14px; }
+    .pkg-stat { background: var(--card); border-radius: var(--radius-sm); padding: 10px 12px; }
+    .pkg-stat .k { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+    .pkg-stat .v { font-size: 1.1rem; font-weight: 800; margin-top: 4px; }
+
+    /* ── LEZIONI ── */
+    .lesson-list { display: grid; gap: 8px; }
+    .lesson-item {
+      background: var(--card); border-radius: var(--radius-sm);
+      padding: 12px 14px; display: flex; align-items: center; gap: 12px;
+      border: 1px solid var(--line);
+    }
+    .lesson-item.past { opacity: 0.5; }
+    .lesson-date-block { text-align: center; min-width: 42px; }
+    .lesson-day-num { font-size: 1.3rem; font-weight: 800; line-height: 1; }
+    .lesson-day-name { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+    .lesson-info { flex: 1; min-width: 0; }
+    .lesson-time { font-weight: 700; font-size: 0.94rem; }
+    .lesson-meta { font-size: 0.8rem; color: var(--muted); margin-top: 2px; }
+    .lesson-actions { display: flex; gap: 6px; flex-shrink: 0; }
+    .badge {
+      display: inline-flex; align-items: center;
+      font-size: 0.72rem; font-weight: 700; padding: 3px 9px;
+      border-radius: 99px; text-transform: uppercase; letter-spacing: 0.04em;
+    }
+    .badge-green { background: rgba(29,185,84,0.15); color: #1db954; }
+    .badge-red { background: rgba(239,68,68,0.15); color: #ef4444; }
+    .badge-muted { background: rgba(255,255,255,0.07); color: var(--muted); }
+    .badge-warn { background: rgba(245,158,11,0.15); color: var(--warn); }
+
+    /* ── BOTTONI ── */
+    .btn {
+      border: 0; border-radius: 99px; padding: 9px 14px; font-weight: 700;
+      font-size: 0.82rem; transition: opacity 120ms;
+      user-select: none; -webkit-user-select: none;
+    }
+    .btn:active { opacity: 0.75; }
+    .btn-ghost { background: rgba(255,255,255,0.08); color: var(--text); }
+    .btn-danger { background: rgba(239,68,68,0.14); color: #ffb3b3; }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-sm { padding: 7px 12px; font-size: 0.78rem; }
+
+    /* ── MESSAGGI ── */
+    .messages-list { display: grid; gap: 8px; max-height: 320px; overflow-y: auto; padding-right: 2px; }
+    .message-bubble {
+      padding: 10px 14px; border-radius: 16px; font-size: 0.88rem; line-height: 1.45;
+      max-width: 85%;
+    }
+    .message-bubble.from-client {
+      background: rgba(229,9,20,0.16); border: 1px solid rgba(229,9,20,0.25);
+      align-self: flex-end; margin-left: auto;
+    }
+    .message-bubble.from-trainer {
+      background: var(--card); border: 1px solid var(--line);
+    }
+    .message-meta { font-size: 0.72rem; color: var(--muted); margin-top: 3px; }
+    .message-type-badge {
+      display: inline-block; font-size: 0.7rem; font-weight: 700;
+      padding: 2px 7px; border-radius: 6px; margin-bottom: 4px;
+      background: rgba(245,158,11,0.15); color: var(--warn);
+    }
+    .message-input-row { display: flex; gap: 8px; margin-top: 12px; }
+    .message-input {
+      flex: 1; background: var(--card); border: 1px solid var(--line);
+      color: var(--text); border-radius: 14px; padding: 10px 14px;
+      font: inherit; font-size: 0.9rem; outline: none; resize: none;
+      min-height: 42px; max-height: 120px;
+    }
+    .message-input:focus { border-color: rgba(229,9,20,0.5); }
+
+    /* ── MODALE DISDETTA/SPOSTAMENTO ── */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.75);
+      display: flex; align-items: flex-end; justify-content: center;
+      z-index: 50; padding: 0 0 env(safe-area-inset-bottom);
+      opacity: 0; pointer-events: none; transition: opacity 200ms;
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+    .modal-sheet {
+      background: #1e1e1e; border-radius: 24px 24px 0 0;
+      padding: 20px; width: 100%; max-width: 500px;
+      border: 1px solid var(--line); border-bottom: 0;
+      transform: translateY(100%); transition: transform 260ms cubic-bezier(0.22,1,0.36,1);
+      display: grid; gap: 14px;
+    }
+    .modal-overlay.open .modal-sheet { transform: translateY(0); }
+    .modal-title { font-size: 1.1rem; font-weight: 800; }
+    .modal-sub { font-size: 0.88rem; color: var(--muted); margin-top: -8px; }
+    .modal-input {
+      background: var(--card); border: 1px solid var(--line); color: var(--text);
+      border-radius: 14px; padding: 11px 14px; font: inherit; font-size: 0.9rem; outline: none; width: 100%;
+    }
+    .modal-input:focus { border-color: rgba(229,9,20,0.5); }
+    .modal-actions { display: flex; gap: 8px; }
+
+    /* ── LOADING / ERROR ── */
+    .loading-wrap { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 60vh; gap: 14px; }
+    .spinner {
+      width: 36px; height: 36px; border: 3px solid rgba(255,255,255,0.08);
+      border-top-color: var(--accent); border-radius: 50%;
+      animation: spin 0.9s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .error-wrap { text-align: center; padding: 40px 24px; }
+    .error-icon { font-size: 3rem; margin-bottom: 14px; }
+    .error-title { font-size: 1.2rem; font-weight: 800; }
+    .error-sub { color: var(--muted); margin-top: 6px; font-size: 0.9rem; }
+
+    /* ── CALENDARIO APPLE ── */
+    .cal-btn {
+      display: flex; align-items: center; gap: 8px;
+      background: rgba(255,255,255,0.06); border: 1px solid var(--line);
+      border-radius: 12px; padding: 8px 12px; color: var(--text);
+      font-size: 0.82rem; font-weight: 600; text-decoration: none;
+    }
+    .section-empty { color: var(--muted); font-size: 0.88rem; padding: 8px 0; }
+  </style>
+</head>
+<body>
+
+<div id="app">
+  <div class="loading-wrap">
+    <div class="spinner"></div>
+    <div style="color:var(--muted);font-size:0.88rem;">Caricamento in corso…</div>
+  </div>
+</div>
+
+<!-- Modale azione lezione -->
+<div class="modal-overlay" id="lessonModal">
+  <div class="modal-sheet">
+    <div class="modal-title" id="lessonModalTitle">Azione lezione</div>
+    <div class="modal-sub" id="lessonModalSub"></div>
+    <div id="lessonModalBody"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeModal()">Annulla</button>
+      <button class="btn btn-primary" style="flex:1" id="lessonModalConfirm">Conferma</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── CONFIG ──────────────────────────────────────────────────────
+// Sostituisci con l'URL della tua Edge Function
+// Es: https://XXXX.supabase.co/functions/v1/client-portal
+const EDGE_URL = 'https://gnyakpvhbhzadqaggjba.supabase.co/functions/v1/client-portal';
+
+// ── UTILS ────────────────────────────────────────────────────────
+const token = new URLSearchParams(window.location.search).get('t');
+let _data = null;
+
+const DAYS_IT = ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
+const MONTHS_IT = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+
+function fmtDate(iso) {
+  const d = new Date(iso + 'T12:00:00');
+  return `${d.getDate()} ${MONTHS_IT[d.getMonth()]} ${d.getFullYear()}`;
+}
+function fmtDateShort(iso) {
+  const d = new Date(iso + 'T12:00:00');
+  return { num: d.getDate(), day: DAYS_IT[d.getDay()], month: MONTHS_IT[d.getMonth()] };
+}
+function isPast(iso) { return iso < new Date().toISOString().slice(0,10); }
+function todayISO() { return new Date().toISOString().slice(0,10); }
+function escape(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+async function api(action, payload = {}) {
+  const res = await fetch(EDGE_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token, action, payload })
+  });
+  return res.json();
+}
+
+function vibrate(ms = 8) { try { navigator.vibrate?.(ms); } catch(e) {} }
+
+// ── MODAL ────────────────────────────────────────────────────────
+let _pendingConfirm = null;
+function openModal(title, sub, bodyHtml, onConfirm, confirmLabel = 'Conferma', isDanger = false) {
+  document.getElementById('lessonModalTitle').textContent = title;
+  document.getElementById('lessonModalSub').textContent = sub;
+  document.getElementById('lessonModalBody').innerHTML = bodyHtml;
+  const btn = document.getElementById('lessonModalConfirm');
+  btn.textContent = confirmLabel;
+  btn.className = `btn ${isDanger ? 'btn-danger' : 'btn-primary'}`;
+  btn.style.flex = '1';
+  _pendingConfirm = onConfirm;
+  document.getElementById('lessonModal').classList.add('open');
+  document.getElementById('lessonModalConfirm').onclick = () => { onConfirm(); closeModal(); };
+}
+function closeModal() {
+  document.getElementById('lessonModal').classList.remove('open');
+  _pendingConfirm = null;
+}
+document.getElementById('lessonModal').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeModal();
+});
+
+// ── RENDER ───────────────────────────────────────────────────────
+function renderApp(data) {
+  _data = data;
+  const { client, lessons, plan, package: pkg, messages } = data;
+  const today = todayISO();
+  const upcoming = lessons.filter(l => l.date >= today && l.status !== 'cancelled').sort((a,b) => a.date.localeCompare(b.date));
+  const past = lessons.filter(l => l.date < today && l.status !== 'cancelled').sort((a,b) => b.date.localeCompare(a.date)).slice(0, 5);
+  const totalDone = lessons.filter(l => l.status === 'done' || (l.status !== 'cancelled' && l.date < today)).length;
+  const totalSessions = pkg?.sessions ?? lessons.filter(l => l.status !== 'cancelled').length;
+  const progress = totalSessions ? Math.round((totalDone / totalSessions) * 100) : 0;
+  const remaining = Math.max(0, totalSessions - totalDone);
+  const unread = messages.filter(m => m.sender === 'trainer' && !m.read).length;
+
+  document.title = `FitFlow — ${escape(client.firstName || client.name)}`;
+
+  document.getElementById('app').innerHTML = `
+    <div class="topbar">
+      <div>
+        <div class="brand">FITFLOW</div>
+        <div class="brand-sub">PORTALE CLIENTE</div>
+      </div>
+      <div style="width:10px;height:10px;border-radius:50%;background:var(--good);box-shadow:0 0 8px rgba(29,185,84,0.5);"></div>
+    </div>
+
+    <div class="greeting">
+      <div class="greeting-name">Ciao, ${escape(client.firstName || (client.name||'').split(' ')[0])} 👋</div>
+      <div class="greeting-sub">${upcoming.length > 0
+        ? `Prossima sessione: <strong>${fmtDate(upcoming[0].date)} · ${upcoming[0].time}</strong>`
+        : 'Nessuna sessione programmata'}</div>
+    </div>
+
+    <!-- PACCHETTO -->
+    ${pkg ? `
+    <div class="card">
+      <div class="card-title">Il tuo pacchetto</div>
+      <div class="pkg-value">${escape(pkg.name)}</div>
+      <div class="pkg-sub">${pkg.sessions} sessioni · ${pkg.perWeek}x settimana · ${pkg.duration} min</div>
+      <div class="progress"><div class="progress-bar" style="width:${progress}%"></div></div>
+      <div class="progress-labels"><span>${totalDone} svolte</span><span>${remaining} rimaste</span></div>
+      <div class="pkg-stats">
+        <div class="pkg-stat"><div class="k">Totale</div><div class="v">${totalSessions}</div></div>
+        <div class="pkg-stat"><div class="k">Svolte</div><div class="v" style="color:var(--good)">${totalDone}</div></div>
+        <div class="pkg-stat"><div class="k">Rimaste</div><div class="v" style="color:${remaining <= 3 ? 'var(--warn)' : 'var(--text)'}">${remaining}</div></div>
+      </div>
+      ${plan?.startDate ? `<div style="margin-top:10px;font-size:0.8rem;color:var(--muted);">Iniziato il ${fmtDate(plan.startDate)}</div>` : ''}
+    </div>` : ''}
+
+    <!-- PROSSIME LEZIONI -->
+    <div class="card">
+      <div class="card-title">Prossime sessioni</div>
+      <div class="lesson-list" id="upcoming-list">
+        ${upcoming.length === 0
+          ? `<div class="section-empty">Nessuna sessione programmata</div>`
+          : upcoming.slice(0, 6).map(l => renderLessonItem(l, false)).join('')}
+      </div>
+    </div>
+
+    <!-- STORICO -->
+    ${past.length > 0 ? `
+    <div class="card">
+      <div class="card-title">Sessioni recenti</div>
+      <div class="lesson-list">
+        ${past.map(l => renderLessonItem(l, true)).join('')}
+      </div>
+    </div>` : ''}
+
+    <!-- MESSAGGI -->
+    <div class="card">
+      <div class="card-title">Messaggi con il trainer${unread > 0 ? ` <span class="badge badge-warn">${unread} nuovi</span>` : ''}</div>
+      <div class="messages-list" id="messages-list">
+        ${messages.length === 0
+          ? `<div class="section-empty">Nessun messaggio ancora. Scrivimi qui sotto!</div>`
+          : messages.map(m => renderMessage(m)).join('')}
+      </div>
+      <div class="message-input-row">
+        <textarea class="message-input" id="messageInput" placeholder="Scrivi un messaggio al tuo trainer…" rows="1" enterkeyhint="send" autocapitalize="sentences" maxlength="1000"></textarea>
+        <button class="btn btn-primary" onclick="sendMessage()">Invia</button>
+      </div>
+    </div>
+  `;
+
+  // Auto-resize textarea
+  const ta = document.getElementById('messageInput');
+  if (ta) {
+    ta.addEventListener('input', () => {
+      ta.style.height = 'auto';
+      ta.style.height = Math.min(ta.scrollHeight, 120) + 'px';
+    });
+  }
+
+  // Scroll messaggi in fondo
+  const ml = document.getElementById('messages-list');
+  if (ml) ml.scrollTop = ml.scrollHeight;
+}
+
+function renderLessonItem(l, past) {
+  const d = fmtDateShort(l.date);
+  const statusBadge = l.status === 'done'
+    ? `<span class="badge badge-green">Svolta</span>`
+    : l.status === 'cancelled'
+    ? `<span class="badge badge-red">Annullata</span>`
+    : `<span class="badge badge-muted">${l.time}</span>`;
+
+  const actions = !past && l.status === 'scheduled' ? `
+    <div class="lesson-actions">
+      <button class="btn btn-ghost btn-sm" onclick="reqReschedule('${l.id}','${l.date}','${l.time}')">Sposta</button>
+      <button class="btn btn-danger btn-sm" onclick="reqCancel('${l.id}','${l.date}','${l.time}')">Disdici</button>
+    </div>` : '';
+
+  return `
+    <div class="lesson-item${past ? ' past' : ''}">
+      <div class="lesson-date-block">
+        <div class="lesson-day-num">${d.num}</div>
+        <div class="lesson-day-name">${d.day}</div>
+        <div class="lesson-day-name">${d.month}</div>
+      </div>
+      <div class="lesson-info">
+        <div class="lesson-time">${past ? fmtDate(l.date) : l.time}</div>
+        <div class="lesson-meta">${l.duration ?? 55} min · ${l.lessonType === 'free_session' ? 'Free session' : 'Sessione personale'}</div>
+      </div>
+      ${past ? statusBadge : actions || statusBadge}
+    </div>`;
+}
+
+function renderMessage(m) {
+  const isClient = m.sender === 'client';
+  const time = new Date(m.created_at).toLocaleString('it-IT', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+  const typeBadge = m.type === 'cancel_request'
+    ? `<div class="message-type-badge">Richiesta disdetta</div>`
+    : m.type === 'reschedule_request'
+    ? `<div class="message-type-badge">Richiesta spostamento</div>`
+    : '';
+  return `
+    <div style="display:flex;flex-direction:column;${isClient ? 'align-items:flex-end' : 'align-items:flex-start'}">
+      <div class="message-bubble ${isClient ? 'from-client' : 'from-trainer'}">
+        ${typeBadge}
+        ${escape(m.text)}
+        <div class="message-meta">${isClient ? 'Tu' : 'Trainer'} · ${time}</div>
+      </div>
+    </div>`;
+}
+
+// ── AZIONI ───────────────────────────────────────────────────────
+function reqCancel(lessonId, lessonDate, lessonTime) {
+  vibrate(8);
+  openModal(
+    'Disdici sessione',
+    `${fmtDate(lessonDate)} · ${lessonTime}`,
+    `<p style="font-size:0.88rem;color:var(--muted);margin:0;">Il tuo trainer riceverà una richiesta di disdetta. Sarà lui a confermarla.</p>`,
+    async () => {
+      const r = await api('cancel_request', { lessonId, lessonDate: fmtDate(lessonDate) });
+      if (r.ok) { showToast('Richiesta inviata!'); refresh(); }
+      else showToast('Errore: ' + (r.error ?? 'riprova'));
+    },
+    'Invia richiesta', true
+  );
+}
+
+function reqReschedule(lessonId, lessonDate, lessonTime) {
+  vibrate(8);
+  openModal(
+    'Sposta sessione',
+    `${fmtDate(lessonDate)} · ${lessonTime}`,
+    `<input class="modal-input" id="preferredDateInput" type="date" placeholder="Data preferita (opzionale)" min="${todayISO()}" />`,
+    async () => {
+      const preferredDate = document.getElementById('preferredDateInput')?.value;
+      const r = await api('reschedule_request', {
+        lessonId,
+        lessonDate: fmtDate(lessonDate),
+        preferredDate: preferredDate ? fmtDate(preferredDate) : undefined
+      });
+      if (r.ok) { showToast('Richiesta inviata!'); refresh(); }
+      else showToast('Errore: ' + (r.error ?? 'riprova'));
+    },
+    'Invia richiesta'
+  );
+}
+
+async function sendMessage() {
+  const input = document.getElementById('messageInput');
+  const text = input?.value?.trim();
+  if (!text) return;
+  vibrate(6);
+  input.value = '';
+  input.style.height = 'auto';
+  const r = await api('send_message', { text });
+  if (r.ok) { refresh(); }
+  else showToast('Errore invio: ' + (r.error ?? 'riprova'));
+}
+
+async function refresh() {
+  const r = await api('get_data');
+  if (r.client) renderApp(r);
+}
+
+// ── TOAST ────────────────────────────────────────────────────────
+let _toastTimer = null;
+function showToast(msg) {
+  let t = document.getElementById('_toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = '_toast';
+    t.style.cssText = `position:fixed;bottom:calc(env(safe-area-inset-bottom) + 20px);left:50%;transform:translateX(-50%) translateY(20px);background:#2a2a2a;color:#fff;padding:10px 18px;border-radius:99px;font-size:0.88rem;font-weight:600;z-index:999;opacity:0;transition:opacity 200ms,transform 200ms;pointer-events:none;white-space:nowrap;`;
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  requestAnimationFrame(() => { t.style.opacity = '1'; t.style.transform = 'translateX(-50%) translateY(0)'; });
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateX(-50%) translateY(20px)'; }, 2500);
+}
+
+// ── INIT ─────────────────────────────────────────────────────────
+async function init() {
+  if (!token) {
+    document.getElementById('app').innerHTML = `
+      <div class="error-wrap">
+        <div class="error-icon">🔗</div>
+        <div class="error-title">Link non valido</div>
+        <div class="error-sub">Chiedi al tuo trainer di inviarti il link personale corretto.</div>
+      </div>`;
+    return;
+  }
+
+  const data = await api('get_data').catch(() => null);
+
+  if (!data || data.error) {
+    document.getElementById('app').innerHTML = `
+      <div class="error-wrap">
+        <div class="error-icon">⚠️</div>
+        <div class="error-title">${data?.error === 'Link non valido o scaduto' ? 'Link non valido' : 'Errore di connessione'}</div>
+        <div class="error-sub">${data?.error === 'Link non valido o scaduto'
+          ? 'Questo link non esiste o è scaduto. Contatta il tuo trainer.'
+          : 'Controlla la connessione e riprova.'}</div>
+        ${data?.error !== 'Link non valido o scaduto' ? `<button class="btn btn-ghost" style="margin-top:20px" onclick="init()">Riprova</button>` : ''}
+      </div>`;
+    return;
+  }
+
+  renderApp(data);
+}
+
+init();
+</script>
+</body>
+</html>

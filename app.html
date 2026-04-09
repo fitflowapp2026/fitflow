@@ -5,11 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
   <meta http-equiv="X-Content-Type-Options" content="nosniff" />
   <meta name="color-scheme" content="dark" />
-  <meta name="description" content="FitFlow — Gestione clienti e calendario per personal trainer" />
+  <meta name="description" content="DSWORLD — Gestione clienti e calendario per personal trainer" />
   <meta name="theme-color" content="#141414" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="FitFlow" />
+  <meta name="apple-mobile-web-app-title" content="DSWORLD" />
   <meta name="mobile-web-app-capable" content="yes" />
   <link rel="manifest" href="manifest.json" />
   <!-- PWA: icona Home screen iOS — genera icon-180.png dalla tua icona -->
@@ -25,7 +25,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
-  <title>FitFlow — Gestione Clienti</title>
+  <title>DSWORLD — Gestione Clienti</title>
   <style>
     :root {
       --bg: #141414;
@@ -3147,7 +3147,7 @@
 
   <div class="auth-shell" id="authShell">
     <div class="auth-card">
-      <div class="auth-brand">FitFlow Cloud</div>
+      <div class="auth-brand">DSWORLD Cloud</div>
       <div>
         <h2>Account</h2>
         <div class="muted">Accedi per sincronizzare clienti, lezioni e pacchetti.</div>
@@ -3238,7 +3238,7 @@
   <!-- Mobile sidebar drawer -->
   <aside class="sidebar-drawer" id="sidebarDrawer">
     <div class="drawer-close-row">
-      <span class="brand" style="font-size:1.1rem;">FITFLOW</span>
+      <span class="brand" style="font-size:1.1rem;">DSWORLD</span>
       <button class="drawer-close-btn" id="drawerCloseBtn">✕ Chiudi</button>
     </div>
     <section class="panel" style="flex:1;min-height:0;">
@@ -3268,7 +3268,7 @@
 
   <div class="app" id="mainApp">
     <header class="topbar">
-      <div class="brand">FITFLOW</div>
+      <div class="brand">DSWORLD</div>
       <div class="top-actions">
         <span class="user-badge" id="userBadge">Non connesso</span>
         <span id="syncBadge" style="display:none;">Cloud disattivato</span>
@@ -3311,7 +3311,7 @@
     <!-- PWA Install Banner -->
     <div class="pwa-install-banner" id="pwaInstallBanner" role="complementary" aria-label="Installa app">
       <div class="pwa-text">
-        <strong>📲 Installa FitFlow</strong>
+        <strong>📲 Installa DSWORLD</strong>
         Accesso rapido dalla home screen, funziona anche offline
       </div>
       <div class="pwa-actions">
@@ -3986,7 +3986,7 @@
 
         <div class="mini-card">
           <div class="summary-row"><span>Google Calendar</span><strong id="googleStatusLabel">Non collegato</strong></div>
-          <div class="muted small" id="googleStatusHint">Collega Google per creare e sincronizzare automaticamente il calendario FitFlow Clienti. Gli altri calendari Google selezionati sul tuo account bloccano gli slot non disponibili.</div>
+          <div class="muted small" id="googleStatusHint">Collega Google per creare e sincronizzare automaticamente il calendario DSWORLD Clienti. Gli altri calendari Google selezionati sul tuo account bloccano gli slot non disponibili.</div>
           <div class="inline-actions" style="margin-top:12px;">
             <button class="btn btn-soft" type="button" id="connectGoogleBtn">Collega Google Calendar</button>
             <button class="btn btn-soft" type="button" id="googleResyncBtn">Sync Google</button>
@@ -4072,13 +4072,13 @@
     (function () {
       function tryLoad(urls, idx) {
         if (idx >= urls.length) {
-          console.error('[FitFlow] Impossibile caricare supabase-js da tutti i CDN disponibili.');
+          console.error('[DSWORLD] Impossibile caricare supabase-js da tutti i CDN disponibili.');
           return;
         }
         var s = document.createElement('script');
         s.src = urls[idx];
         s.onerror = function () {
-          console.warn('[FitFlow] CDN non disponibile:', urls[idx], '— provo il successivo…');
+          console.warn('[DSWORLD] CDN non disponibile:', urls[idx], '— provo il successivo…');
           document.head.removeChild(s);
           tryLoad(urls, idx + 1);
         };
@@ -4105,11 +4105,11 @@
     }
   </script>
   <script>
-    const STORAGE_KEY = 'fitflow_clienti_v2';
+    const STORAGE_KEY = 'dsworld_clienti_v2';
     const LEGACY_KEY = 'fitplanner_clienti_v1';
-    const BACKUP_LATEST_KEY = 'fitflow_clienti_backup_latest_v1';
-    const BACKUP_HISTORY_KEY = 'fitflow_clienti_backup_history_v1';
-    const SESSION_BACKUP_KEY = 'fitflow_clienti_session_backup_v1';
+    const BACKUP_LATEST_KEY = 'dsworld_clienti_backup_latest_v1';
+    const BACKUP_HISTORY_KEY = 'dsworld_clienti_backup_history_v1';
+    const SESSION_BACKUP_KEY = 'dsworld_clienti_session_backup_v1';
     const GESTITI_TEMPLATE_BASE64 = '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';
     const DAYS_IT = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'];
     const MONTHS_IT = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
@@ -4121,7 +4121,7 @@
       const sorted = [...counts.entries()].sort((a, b) => b[1] - a[1]).map(e => e[0]).slice(0, 10);
       return sorted.length >= 5 ? sorted : _FALLBACK_TIMES;
     }
-    const SUPABASE_CONFIG_KEY = 'fitflow_supabase_config_v1';
+    const SUPABASE_CONFIG_KEY = 'dsworld_supabase_config_v1';
     const GOOGLE_FN_BASE = '/.netlify/functions';
 
     /* ── Credenziali Supabase ───────────────────────────────────────
@@ -4146,12 +4146,12 @@
           if (cfg.supabaseUrl && cfg.supabaseAnonKey) {
             DEFAULT_SUPABASE_URL = cfg.supabaseUrl;
             DEFAULT_SUPABASE_ANON_KEY = cfg.supabaseAnonKey;
-            console.info('[FitFlow] Config cloud caricata da', url);
+            console.info('[DSWORLD] Config cloud caricata da', url);
             return;
           }
         } catch (_) { /* prova il prossimo endpoint */ }
       }
-      console.info('[FitFlow] Usando config locale (Netlify Function non ancora attiva)');
+      console.info('[DSWORLD] Usando config locale (Netlify Function non ancora attiva)');
     }
     const cloud = { client: null, session: null, user: null, config: null, saveTimer: null, listenerBound: false, saving: false, allowLocalOnly: false, hydrated: false, google: { connected: false, calendarId: '', calendarName: '', googleEmail: '', lastError: '', lastSyncAt: '', syncing: false }, googleQueue: Promise.resolve() };
 
@@ -4839,7 +4839,7 @@
         return false;
       }
       if (!window.supabase?.createClient) {
-        console.error('[FitFlow] Libreria Supabase non caricata.');
+        console.error('[DSWORLD] Libreria Supabase non caricata.');
         cloud.client = null;
         updateSyncBadge('Errore libreria Supabase');
         return false;
@@ -4848,7 +4848,7 @@
         cloud.config = config;
         const client = window.supabase.createClient(config.url, config.key);
         if (!client || !client.auth) {
-          console.error('[FitFlow] Client Supabase non valido o incompleto.');
+          console.error('[DSWORLD] Client Supabase non valido o incompleto.');
           cloud.client = null;
           updateSyncBadge('Errore inizializzazione cloud');
           return false;
@@ -4859,7 +4859,7 @@
         updateSyncBadge('Cloud pronto');
         return true;
       } catch (err) {
-        console.error('[FitFlow] Errore createClient:', err);
+        console.error('[DSWORLD] Errore createClient:', err);
         cloud.client = null;
         updateSyncBadge('Errore inizializzazione cloud');
         return false;
@@ -5083,7 +5083,7 @@
       }
       const ready = initSupabaseClient(config);
       if (!ready || !cloud.client?.auth) {
-        console.error('[FitFlow] Client cloud non disponibile dopo initSupabaseClient.');
+        console.error('[DSWORLD] Client cloud non disponibile dopo initSupabaseClient.');
         updateUserBadge();
         resetGoogleState();
         return false;
@@ -5137,12 +5137,12 @@
       if (el.googleStatusLabel) el.googleStatusLabel.textContent = cloud.google?.syncing ? 'Sync in corso' : baseStatus;
       let hint = 'Accedi per collegare Google Calendar.';
       if (loggedIn && connected) {
-        const parts = [cloud.google.calendarName || 'FitFlow Clienti'];
+        const parts = [cloud.google.calendarName || 'DSWORLD Clienti'];
         if (cloud.google.googleEmail) parts.push(cloud.google.googleEmail);
         parts.push('sync automatica attiva');
         hint = parts.join(' • ');
       } else if (loggedIn) {
-        hint = 'Collega Google per creare e sincronizzare automaticamente il calendario FitFlow Clienti. Gli altri calendari Google selezionati sul tuo account bloccano gli slot non disponibili.';
+        hint = 'Collega Google per creare e sincronizzare automaticamente il calendario DSWORLD Clienti. Gli altri calendari Google selezionati sul tuo account bloccano gli slot non disponibili.';
       }
       if (cloud.google?.lastError) hint = `${hint} • ${cloud.google.lastError}`;
       if (el.googleStatusHint) el.googleStatusHint.textContent = hint;
@@ -5185,7 +5185,7 @@
         const data = await googleApi('google-status');
         cloud.google.connected = Boolean(data.connected);
         cloud.google.calendarId = data.calendarId || '';
-        cloud.google.calendarName = data.calendarName || 'FitFlow Clienti';
+        cloud.google.calendarName = data.calendarName || 'DSWORLD Clienti';
         cloud.google.googleEmail = data.googleEmail || '';
         cloud.google.lastError = '';
       } catch (error) {
@@ -5238,7 +5238,7 @@
       const isDelete = action === 'delete';
       const isTerminalStatus = payload.status === 'done' || payload.status === 'cancelled';
       if ((isDelete || isTerminalStatus) && !payload.googleEventId && !allowCreateWithoutEventId) {
-        console.warn('[FitFlow Google Sync] Sync evitata per lezione senza googleEventId:', payload.id, 'azione:', action, 'stato:', payload.status);
+        console.warn('[DSWORLD Google Sync] Sync evitata per lezione senza googleEventId:', payload.id, 'azione:', action, 'stato:', payload.status);
         return true;
       }
       return false;
@@ -6536,7 +6536,7 @@ function copyAppointmentsToClipboard() {
   }
   /* Web Share API — apre il foglio nativo iOS (WhatsApp, Mail, AirDrop…) */
   if (navigator.share) {
-    navigator.share({ title: 'Appuntamenti FitFlow', text })
+    navigator.share({ title: 'Appuntamenti DSWORLD', text })
       .then(() => showToast('Appuntamenti condivisi!', 'ok'))
       .catch(err => { if (err.name !== 'AbortError') showToast('Condivisione annullata.'); });
     return;
@@ -7112,7 +7112,7 @@ function applyReportFilter() {
         if (!client.shareToken) return;
         const url = clientPortalUrl(client.shareToken);
         if (navigator.share) {
-          navigator.share({ title: `FitFlow — Portale di ${getClientFullName(client)}`, url })
+          navigator.share({ title: `DSWORLD — Portale di ${getClientFullName(client)}`, url })
             .catch(e => { if (e.name !== 'AbortError') navigator.clipboard.writeText(url).then(() => showToast('Link copiato!', 'ok')); });
         } else {
           navigator.clipboard.writeText(url).then(() => showToast('Link copiato!', 'ok'))
@@ -8438,11 +8438,11 @@ function applyReportFilter() {
         lessons: state.lessons
       };
       const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-      const filename = `fitflow-backup-${todayISO()}.json`;
+      const filename = `dsworld-backup-${todayISO()}.json`;
       /* Web Share API con file — AirDrop, iCloud Drive, Mail… */
       if (navigator.share && navigator.canShare && navigator.canShare({ files: [new File([blob], filename, { type: 'application/json' })] })) {
         const file = new File([blob], filename, { type: 'application/json' });
-        navigator.share({ title: 'FitFlow Backup', files: [file] })
+        navigator.share({ title: 'DSWORLD Backup', files: [file] })
           .then(() => showToast('Backup condiviso!', 'ok'))
           .catch(err => { if (err.name !== 'AbortError') fallbackDownload(blob, filename); });
         return;
@@ -9302,7 +9302,7 @@ function renderClientFormStickySummary() {
           if (!_pwaInstallPrompt) return;
           _pwaInstallPrompt.prompt();
           const { outcome } = await _pwaInstallPrompt.userChoice;
-          if (outcome === 'accepted') showToast('FitFlow installato!', 'ok');
+          if (outcome === 'accepted') showToast('DSWORLD installato!', 'ok');
           _pwaInstallPrompt = null;
           banner.classList.remove('show');
         });
@@ -9649,18 +9649,18 @@ function renderClientFormStickySummary() {
       
       /* 2. Recupera la configurazione (che ora dovrebbe avere le chiavi caricate) */
       const config = loadSupabaseConfig();
-      console.log('[FitFlow] Configurazione caricata:', config.url ? 'URL presente' : 'URL mancante');
+      console.log('[DSWORLD] Configurazione caricata:', config.url ? 'URL presente' : 'URL mancante');
 
       /* 3. Inizializza il client Supabase con la nuova configurazione */
       if (config.url && config.key) {
         const clientReady = initSupabaseClient(config);
         if (clientReady) {
-          console.log('[FitFlow] Client Supabase inizializzato con successo.');
+          console.log('[DSWORLD] Client Supabase inizializzato con successo.');
         } else {
-          console.error('[FitFlow] Client Supabase NON inizializzato. Libreria o client non disponibile.');
+          console.error('[DSWORLD] Client Supabase NON inizializzato. Libreria o client non disponibile.');
         }
       } else {
-        console.warn('[FitFlow] Attenzione: Chiavi Supabase non trovate dopo loadRemoteConfig.');
+        console.warn('[DSWORLD] Attenzione: Chiavi Supabase non trovate dopo loadRemoteConfig.');
       }
 
       persistSupabaseConfig(config);
@@ -9943,9 +9943,9 @@ function renderClientFormStickySummary() {
         )
         .subscribe((status) => {
           if (status === 'SUBSCRIBED') {
-            console.log('[FitFlow] Realtime messaggi attivo.');
+            console.log('[DSWORLD] Realtime messaggi attivo.');
           } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-            console.warn('[FitFlow] Realtime non disponibile, uso polling.');
+            console.warn('[DSWORLD] Realtime non disponibile, uso polling.');
             /* Fallback al polling se realtime fallisce */
             initMessagePolling();
           }
@@ -10413,7 +10413,7 @@ function renderClientFormStickySummary() {
       } else if (attempts > 0) {
         setTimeout(function () { waitForSupabase(attempts - 1); }, 150);
       } else {
-        console.error('[FitFlow] supabase-js non caricato dopo tutti i tentativi CDN.');
+        console.error('[DSWORLD] supabase-js non caricato dopo tutti i tentativi CDN.');
         // Avvia comunque l'app in modalità solo locale
         initApp();
       }

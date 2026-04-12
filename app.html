@@ -170,10 +170,28 @@ input:invalid:not(:placeholder-shown), select:invalid:not(:placeholder-shown) {
 }
 
 .brand {
+  display: flex;
+  flex-direction: column;
+  line-height: 1;
+  gap: 2px;
+  text-decoration: none;
+}
+.brand-main {
   font-size: 1.3rem;
   font-weight: 900;
   letter-spacing: 0.12em;
   color: var(--accent);
+  line-height: 1;
+}
+.brand-sub {
+  font-size: 0.52rem;
+  font-weight: 700;
+  letter-spacing: 0.28em;
+  color: var(--accent);
+  opacity: 0.72;
+  text-transform: uppercase;
+  line-height: 1;
+  padding-left: 0.08em;
 }
 
 .top-actions, .inline-actions, .pill-row, .chip-row, .quick-grid {
@@ -3208,7 +3226,10 @@ button:focus-visible {
 
   <aside class="sidebar-drawer" id="sidebarDrawer">
 <div class="drawer-close-row">
-  <span class="brand" style="font-size:1.1rem;">DSWORLD</span>
+  <div class="brand" style="font-size:0.9em;">
+      <span class="brand-main">DSWORLD</span>
+      <span class="brand-sub">FITNESS</span>
+    </div>
   <button class="drawer-close-btn" id="drawerCloseBtn">✕ Chiudi</button>
 </div>
 <section class="panel" style="flex:1;min-height:0;">
@@ -3919,7 +3940,10 @@ button:focus-visible {
 
   <div class="app" id="mainApp">
 <header class="topbar">
-  <div class="brand">DSWORLD</div>
+  <div class="brand">
+    <span class="brand-main">DSWORLD</span>
+    <span class="brand-sub">FITNESS</span>
+  </div>
   <div class="top-actions">
     <span class="user-badge" id="userBadge">Non connesso</span>
     <span id="syncBadge" style="display:none;">Cloud disattivato</span>
@@ -4124,21 +4148,21 @@ button:focus-visible {
   }
   </script>
 
-  <!-- Supabase JS — CDN con fallback, usa onload invece di polling -->
+  <!-- Supabase JS: carica da jsDelivr, con fallback automatico su unpkg se offline -->
   <script>
     (function () {
-      var _loaded = false;
-      function onLoad() {
-        if (_loaded) return; _loaded = true;
-        if (typeof initApp === 'function') initApp();
-        else window._supabaseReadyCallback = true;
-      }
       function tryLoad(urls, idx) {
-        if (idx >= urls.length) { onLoad(); return; }
+        if (idx >= urls.length) {
+          console.error('[DSWORLD] Impossibile caricare supabase-js da tutti i CDN disponibili.');
+          return;
+        }
         var s = document.createElement('script');
         s.src = urls[idx];
-        s.onload = onLoad;
-        s.onerror = function() { document.head.removeChild(s); tryLoad(urls, idx + 1); };
+        s.onerror = function () {
+          console.warn('[DSWORLD] CDN non disponibile:', urls[idx], '— provo il successivo…');
+          document.head.removeChild(s);
+          tryLoad(urls, idx + 1);
+        };
         document.head.appendChild(s);
       }
       tryLoad([
@@ -7093,8 +7117,7 @@ function renderSelectedClient() {
     <div class="inline-actions">
       <button class="btn btn-soft btn-small" id="editClientBtn">Modifica</button>
       <button class="btn btn-primary btn-small" id="renewClientBtn">Rinnova</button>
-      <button class="btn btn-soft btn-small" id="sharePortalBtn" title="Apri portale cliente">🔗 Portale</button>
-      <button class="btn btn-ghost btn-small" id="sharePortalLinkBtn" title="Condividi link portale">↗ Condividi</button>
+      <button class="btn btn-soft btn-small" id="sharePortalBtn" title="Invia link portale al cliente">🔗 Portale</button>
     </div>
     ${client.pendingPlanId ? (() => {
       const pending = getPendingPlan(client.id);
@@ -7154,7 +7177,6 @@ function renderSelectedClient() {
         <button class="btn btn-soft btn-small" id="mobileEditClientBtn" type="button">Modifica cliente</button>
         <button class="btn btn-primary btn-small" id="mobileRenewClientBtn" type="button">Rinnova pacchetto</button>
         <button class="btn btn-soft btn-small" id="mobileSharePortalBtn" type="button">🔗 Portale</button>
-        <button class="btn btn-ghost btn-small" id="mobileSharePortalLinkBtn" type="button">↗ Condividi</button>
         <button class="btn btn-soft btn-small" id="mobileMsgClientBtn" type="button" style="position:relative;">
           💬 Messaggi
           <span class="msg-badge" id="msgBadgeClientCard" style="top:-6px;right:-6px;">0</span>
@@ -7204,16 +7226,9 @@ function renderSelectedClient() {
     }
   });
 
-  /* Portale cliente — apre il portale + condividi link */
+  /* Portale cliente — invia direttamente il link al cliente */
   const sharePortalFn = () => {
     if (!client.shareToken) { showToast('Token non trovato, modifica e salva il cliente.', 'warn'); return; }
-    const url = clientPortalUrl(client.shareToken);
-    /* Apre il portale in una nuova scheda */
-    window.open(url, '_blank');
-    haptic(8);
-  };
-  const sharePortalLinkFn = () => {
-    if (!client.shareToken) return;
     const url = clientPortalUrl(client.shareToken);
     if (navigator.share) {
       navigator.share({ title: `DSWORLD — Portale di ${getClientFullName(client)}`, url })
@@ -7226,12 +7241,6 @@ function renderSelectedClient() {
   };
   document.getElementById('sharePortalBtn')?.addEventListener('click', sharePortalFn);
   document.getElementById('mobileSharePortalBtn')?.addEventListener('click', sharePortalFn);
-  /* Tasto destro / long press → condivide il link */
-  document.getElementById('sharePortalBtn')?.addEventListener('contextmenu', e => { e.preventDefault(); sharePortalLinkFn(); });
-  document.getElementById('mobileSharePortalBtn')?.addEventListener('contextmenu', e => { e.preventDefault(); sharePortalLinkFn(); });
-  /* Bottoni condividi dedicati */
-  document.getElementById('sharePortalLinkBtn')?.addEventListener('click', sharePortalLinkFn);
-  document.getElementById('mobileSharePortalLinkBtn')?.addEventListener('click', sharePortalLinkFn);
 
   /* Carica messaggi del cliente */
   loadClientMessages(client);
@@ -9967,6 +9976,7 @@ function openMonthPicker(defaultDate, onConfirm) {
   }
   renderAll();
   initInteractionDelegation();
+  initMobileUI();
   updateGoogleUi();
   renderHeroGreeting();
   initDebouncedSearch();
@@ -10003,11 +10013,16 @@ function openMonthPicker(defaultDate, onConfirm) {
 /* ═══════════════════════════════════════════════════════════
    MOBILE DRAWER & BOTTOM NAV
 ═══════════════════════════════════════════════════════════ */
-(function initMobileUI() {
+/* ── Mobile UI — drawer, bottom nav, sync badge ──────────────
+   Chiamata da initApp() invece che come IIFE, così eventuali
+   errori nei file precedenti non la bloccano.
+   Usa anche event delegation sul bottomNav come fallback.
+─────────────────────────────────────────────────────────────── */
+function initMobileUI() {
   const drawerOverlay = document.getElementById('drawerOverlay');
   const sidebarDrawer = document.getElementById('sidebarDrawer');
   const drawerCloseBtn = document.getElementById('drawerCloseBtn');
-  const bnavClienti   = document.getElementById('bnavClienti');
+  const bnavClienti    = document.getElementById('bnavClienti');
   const bnavCalendario = document.getElementById('bnavCalendario');
   const bnavAddCliente = document.getElementById('bnavAddCliente');
   const bnavResoconto  = document.getElementById('bnavResoconto');
@@ -10015,6 +10030,7 @@ function openMonthPicker(defaultDate, onConfirm) {
   const openAccountBtnMobile = document.getElementById('openAccountBtnMobile');
 
   function openDrawer() {
+    if (!sidebarDrawer || !drawerOverlay) return;
     sidebarDrawer.classList.add('open');
     drawerOverlay.classList.add('open');
     lockBodyScroll();
@@ -10022,27 +10038,60 @@ function openMonthPicker(defaultDate, onConfirm) {
     if (search) setTimeout(() => search.focus(), 260);
   }
   function closeDrawer() {
+    if (!sidebarDrawer || !drawerOverlay) return;
     sidebarDrawer.classList.remove('open');
     drawerOverlay.classList.remove('open');
     unlockBodyScroll();
   }
 
+  function setActiveBnav(activeBtn) {
+    document.querySelectorAll('.bnav-btn').forEach(b => b.classList.remove('active'));
+    if (activeBtn) activeBtn.classList.add('active');
+  }
+
   if (drawerOverlay) drawerOverlay.addEventListener('click', closeDrawer);
   if (drawerCloseBtn) drawerCloseBtn.addEventListener('click', closeDrawer);
+
   if (bnavClienti) bnavClienti.addEventListener('click', () => { openDrawer(); setActiveBnav(bnavClienti); });
   if (bnavCalendario) bnavCalendario.addEventListener('click', () => {
     closeDrawer();
     document.querySelector('.calendar-wrap')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     setActiveBnav(bnavCalendario);
   });
-  if (bnavAddCliente) bnavAddCliente.addEventListener('click', event => { closeDrawer(); openNewClientModal(event.currentTarget); });
-  if (bnavResoconto) bnavResoconto.addEventListener('click', () => { closeDrawer(); renderReport(); openModal('reportModalBackdrop'); });
-  if (bnavPacchetti) bnavPacchetti.addEventListener('click', () => { closeDrawer(); renderPackages(); openModal('packagesModalBackdrop'); });
-  if (openAccountBtnMobile) openAccountBtnMobile.addEventListener('click', async () => { populateCloudConfigInputs(); await refreshGoogleStatus(); openModal('accountModalBackdrop'); });
+  if (bnavAddCliente) bnavAddCliente.addEventListener('click', event => {
+    closeDrawer();
+    openNewClientModal(event.currentTarget);
+  });
+  if (bnavResoconto) bnavResoconto.addEventListener('click', () => {
+    closeDrawer();
+    renderReport();
+    openModal('reportModalBackdrop');
+  });
+  if (bnavPacchetti) bnavPacchetti.addEventListener('click', () => {
+    closeDrawer();
+    renderPackages();
+    openModal('packagesModalBackdrop');
+  });
+  if (openAccountBtnMobile) openAccountBtnMobile.addEventListener('click', async () => {
+    populateCloudConfigInputs();
+    await refreshGoogleStatus();
+    openModal('accountModalBackdrop');
+  });
 
-  function setActiveBnav(activeBtn) {
-    document.querySelectorAll('.bnav-btn').forEach(b => b.classList.remove('active'));
-    if (activeBtn) activeBtn.classList.add('active');
+  /* Event delegation come fallback — cattura i click sul bottomNav
+     anche se i listener diretti non fossero stati attaccati */
+  const bottomNav = document.getElementById('bottomNav');
+  if (bottomNav) {
+    bottomNav.addEventListener('click', event => {
+      const btn = event.target.closest('[id^="bnav"]');
+      if (!btn) return;
+      const id = btn.id;
+      if (id === 'bnavClienti')    { openDrawer(); setActiveBnav(btn); }
+      if (id === 'bnavCalendario') { closeDrawer(); document.querySelector('.calendar-wrap')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); setActiveBnav(btn); }
+      if (id === 'bnavAddCliente') { closeDrawer(); openNewClientModal(btn); }
+      if (id === 'bnavResoconto')  { closeDrawer(); renderReport(); openModal('reportModalBackdrop'); }
+      if (id === 'bnavPacchetti')  { closeDrawer(); renderPackages(); openModal('packagesModalBackdrop'); }
+    });
   }
 
   /* Sync drawer client search/filter with main state */
@@ -10063,7 +10112,6 @@ function openMonthPicker(defaultDate, onConfirm) {
           b.classList.toggle('active', isActive);
           b.setAttribute('aria-pressed', isActive ? 'true' : 'false');
         });
-        /* sync main sidebar filter row */
         el.clientFilterRow?.querySelectorAll('[data-client-filter]').forEach(b => {
           const isActive = b.getAttribute('data-client-filter') === state.clientFilter;
           b.classList.toggle('active', isActive);
@@ -10073,6 +10121,7 @@ function openMonthPicker(defaultDate, onConfirm) {
       });
     });
   }
+
   const exportBtnDrawer = document.getElementById('exportBtnDrawer');
   if (exportBtnDrawer) exportBtnDrawer.addEventListener('click', exportBackup);
 
@@ -10086,9 +10135,8 @@ function openMonthPicker(defaultDate, onConfirm) {
     syncBadgeMobile.style.color = isOk ? '#1db954' : 'rgba(255,255,255,0.4)';
     syncBadgeMobile.title = main.textContent;
   }
-  const syncObserver = new MutationObserver(mirrorSyncBadge);
   const syncBadgeEl = document.getElementById('syncBadge');
-  if (syncBadgeEl) syncObserver.observe(syncBadgeEl, { characterData: true, subtree: true, childList: true });
+  if (syncBadgeEl) new MutationObserver(mirrorSyncBadge).observe(syncBadgeEl, { characterData: true, subtree: true, childList: true });
 
   /* Offline retry button */
   const offlineRetryBtn = document.getElementById('offlineRetryBtn');
@@ -10100,20 +10148,8 @@ function openMonthPicker(defaultDate, onConfirm) {
       else showToast('Ancora offline. Riprova più tardi.', 'error');
     });
   }
+}
 
-  /* Patch renderClientList to also populate drawer */
-  const _origRenderAll = window._renderAllOrig || null;
-})();
-
-/* ── Navigazione automatica tra campi form con tasto Enter ── */
-/* ═══════════════════════════════════════════════════════════
-   PORTALE CLIENTE — messaggi in arrivo (vista trainer)
-═══════════════════════════════════════════════════════════ */
-
-/* Sostituisci con l'URL della tua Edge Function Supabase */
-/* ═══════════════════════════════════════════════════════════
-   BADGE MESSAGGI NON LETTI — aggiorna tutti i badge
-═══════════════════════════════════════════════════════════ */
 let _unreadMsgCount = 0;
 function updateMsgBadges(count) {
   _unreadMsgCount = count;
@@ -10694,10 +10730,9 @@ window.addEventListener('offline', () => {
     setTimeout(function () { waitForSupabase(attempts - 1); }, 150);
   } else {
     console.error('[DSWORLD] supabase-js non caricato dopo tutti i tentativi CDN.');
-    // Avvia comunque l'app in modalità solo locale
     initApp();
   }
-})(40); // 40 × 150ms = 6 secondi max di attesa
+})(40); // 40 x 150ms = 6 secondi max di attesa
 </script>
 
 </body>

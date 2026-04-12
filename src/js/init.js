@@ -49,6 +49,7 @@
   }
   renderAll();
   initInteractionDelegation();
+  initMobileUI();
   updateGoogleUi();
   renderHeroGreeting();
   initDebouncedSearch();

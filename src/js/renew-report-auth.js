@@ -189,7 +189,7 @@ function openScheduleNewPlanModal(client, newPlan, newPkg, { showOldPlan = false
   /* Imposta orario fisso — apre scheda cliente (quando non c'è orario fisso) */
   const openClientAndClose = () => {
     backdrop.remove();
-    requestAnimationFrame(() => renderClientModal(client.id));
+    requestAnimationFrame(() => renderClientModal(client));
   };
   backdrop.querySelector('#scheduleOldPlanOpenClientBtn')?.addEventListener('click', openClientAndClose);
   backdrop.querySelector('#scheduleNewPlanOpenClientBtn')?.addEventListener('click', openClientAndClose);

@@ -1,3 +1,4 @@
+    async function initApp() {
   loadStateLocal();
   resetPackageForm();
   el.clientStartDate.value = todayISO();

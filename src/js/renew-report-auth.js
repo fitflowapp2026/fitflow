@@ -1,44 +1,22 @@
 function openRenewModal() {
   const client = getClient(state.selectedClientId);
   if (!client) { showToast('Seleziona un cliente.'); return; }
-
-  /* Se c'è già un pending plan non ancora promosso, mostra direttamente
-     il modal di pianificazione invece di aprire un nuovo rinnovo */
-  if (client.pendingPlanId) {
-    const pending = getPendingPlan(client.id);
-    const pendingPkg = getPackage(pending?.packageId);
-    if (pending && pendingPkg) {
-      showConfirm(
-        'Rinnovo già registrato',
-        `Hai già un pacchetto "${pendingPkg.name}" in attesa. Vuoi pianificare le lezioni del vecchio o del nuovo pacchetto?`,
-        () => openScheduleNewPlanModal(client, pending, pendingPkg, {
-          showOldPlan: true,
-          oldPlan: getActivePlan(client.id),
-          carryOver: planStats(getActivePlan(client.id)).remaining
-        }),
-        'Pianifica lezioni'
-      );
-      return;
-    }
-  }
-
   const activePlan = getActivePlan(client.id);
   renderPackageOptions(el.renewPackage, activePlan?.packageId || state.packages[0]?.id || '');
   el.renewCheckMode.value = normalizeCheckMode(activePlan?.checkMode);
   const lastLesson = getLessonsForClient(client.id).filter(item => item.status !== 'cancelled').map(item => item.date).sort().slice(-1)[0];
   el.renewStartDate.value = lastLesson || todayISO();
 
-  const oldStats = activePlan ? planStats(activePlan) : { remaining: 0 };
-  const carryPreview = Math.max(0, oldStats.remaining || 0);
+  const oldPlanForPreview = getActivePlan(client.id);
+  const oldStatsForPreview = oldPlanForPreview ? planStats(oldPlanForPreview) : { remaining: 0 };
+  const carryPreview = Math.max(0, oldStatsForPreview.remaining || 0);
 
   const syncPrice = () => {
     const pkg = getPackage(el.renewPackage.value);
     const defaultPrice = Number(client.packagePrice || pkg?.totalPrice || 0);
     if (el.renewPrice && !el.renewPrice._touched) el.renewPrice.value = defaultPrice;
-    const statusNote = carryPreview > 0
-      ? ` · ${carryPreview} lezioni rimanenti dal pacchetto corrente`
-      : ' · Pacchetto corrente completato';
-    if (el.renewPriceHint) el.renewPriceHint.textContent = `Default: ${formatCurrency(defaultPrice)}${statusNote}`;
+    const carryNote = carryPreview > 0 ? ` · +${carryPreview} lezioni riportate` : '';
+    if (el.renewPriceHint) el.renewPriceHint.textContent = `Default: ${formatCurrency(defaultPrice)}${carryNote}`;
     el.renewPreview.innerHTML = buildPackageSummary(pkg, Number(el.renewPrice?.value || defaultPrice));
   };
   syncPrice();
@@ -48,137 +26,6 @@ function openRenewModal() {
   }
   el.renewPackage.onchange = () => { if (el.renewPrice) el.renewPrice._touched = false; syncPrice(); };
   openModal('renewModalBackdrop');
-}
-
-/* ── Modal pianificazione dopo rinnovo ──────────────────────────
-   Appare dopo aver confermato il rinnovo e permette con un click
-   di pianificare le lezioni del vecchio pacchetto rimanenti
-   e/o le prime lezioni del nuovo pacchetto.
-──────────────────────────────────────────────────────────────── */
-function openScheduleNewPlanModal(client, newPlan, newPkg, { showOldPlan = false, oldPlan = null, carryOver = 0 } = {}) {
-  if (!client || !newPlan || !newPkg) return;
-
-  const hasSchedule = (client.scheduleMode === 'same' && client.fixedTime && (client.fixedDays || []).length > 0)
-                   || (client.scheduleMode === 'different' && (client.variableSchedule || []).length > 0);
-
-  const oldStats = oldPlan ? planStats(oldPlan) : { remaining: 0 };
-  const oldRemaining = Math.max(0, oldStats.remaining || 0);
-
-  /* Costruisce il contenuto del modal dinamicamente */
-  const existingBackdrop = document.getElementById('scheduleAfterRenewBackdrop');
-  if (existingBackdrop) existingBackdrop.remove();
-
-  const backdrop = document.createElement('div');
-  backdrop.id = 'scheduleAfterRenewBackdrop';
-  backdrop.className = 'modal-backdrop';
-  backdrop.style.cssText = 'display:flex;z-index:80;';
-
-  const oldPlanSection = (showOldPlan && oldPlan && oldRemaining > 0) ? `
-    <div class="mini-card" style="border-color:rgba(245,158,11,0.3);background:rgba(245,158,11,0.06);">
-      <div class="section-title" style="color:var(--warn);">Pacchetto precedente — ancora attivo</div>
-      <div class="muted small" style="margin-top:6px;">${oldRemaining} lezioni rimanenti da completare.</div>
-      ${hasSchedule ? `
-        <button class="btn btn-soft btn-small" style="margin-top:10px;width:100%;" id="scheduleOldPlanBtn">
-          Pianifica le ${oldRemaining} lezioni rimanenti →
-        </button>
-      ` : `<div class="muted small" style="margin-top:8px;">Nessun orario fisso impostato — aggiungile manualmente dal calendario.</div>`}
-    </div>
-  ` : '';
-
-  const newPlanSection = `
-    <div class="mini-card" style="border-color:rgba(29,185,84,0.3);background:rgba(29,185,84,0.06);">
-      <div class="section-title" style="color:var(--good);">Nuovo pacchetto — ${escapeHtml(newPkg.name)}</div>
-      <div class="muted small" style="margin-top:6px;">${newPkg.lessonsTotal} lezioni · inizia ${formatDateShort(newPlan.startDate)}</div>
-      ${hasSchedule ? `
-        <button class="btn btn-primary btn-small" style="margin-top:10px;width:100%;" id="scheduleNewPlanBtn">
-          Pianifica tutte le ${newPkg.lessonsTotal} lezioni del nuovo pacchetto →
-        </button>
-      ` : `<div class="muted small" style="margin-top:8px;">Nessun orario fisso impostato — aggiungile manualmente dal calendario.</div>`}
-    </div>
-  `;
-
-  backdrop.innerHTML = `
-    <div class="modal narrow" role="dialog" aria-modal="true" style="max-width:480px;">
-      <div class="modal-top">
-        <div>
-          <h3 class="modal-title">Pianifica lezioni</h3>
-          <div class="muted small">${escapeHtml(getClientFullName(client))}</div>
-        </div>
-        <button class="btn btn-ghost btn-small" id="scheduleAfterRenewClose">Chiudi</button>
-      </div>
-      <div style="display:grid;gap:14px;">
-        ${oldPlanSection}
-        ${newPlanSection}
-        ${!hasSchedule ? `
-          <div class="mini-card">
-            <div class="muted small">Per la pianificazione automatica, imposta un orario fisso nella scheda cliente.</div>
-            <button class="btn btn-soft btn-small" style="margin-top:10px;" id="scheduleOpenClientBtn">Apri scheda cliente →</button>
-          </div>
-        ` : ''}
-      </div>
-    </div>
-  `;
-
-  document.body.appendChild(backdrop);
-
-  /* Chiudi */
-  backdrop.querySelector('#scheduleAfterRenewClose').addEventListener('click', () => backdrop.remove());
-  backdrop.addEventListener('click', e => { if (e.target === backdrop) backdrop.remove(); });
-
-  /* Pianifica lezioni vecchio pacchetto */
-  backdrop.querySelector('#scheduleOldPlanBtn')?.addEventListener('click', () => {
-    if (!oldPlan) return;
-    const oldPkg = getPackage(oldPlan.packageId);
-    if (!oldPkg) return;
-    const weekdays = client.scheduleMode === 'same' ? (client.fixedDays || []) : (client.variableSchedule || []).map(v => v.weekday);
-    const timesByWeekday = client.scheduleMode === 'different'
-      ? Object.fromEntries((client.variableSchedule || []).map(v => [v.weekday, v.time]))
-      : null;
-    const count = createRecurringLessonsForClient({
-      client, plan: oldPlan, pkg: { ...oldPkg, lessonsTotal: oldRemaining },
-      startDate: todayISO(),
-      weekdays,
-      time: client.fixedTime || '',
-      timesByWeekday
-    });
-    if (count > 0) {
-      showToast(`${count} lezioni del vecchio pacchetto pianificate.`, 'ok');
-      backdrop.querySelector('#scheduleOldPlanBtn').disabled = true;
-      backdrop.querySelector('#scheduleOldPlanBtn').textContent = `✓ ${count} lezioni pianificate`;
-    } else {
-      showToast('Nessuno slot disponibile. Controlla il calendario.', 'warn');
-    }
-  });
-
-  /* Pianifica lezioni nuovo pacchetto */
-  backdrop.querySelector('#scheduleNewPlanBtn')?.addEventListener('click', () => {
-    const weekdays = client.scheduleMode === 'same' ? (client.fixedDays || []) : (client.variableSchedule || []).map(v => v.weekday);
-    const timesByWeekday = client.scheduleMode === 'different'
-      ? Object.fromEntries((client.variableSchedule || []).map(v => [v.weekday, v.time]))
-      : null;
-    const count = createRecurringLessonsForClient({
-      client, plan: newPlan, pkg: newPkg,
-      startDate: newPlan.startDate || todayISO(),
-      weekdays,
-      time: client.fixedTime || '',
-      timesByWeekday
-    });
-    /* Se il vecchio piano era già esaurito, promuovi automaticamente */
-    maybePromotePendingPlan(client.id);
-    if (count > 0) {
-      showToast(`${count} lezioni del nuovo pacchetto pianificate.`, 'ok');
-      backdrop.querySelector('#scheduleNewPlanBtn').disabled = true;
-      backdrop.querySelector('#scheduleNewPlanBtn').textContent = `✓ ${count} lezioni pianificate`;
-    } else {
-      showToast('Nessuno slot disponibile. Controlla il calendario.', 'warn');
-    }
-  });
-
-  /* Apri scheda cliente */
-  backdrop.querySelector('#scheduleOpenClientBtn')?.addEventListener('click', () => {
-    backdrop.remove();
-    requestAnimationFrame(() => renderClientModal(client.id));
-  });
 }
 
 function renderReport() {

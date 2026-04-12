@@ -195,8 +195,8 @@ const JS_SPLITS = [
   ['js/renew-report-auth.js',    8218, 8696],
   ['js/render-all.js',           8697, 8720],
   ['js/actions.js',              8721, 9218],
-  ['js/pwa.js',                  9219, 9640],
-  ['js/init.js',                 9641, 9727],
+  ['js/pwa.js',                  9219, 9639],
+  ['js/init.js',                 9640, 9727],
   ['js/mobile-ui.js',            9728, 9840],
   ['js/realtime.js',             9841, 9977],
   ['js/render-messages.js',      9978,10339],
@@ -309,21 +309,20 @@ ${cssBlock}
 
 ${excelLoader}
 
-  <!-- Supabase JS — CDN con fallback, usa onload invece di polling -->
+  <!-- Supabase JS: carica da CDN, con fallback automatico -->
   <script>
     (function () {
-      var _loaded = false;
-      function onLoad() {
-        if (_loaded) return; _loaded = true;
-        if (typeof initApp === 'function') initApp();
-        else window._supabaseReadyCallback = true;
-      }
       function tryLoad(urls, idx) {
-        if (idx >= urls.length) { onLoad(); return; }
+        if (idx >= urls.length) {
+          console.error('[DSWORLD] Impossibile caricare supabase-js.');
+          return;
+        }
         var s = document.createElement('script');
         s.src = urls[idx];
-        s.onload = onLoad;
-        s.onerror = function() { document.head.removeChild(s); tryLoad(urls, idx + 1); };
+        s.onerror = function () {
+          document.head.removeChild(s);
+          tryLoad(urls, idx + 1);
+        };
         document.head.appendChild(s);
       }
       tryLoad([

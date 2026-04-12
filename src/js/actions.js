@@ -406,10 +406,10 @@ el.renewForm.addEventListener('submit', event => {
   const pkg = getPackage(el.renewPackage.value);
   if (!client || !pkg) return;
 
+  // Calcola le lezioni rimanenti dal piano attuale da riportare
   const oldPlan = getActivePlan(client.id);
   const oldStats = oldPlan ? planStats(oldPlan) : { remaining: 0 };
   const carryOver = Math.max(0, oldStats.remaining || 0);
-  const oldPlanIsFinished = oldStats.remaining === 0;
 
   const newPlanId = uid('plan');
   state.plans.push({
@@ -421,10 +421,11 @@ el.renewForm.addEventListener('submit', event => {
     saleType: 'renewal',
     planType: 'personal',
     totalPrice: Number(el.renewPrice?.value ?? client.packagePrice ?? pkg.totalPrice ?? 0),
-    carryOverLessons: 0,   // carryOver non serve più: le lezioni restano sul vecchio piano
+    carryOverLessons: carryOver,   // lezioni riportate dal pacchetto precedente
     createdAt: new Date().toISOString()
   });
 
+  // Resetta sempre il pagamento per il nuovo pacchetto
   client.paymentStatus = 'unpaid';
   if (!client.paymentMode) client.paymentMode = 'single';
 
@@ -434,8 +435,10 @@ el.renewForm.addEventListener('submit', event => {
     client.conversionStatus = 'path_started';
   }
 
+  // Dismetti gli alert vecchi di rinnovo e pagamento per questo cliente
   if (!Array.isArray(state.dismissedAlerts)) state.dismissedAlerts = [];
   ['renewal', 'payment'].forEach(type => {
+    // Rimuovi qualsiasi alert precedente di questo tipo per il cliente
     state.dismissedAlerts = state.dismissedAlerts.filter(id => !id.startsWith(`${type}_${client.id}_`));
   });
 
@@ -448,26 +451,12 @@ el.renewForm.addEventListener('submit', event => {
     startDate: el.renewStartDate.value,
     carryOverLessons: carryOver
   });
-
-  if (oldPlanIsFinished) {
-    /* Piano vecchio già esaurito → passa subito al nuovo */
-    client.activePlanId = newPlanId;
-    client.pendingPlanId = null;
-    saveState(true);
-    renderAll();
-    closeModal('renewModalBackdrop');
-    showToast('Rinnovo registrato.', 'ok');
-    openScheduleNewPlanModal(client, getPlan(newPlanId), pkg);
-  } else {
-    /* Piano vecchio ancora in corso → il nuovo va in attesa */
-    client.pendingPlanId = newPlanId;
-    saveState(true);
-    renderAll();
-    closeModal('renewModalBackdrop');
-    const carryMsg = carryOver > 0 ? ` (${carryOver} lezioni rimanenti dal vecchio pacchetto)` : '';
-    showToast(`Rinnovo registrato${carryMsg}. Vecchio pacchetto ancora attivo.`, 'ok');
-    openScheduleNewPlanModal(client, getPlan(newPlanId), pkg, { showOldPlan: true, oldPlan, carryOver });
-  }
+  client.activePlanId = newPlanId;
+  saveState(true);
+  renderAll();
+  closeModal('renewModalBackdrop');
+  const carryMsg = carryOver > 0 ? ` (+ ${carryOver} lezioni riportate)` : '';
+  showToast(`Rinnovo registrato${carryMsg}.`, 'ok');
 });
 
 // "Chiudi senza rinnovo": rimuove gli alert di pagamento/rinnovo senza creare un nuovo piano

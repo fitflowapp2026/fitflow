@@ -4124,21 +4124,20 @@ button:focus-visible {
   }
   </script>
 
-  <!-- Supabase JS — CDN con fallback, usa onload invece di polling -->
+  <!-- Supabase JS: carica da CDN, con fallback automatico -->
   <script>
     (function () {
-      var _loaded = false;
-      function onLoad() {
-        if (_loaded) return; _loaded = true;
-        if (typeof initApp === 'function') initApp();
-        else window._supabaseReadyCallback = true;
-      }
       function tryLoad(urls, idx) {
-        if (idx >= urls.length) { onLoad(); return; }
+        if (idx >= urls.length) {
+          console.error('[DSWORLD] Impossibile caricare supabase-js.');
+          return;
+        }
         var s = document.createElement('script');
         s.src = urls[idx];
-        s.onload = onLoad;
-        s.onerror = function() { document.head.removeChild(s); tryLoad(urls, idx + 1); };
+        s.onerror = function () {
+          document.head.removeChild(s);
+          tryLoad(urls, idx + 1);
+        };
         document.head.appendChild(s);
       }
       tryLoad([
@@ -5477,43 +5476,6 @@ function getActivePlan(clientId) {
   if (!client) return null;
   return getPlan(client.activePlanId) || state.plans.filter(plan => plan.clientId === clientId).sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt))).slice(-1)[0] || null;
 }
-
-/* Restituisce il piano "in attesa" (nuovo pacchetto rinnovato ma non ancora attivo) */
-function getPendingPlan(clientId) {
-  const client = getClient(clientId);
-  if (!client?.pendingPlanId) return null;
-  return getPlan(client.pendingPlanId) || null;
-}
-
-/* Restituisce tutti i piani attivi per un cliente:
-   - Se c'è un pendingPlan: [activePlan, pendingPlan]
-   - Altrimenti: [activePlan]
-   Usato per mostrare entrambi i pacchetti nel calendario */
-function getAllActivePlans(clientId) {
-  const active = getActivePlan(clientId);
-  const pending = getPendingPlan(clientId);
-  const plans = [];
-  if (active) plans.push(active);
-  if (pending && pending.id !== active?.id) plans.push(pending);
-  return plans;
-}
-
-/* Controlla se il piano attivo è esaurito e, se sì, promuove
-   automaticamente il pendingPlan ad activePlan */
-function maybePromotePendingPlan(clientId) {
-  const client = getClient(clientId);
-  if (!client?.pendingPlanId) return false;
-  const activePlan = getActivePlan(clientId);
-  if (!activePlan) return false;
-  const stats = planStats(activePlan);
-  if (stats.remaining > 0) return false;
-  /* Piano esaurito → promuovi il pending */
-  client.activePlanId = client.pendingPlanId;
-  client.pendingPlanId = null;
-  saveState(true);
-  return true;
-}
-
 function getLesson(id) { return state.lessons.find(item => item.id === id) || null; }
 function getLessonsForClient(clientId) {
   return state.lessons.filter(item => item.clientId === clientId).sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`));
@@ -5712,11 +5674,6 @@ function autoCompleteElapsedLessons() {
     }
   });
   if (changed) {
-    /* Dopo aver segnato lezioni come svolte, controlla se qualche
-       piano attivo è ora esaurito e ha un pending da promuovere */
-    state.clients.forEach(client => {
-      if (client.pendingPlanId) maybePromotePendingPlan(client.id);
-    });
     saveState();
     changedLessons.forEach(id => requestGoogleLessonSync('upsert', id));
     /* Free session auto-completata → proponi conversione se nessun modal è aperto */
@@ -7096,21 +7053,6 @@ function renderSelectedClient() {
       <button class="btn btn-soft btn-small" id="sharePortalBtn" title="Apri portale cliente">🔗 Portale</button>
       <button class="btn btn-ghost btn-small" id="sharePortalLinkBtn" title="Condividi link portale">↗ Condividi</button>
     </div>
-    ${client.pendingPlanId ? (() => {
-      const pending = getPendingPlan(client.id);
-      const pendingPkg = getPackage(pending?.packageId);
-      return pending && pendingPkg ? `
-        <div class="mini-card" style="border-color:rgba(29,185,84,0.3);background:rgba(29,185,84,0.06);margin-top:4px;">
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
-            <div>
-              <div style="font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--good);">Nuovo pacchetto in attesa</div>
-              <div class="muted small" style="margin-top:2px;">${escapeHtml(pendingPkg.name)} · ${pendingPkg.lessonsTotal} lezioni · dal ${formatDateShort(pending.startDate)}</div>
-            </div>
-            <button class="btn btn-good btn-small" id="schedulePendingPlanBtn">Pianifica →</button>
-          </div>
-        </div>
-      ` : '';
-    })() : ''}
     <div id="clientMessagesPanel" style="display:none;margin-top:4px;"></div>
   `;
   if (el.mobileSelectedClientCard) {
@@ -7192,17 +7134,6 @@ function renderSelectedClient() {
   document.getElementById('mobilePaymentStatusTag')?.addEventListener('click', openPaymentQuickModal);
   document.getElementById('editClientBtn').addEventListener('click', () => renderClientModal(client));
   document.getElementById('renewClientBtn').addEventListener('click', openRenewModal);
-  document.getElementById('schedulePendingPlanBtn')?.addEventListener('click', () => {
-    const pending = getPendingPlan(client.id);
-    const pendingPkg = getPackage(pending?.packageId);
-    if (pending && pendingPkg) {
-      openScheduleNewPlanModal(client, pending, pendingPkg, {
-        showOldPlan: true,
-        oldPlan: getActivePlan(client.id),
-        carryOver: planStats(getActivePlan(client.id)).remaining
-      });
-    }
-  });
 
   /* Portale cliente — apre il portale + condividi link */
   const sharePortalFn = () => {
@@ -8087,8 +8018,7 @@ function createLesson({ clientId, planId, date, time, duration, setFixedTime = f
   };
   state.lessons.push(lesson);
   if (setFixedTime && client.scheduleMode === 'same' && !client.fixedTime) client.fixedTime = time;
-saveState(true);
-  autoCompleteElapsedLessons();
+  saveState(true);
   renderAll();
   requestGoogleLessonSync('upsert', lesson, { allowCreateWithoutEventId: true });
   showToast(`Lezione inserita: ${formatDateFancy(date)} • ${time}`);
@@ -8319,44 +8249,22 @@ function deleteLesson() {
 function openRenewModal() {
   const client = getClient(state.selectedClientId);
   if (!client) { showToast('Seleziona un cliente.'); return; }
-
-  /* Se c'è già un pending plan non ancora promosso, mostra direttamente
-     il modal di pianificazione invece di aprire un nuovo rinnovo */
-  if (client.pendingPlanId) {
-    const pending = getPendingPlan(client.id);
-    const pendingPkg = getPackage(pending?.packageId);
-    if (pending && pendingPkg) {
-      showConfirm(
-        'Rinnovo già registrato',
-        `Hai già un pacchetto "${pendingPkg.name}" in attesa. Vuoi pianificare le lezioni del vecchio o del nuovo pacchetto?`,
-        () => openScheduleNewPlanModal(client, pending, pendingPkg, {
-          showOldPlan: true,
-          oldPlan: getActivePlan(client.id),
-          carryOver: planStats(getActivePlan(client.id)).remaining
-        }),
-        'Pianifica lezioni'
-      );
-      return;
-    }
-  }
-
   const activePlan = getActivePlan(client.id);
   renderPackageOptions(el.renewPackage, activePlan?.packageId || state.packages[0]?.id || '');
   el.renewCheckMode.value = normalizeCheckMode(activePlan?.checkMode);
   const lastLesson = getLessonsForClient(client.id).filter(item => item.status !== 'cancelled').map(item => item.date).sort().slice(-1)[0];
   el.renewStartDate.value = lastLesson || todayISO();
 
-  const oldStats = activePlan ? planStats(activePlan) : { remaining: 0 };
-  const carryPreview = Math.max(0, oldStats.remaining || 0);
+  const oldPlanForPreview = getActivePlan(client.id);
+  const oldStatsForPreview = oldPlanForPreview ? planStats(oldPlanForPreview) : { remaining: 0 };
+  const carryPreview = Math.max(0, oldStatsForPreview.remaining || 0);
 
   const syncPrice = () => {
     const pkg = getPackage(el.renewPackage.value);
     const defaultPrice = Number(client.packagePrice || pkg?.totalPrice || 0);
     if (el.renewPrice && !el.renewPrice._touched) el.renewPrice.value = defaultPrice;
-    const statusNote = carryPreview > 0
-      ? ` · ${carryPreview} lezioni rimanenti dal pacchetto corrente`
-      : ' · Pacchetto corrente completato';
-    if (el.renewPriceHint) el.renewPriceHint.textContent = `Default: ${formatCurrency(defaultPrice)}${statusNote}`;
+    const carryNote = carryPreview > 0 ? ` · +${carryPreview} lezioni riportate` : '';
+    if (el.renewPriceHint) el.renewPriceHint.textContent = `Default: ${formatCurrency(defaultPrice)}${carryNote}`;
     el.renewPreview.innerHTML = buildPackageSummary(pkg, Number(el.renewPrice?.value || defaultPrice));
   };
   syncPrice();
@@ -8366,137 +8274,6 @@ function openRenewModal() {
   }
   el.renewPackage.onchange = () => { if (el.renewPrice) el.renewPrice._touched = false; syncPrice(); };
   openModal('renewModalBackdrop');
-}
-
-/* ── Modal pianificazione dopo rinnovo ──────────────────────────
-   Appare dopo aver confermato il rinnovo e permette con un click
-   di pianificare le lezioni del vecchio pacchetto rimanenti
-   e/o le prime lezioni del nuovo pacchetto.
-──────────────────────────────────────────────────────────────── */
-function openScheduleNewPlanModal(client, newPlan, newPkg, { showOldPlan = false, oldPlan = null, carryOver = 0 } = {}) {
-  if (!client || !newPlan || !newPkg) return;
-
-  const hasSchedule = (client.scheduleMode === 'same' && client.fixedTime && (client.fixedDays || []).length > 0)
-                   || (client.scheduleMode === 'different' && (client.variableSchedule || []).length > 0);
-
-  const oldStats = oldPlan ? planStats(oldPlan) : { remaining: 0 };
-  const oldRemaining = Math.max(0, oldStats.remaining || 0);
-
-  /* Costruisce il contenuto del modal dinamicamente */
-  const existingBackdrop = document.getElementById('scheduleAfterRenewBackdrop');
-  if (existingBackdrop) existingBackdrop.remove();
-
-  const backdrop = document.createElement('div');
-  backdrop.id = 'scheduleAfterRenewBackdrop';
-  backdrop.className = 'modal-backdrop';
-  backdrop.style.cssText = 'display:flex;z-index:80;';
-
-  const oldPlanSection = (showOldPlan && oldPlan && oldRemaining > 0) ? `
-    <div class="mini-card" style="border-color:rgba(245,158,11,0.3);background:rgba(245,158,11,0.06);">
-      <div class="section-title" style="color:var(--warn);">Pacchetto precedente — ancora attivo</div>
-      <div class="muted small" style="margin-top:6px;">${oldRemaining} lezioni rimanenti da completare.</div>
-      ${hasSchedule ? `
-        <button class="btn btn-soft btn-small" style="margin-top:10px;width:100%;" id="scheduleOldPlanBtn">
-          Pianifica le ${oldRemaining} lezioni rimanenti →
-        </button>
-      ` : `<div class="muted small" style="margin-top:8px;">Nessun orario fisso impostato — aggiungile manualmente dal calendario.</div>`}
-    </div>
-  ` : '';
-
-  const newPlanSection = `
-    <div class="mini-card" style="border-color:rgba(29,185,84,0.3);background:rgba(29,185,84,0.06);">
-      <div class="section-title" style="color:var(--good);">Nuovo pacchetto — ${escapeHtml(newPkg.name)}</div>
-      <div class="muted small" style="margin-top:6px;">${newPkg.lessonsTotal} lezioni · inizia ${formatDateShort(newPlan.startDate)}</div>
-      ${hasSchedule ? `
-        <button class="btn btn-primary btn-small" style="margin-top:10px;width:100%;" id="scheduleNewPlanBtn">
-          Pianifica tutte le ${newPkg.lessonsTotal} lezioni del nuovo pacchetto →
-        </button>
-      ` : `<div class="muted small" style="margin-top:8px;">Nessun orario fisso impostato — aggiungile manualmente dal calendario.</div>`}
-    </div>
-  `;
-
-  backdrop.innerHTML = `
-    <div class="modal narrow" role="dialog" aria-modal="true" style="max-width:480px;">
-      <div class="modal-top">
-        <div>
-          <h3 class="modal-title">Pianifica lezioni</h3>
-          <div class="muted small">${escapeHtml(getClientFullName(client))}</div>
-        </div>
-        <button class="btn btn-ghost btn-small" id="scheduleAfterRenewClose">Chiudi</button>
-      </div>
-      <div style="display:grid;gap:14px;">
-        ${oldPlanSection}
-        ${newPlanSection}
-        ${!hasSchedule ? `
-          <div class="mini-card">
-            <div class="muted small">Per la pianificazione automatica, imposta un orario fisso nella scheda cliente.</div>
-            <button class="btn btn-soft btn-small" style="margin-top:10px;" id="scheduleOpenClientBtn">Apri scheda cliente →</button>
-          </div>
-        ` : ''}
-      </div>
-    </div>
-  `;
-
-  document.body.appendChild(backdrop);
-
-  /* Chiudi */
-  backdrop.querySelector('#scheduleAfterRenewClose').addEventListener('click', () => backdrop.remove());
-  backdrop.addEventListener('click', e => { if (e.target === backdrop) backdrop.remove(); });
-
-  /* Pianifica lezioni vecchio pacchetto */
-  backdrop.querySelector('#scheduleOldPlanBtn')?.addEventListener('click', () => {
-    if (!oldPlan) return;
-    const oldPkg = getPackage(oldPlan.packageId);
-    if (!oldPkg) return;
-    const weekdays = client.scheduleMode === 'same' ? (client.fixedDays || []) : (client.variableSchedule || []).map(v => v.weekday);
-    const timesByWeekday = client.scheduleMode === 'different'
-      ? Object.fromEntries((client.variableSchedule || []).map(v => [v.weekday, v.time]))
-      : null;
-    const count = createRecurringLessonsForClient({
-      client, plan: oldPlan, pkg: { ...oldPkg, lessonsTotal: oldRemaining },
-      startDate: todayISO(),
-      weekdays,
-      time: client.fixedTime || '',
-      timesByWeekday
-    });
-    if (count > 0) {
-      showToast(`${count} lezioni del vecchio pacchetto pianificate.`, 'ok');
-      backdrop.querySelector('#scheduleOldPlanBtn').disabled = true;
-      backdrop.querySelector('#scheduleOldPlanBtn').textContent = `✓ ${count} lezioni pianificate`;
-    } else {
-      showToast('Nessuno slot disponibile. Controlla il calendario.', 'warn');
-    }
-  });
-
-  /* Pianifica lezioni nuovo pacchetto */
-  backdrop.querySelector('#scheduleNewPlanBtn')?.addEventListener('click', () => {
-    const weekdays = client.scheduleMode === 'same' ? (client.fixedDays || []) : (client.variableSchedule || []).map(v => v.weekday);
-    const timesByWeekday = client.scheduleMode === 'different'
-      ? Object.fromEntries((client.variableSchedule || []).map(v => [v.weekday, v.time]))
-      : null;
-    const count = createRecurringLessonsForClient({
-      client, plan: newPlan, pkg: newPkg,
-      startDate: newPlan.startDate || todayISO(),
-      weekdays,
-      time: client.fixedTime || '',
-      timesByWeekday
-    });
-    /* Se il vecchio piano era già esaurito, promuovi automaticamente */
-    maybePromotePendingPlan(client.id);
-    if (count > 0) {
-      showToast(`${count} lezioni del nuovo pacchetto pianificate.`, 'ok');
-      backdrop.querySelector('#scheduleNewPlanBtn').disabled = true;
-      backdrop.querySelector('#scheduleNewPlanBtn').textContent = `✓ ${count} lezioni pianificate`;
-    } else {
-      showToast('Nessuno slot disponibile. Controlla il calendario.', 'warn');
-    }
-  });
-
-  /* Apri scheda cliente */
-  backdrop.querySelector('#scheduleOpenClientBtn')?.addEventListener('click', () => {
-    backdrop.remove();
-    requestAnimationFrame(() => renderClientModal(client.id));
-  });
 }
 
 function renderReport() {
@@ -9379,10 +9156,10 @@ el.renewForm.addEventListener('submit', event => {
   const pkg = getPackage(el.renewPackage.value);
   if (!client || !pkg) return;
 
+  // Calcola le lezioni rimanenti dal piano attuale da riportare
   const oldPlan = getActivePlan(client.id);
   const oldStats = oldPlan ? planStats(oldPlan) : { remaining: 0 };
   const carryOver = Math.max(0, oldStats.remaining || 0);
-  const oldPlanIsFinished = oldStats.remaining === 0;
 
   const newPlanId = uid('plan');
   state.plans.push({
@@ -9394,10 +9171,11 @@ el.renewForm.addEventListener('submit', event => {
     saleType: 'renewal',
     planType: 'personal',
     totalPrice: Number(el.renewPrice?.value ?? client.packagePrice ?? pkg.totalPrice ?? 0),
-    carryOverLessons: 0,   // carryOver non serve più: le lezioni restano sul vecchio piano
+    carryOverLessons: carryOver,   // lezioni riportate dal pacchetto precedente
     createdAt: new Date().toISOString()
   });
 
+  // Resetta sempre il pagamento per il nuovo pacchetto
   client.paymentStatus = 'unpaid';
   if (!client.paymentMode) client.paymentMode = 'single';
 
@@ -9407,8 +9185,10 @@ el.renewForm.addEventListener('submit', event => {
     client.conversionStatus = 'path_started';
   }
 
+  // Dismetti gli alert vecchi di rinnovo e pagamento per questo cliente
   if (!Array.isArray(state.dismissedAlerts)) state.dismissedAlerts = [];
   ['renewal', 'payment'].forEach(type => {
+    // Rimuovi qualsiasi alert precedente di questo tipo per il cliente
     state.dismissedAlerts = state.dismissedAlerts.filter(id => !id.startsWith(`${type}_${client.id}_`));
   });
 
@@ -9421,26 +9201,12 @@ el.renewForm.addEventListener('submit', event => {
     startDate: el.renewStartDate.value,
     carryOverLessons: carryOver
   });
-
-  if (oldPlanIsFinished) {
-    /* Piano vecchio già esaurito → passa subito al nuovo */
-    client.activePlanId = newPlanId;
-    client.pendingPlanId = null;
-    saveState(true);
-    renderAll();
-    closeModal('renewModalBackdrop');
-    showToast('Rinnovo registrato.', 'ok');
-    openScheduleNewPlanModal(client, getPlan(newPlanId), pkg);
-  } else {
-    /* Piano vecchio ancora in corso → il nuovo va in attesa */
-    client.pendingPlanId = newPlanId;
-    saveState(true);
-    renderAll();
-    closeModal('renewModalBackdrop');
-    const carryMsg = carryOver > 0 ? ` (${carryOver} lezioni rimanenti dal vecchio pacchetto)` : '';
-    showToast(`Rinnovo registrato${carryMsg}. Vecchio pacchetto ancora attivo.`, 'ok');
-    openScheduleNewPlanModal(client, getPlan(newPlanId), pkg, { showOldPlan: true, oldPlan, carryOver });
-  }
+  client.activePlanId = newPlanId;
+  saveState(true);
+  renderAll();
+  closeModal('renewModalBackdrop');
+  const carryMsg = carryOver > 0 ? ` (+ ${carryOver} lezioni riportate)` : '';
+  showToast(`Rinnovo registrato${carryMsg}.`, 'ok');
 });
 
 // "Chiudi senza rinnovo": rimuove gli alert di pagamento/rinnovo senza creare un nuovo piano
@@ -9900,7 +9666,6 @@ function openMonthPicker(defaultDate, onConfirm) {
   lockBodyScroll();
   requestAnimationFrame(() => document.getElementById('mpConfirmBtn')?.focus());
 }
-
     async function initApp() {
   loadStateLocal();
   resetPackageForm();
@@ -10242,7 +10007,6 @@ async function callPortalEdge(token, action, payload = {}) {
   } catch(e) { return null; }
 }
 async function loadClientMessages(client) {
-  if (!cloud.user || !cloud.client) return;
   const panel = document.getElementById('clientMessagesPanel');
   if (!panel || !client.shareToken) return;
 

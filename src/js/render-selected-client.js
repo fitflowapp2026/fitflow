@@ -80,21 +80,6 @@ function renderSelectedClient() {
       <button class="btn btn-soft btn-small" id="sharePortalBtn" title="Apri portale cliente">🔗 Portale</button>
       <button class="btn btn-ghost btn-small" id="sharePortalLinkBtn" title="Condividi link portale">↗ Condividi</button>
     </div>
-    ${client.pendingPlanId ? (() => {
-      const pending = getPendingPlan(client.id);
-      const pendingPkg = getPackage(pending?.packageId);
-      return pending && pendingPkg ? `
-        <div class="mini-card" style="border-color:rgba(29,185,84,0.3);background:rgba(29,185,84,0.06);margin-top:4px;">
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
-            <div>
-              <div style="font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--good);">Nuovo pacchetto in attesa</div>
-              <div class="muted small" style="margin-top:2px;">${escapeHtml(pendingPkg.name)} · ${pendingPkg.lessonsTotal} lezioni · dal ${formatDateShort(pending.startDate)}</div>
-            </div>
-            <button class="btn btn-good btn-small" id="schedulePendingPlanBtn">Pianifica →</button>
-          </div>
-        </div>
-      ` : '';
-    })() : ''}
     <div id="clientMessagesPanel" style="display:none;margin-top:4px;"></div>
   `;
   if (el.mobileSelectedClientCard) {
@@ -176,17 +161,6 @@ function renderSelectedClient() {
   document.getElementById('mobilePaymentStatusTag')?.addEventListener('click', openPaymentQuickModal);
   document.getElementById('editClientBtn').addEventListener('click', () => renderClientModal(client));
   document.getElementById('renewClientBtn').addEventListener('click', openRenewModal);
-  document.getElementById('schedulePendingPlanBtn')?.addEventListener('click', () => {
-    const pending = getPendingPlan(client.id);
-    const pendingPkg = getPackage(pending?.packageId);
-    if (pending && pendingPkg) {
-      openScheduleNewPlanModal(client, pending, pendingPkg, {
-        showOldPlan: true,
-        oldPlan: getActivePlan(client.id),
-        carryOver: planStats(getActivePlan(client.id)).remaining
-      });
-    }
-  });
 
   /* Portale cliente — apre il portale + condividi link */
   const sharePortalFn = () => {

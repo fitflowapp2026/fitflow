@@ -1,3 +1,4 @@
+/* ── Modal pagamento rapido ──────────────────────── */
 function openPaymentQuickModal() {
   const client = getClient(state.selectedClientId);
   if (!client || client.paymentStatus === 'paid') return;

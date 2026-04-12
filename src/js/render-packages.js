@@ -1,3 +1,4 @@
+
 function renderPackages() {
   if (!state.packages.length) {
     el.packageList.innerHTML = '<div class="empty">Nessun pacchetto</div>';

@@ -1,3 +1,4 @@
+
 function normalizePackageData() {
   state.packages = (state.packages || []).map(pkg => ({ ...pkg, totalPrice: Number(pkg?.totalPrice || 0) }));
 }

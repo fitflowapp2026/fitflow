@@ -1,3 +1,4 @@
+
 function updateMsgBadges(count) {
   _unreadMsgCount = count;
   const ids = ['msgBadgeBnav', 'msgBadgeMobileTopbar', 'msgBadgeDesktop'];

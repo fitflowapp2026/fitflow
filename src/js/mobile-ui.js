@@ -1,3 +1,4 @@
+═══════════════════════════════════════════════════════════ */
 (function initMobileUI() {
   const drawerOverlay = document.getElementById('drawerOverlay');
   const sidebarDrawer = document.getElementById('sidebarDrawer');

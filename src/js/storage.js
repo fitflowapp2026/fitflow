@@ -1,3 +1,4 @@
+
 function getSnapshot() {
   return {
     clients: state.clients,

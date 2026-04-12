@@ -1,3 +1,4 @@
+
 async function loadClientMessages(client) {
   const panel = document.getElementById('clientMessagesPanel');
   if (!panel || !client.shareToken) return;

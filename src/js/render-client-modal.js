@@ -1,3 +1,4 @@
+
 function renderClientHistory(client) {
   if (!client) return;
   ensureClientHistoryBuckets(client);

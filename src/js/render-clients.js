@@ -1,3 +1,4 @@
+
 function getClientUrgency(client) {
   const plan = getActivePlan(client.id);
   const stats = planStats(plan);

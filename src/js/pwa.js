@@ -1,3 +1,4 @@
+═══════════════════════════════════════════════════════════ */
 function renderHeroGreeting() {
   const dateLabel = document.getElementById('heroDateLabel');
   const greeting  = document.getElementById('heroGreeting');

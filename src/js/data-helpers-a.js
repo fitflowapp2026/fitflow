@@ -1,3 +1,4 @@
+
 function getPackageUnitValue(pkg) {
   const lessonsTotal = Number(pkg?.lessonsTotal || 0);
   const totalPrice = Number(pkg?.totalPrice || 0);

@@ -1,3 +1,4 @@
+
 async function syncStateToCloud(force = false) {
   if (!cloud.client || !cloud.user || cloud.allowLocalOnly) return false;
   if (cloud.saving && !force) return false;

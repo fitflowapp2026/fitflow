@@ -1,92 +1,65 @@
 #!/usr/bin/env node
 /**
- * DSWORLD — extract.js  v2
- * ─────────────────────────────────────────────────────────────
- * Legge app.html e scrive automaticamente tutti i file src/.
- * Genera anche shell.html corretto e applica i bug fix noti.
- *
- * USO (una volta sola):
- *   node extract.js
- *
- * Poi verifica:
- *   node build.js && open app.html
+ * DSWORLD — extract.js
+ * Legge app_source.html e genera src/ completo.
+ * Esegui UNA SOLA VOLTA: node extract.js
+ * Poi usa: node build.js  (oppure npm run dev)
  */
-
 'use strict';
-
 const fs   = require('fs');
 const path = require('path');
 
-const ROOT       = __dirname;
-const APP_HTML   = path.join(ROOT, 'app.html');
-const APP_SOURCE = path.join(ROOT, 'app.source.html');
-const SRC        = path.join(ROOT, 'src');
+const ROOT   = __dirname;
+const SOURCE = path.join(ROOT, 'app_source.html');
+const SRC    = path.join(ROOT, 'src');
 
-// Usa app.source.html come sorgente (immutabile).
-// build.js sovrascrive solo app.html, mai app.source.html.
-if (!fs.existsSync(APP_SOURCE)) {
-  if (!fs.existsSync(APP_HTML)) {
-    console.error('X  app.html non trovato.'); process.exit(1);
-  }
-  fs.copyFileSync(APP_HTML, APP_SOURCE);
-  console.log('ok  app.source.html creato (sorgente originale)');
-} else {
-  console.log('--  Usando app.source.html');
+if (!fs.existsSync(SOURCE)) {
+  console.error('ERRORE: app_source.html non trovato.');
+  process.exit(1);
 }
-const raw   = fs.readFileSync(APP_SOURCE, 'utf8');
-const lines = raw.split('\n');
 
-/* -- Helper: righe [from, to] 1-indexed inclusivo ----------- */
+const raw   = fs.readFileSync(SOURCE, 'utf8');
+const lines = raw.split('\n');
+console.log(`Sorgente: ${lines.length} righe\n`);
+
+// Scrive un file, strippando l'indentazione di 4 spazi
+function W(relPath, content) {
+  const abs = path.join(SRC, relPath);
+  fs.mkdirSync(path.dirname(abs), { recursive: true });
+  const out = content.split('\n').map(l => l.startsWith('    ') ? l.slice(4) : l).join('\n');
+  fs.writeFileSync(abs, out.trimEnd() + '\n', 'utf8');
+  const kb = (fs.statSync(abs).size / 1024).toFixed(1);
+  process.stdout.write(`  ok  src/${relPath.padEnd(40)} ${kb.padStart(6)} KB\n`);
+}
+
+// Righe [from, to] 1-indexed inclusive
 function L(from, to) {
   return lines.slice(from - 1, to).join('\n');
 }
 
-/* -- Helper: scrive file, crea dir, rimuove indent 4sp ------- */
-function write(relPath, content) {
-  const abs = path.join(SRC, relPath);
-  fs.mkdirSync(path.dirname(abs), { recursive: true });
-  const cleaned = content.replace(/^    /gm, '');
-  fs.writeFileSync(abs, cleaned.trimEnd() + '\n', 'utf8');
-  const kb = (Buffer.byteLength(cleaned, 'utf8') / 1024).toFixed(1);
-  console.log(`  ok  src/${relPath.padEnd(42)} ${kb.padStart(6)} KB`);
-}
-
-/* -- Helper: scrive senza rimuovere indent ------------------ */
-function writeRaw(relPath, content) {
-  const abs = path.join(SRC, relPath);
-  fs.mkdirSync(path.dirname(abs), { recursive: true });
-  fs.writeFileSync(abs, content.trimEnd() + '\n', 'utf8');
-  const kb = (Buffer.byteLength(content, 'utf8') / 1024).toFixed(1);
-  console.log(`  ok  src/${relPath.padEnd(42)} ${kb.padStart(6)} KB`);
-}
-
-/* -- Helper: estrae blocco HTML per id ---------------------- */
-function extractById(id) {
+// Estrae un blocco HTML per id
+function byId(id) {
   let start = -1;
   for (let i = 0; i < lines.length; i++) {
     if (lines[i].includes(`id="${id}"`)) { start = i; break; }
   }
-  if (start === -1) return `<!-- MISSING: #${id} -->`;
+  if (start === -1) return `<!-- MISSING: ${id} -->`;
   const tagMatch = lines[start].match(/<(\w+)/);
   const tag = tagMatch ? tagMatch[1] : 'div';
+  const reO = new RegExp(`<${tag}[\\s>/]`, 'g');
+  const reC = new RegExp(`</${tag}>`, 'g');
   let depth = 0, end = start;
-  const reOpen  = new RegExp(`<${tag}[\\s>/]`, 'g');
-  const reClose = new RegExp(`</${tag}>`, 'g');
   for (let i = start; i < lines.length; i++) {
-    depth += (lines[i].match(reOpen)  || []).length;
-    depth -= (lines[i].match(reClose) || []).length;
+    depth += (lines[i].match(reO) || []).length;
+    depth -= (lines[i].match(reC) || []).length;
     if (i > start && depth <= 0) { end = i; break; }
   }
   return lines.slice(start, end + 1).join('\n');
 }
 
-/* ============================================================
-   STEP 1 — CSS
-   Ordine identico all'originale (nessun gap, nessun overlap)
-   ============================================================ */
-console.log('\n[1/6] CSS...');
-
-const CSS_SPLITS = [
+// ── CSS ────────────────────────────────────────────────────────
+console.log('[1/5] CSS...');
+const CSS = [
   ['css/variables.css',   30,   49],
   ['css/base.css',        50,  184],
   ['css/messages.css',   185,  292],
@@ -94,51 +67,42 @@ const CSS_SPLITS = [
   ['css/calendar.css',   584,  712],
   ['css/hero.css',       713,  898],
   ['css/modals.css',     899, 1464],
-  ['css/forms.css',     1465, 2119],
-  ['css/animations.css',2120, 2415],
-  ['css/mobile.css',    2416, 3143],
+  ['css/forms.css',     1465, 2118],
+  ['css/animations.css',2119, 2414],
+  ['css/mobile.css',    2415, 3142],
 ];
+CSS.forEach(([p, s, e]) => W(p, L(s, e)));
 
-for (const [relPath, from, to] of CSS_SPLITS) write(relPath, L(from, to));
+// ── HTML ───────────────────────────────────────────────────────
+console.log('\n[2/5] HTML...');
+W('html/auth.html', byId('authShell'));
 
-/* ============================================================
-   STEP 2 — HTML
-   ============================================================ */
-console.log('\n[2/6] HTML...');
-
-write('html/auth.html', extractById('authShell'));
-
-/* drawer = overlay + sidebar + bottom nav */
+// drawer = overlay + sidebar + bottomNav
 {
-  const overlay = extractById('drawerOverlay');
-  const sidebar = extractById('sidebarDrawer');
-  let bnStart = -1, bnEnd = -1;
+  const overlay = byId('drawerOverlay');
+  const sidebar = byId('sidebarDrawer');
+  let ns = -1, ne = -1;
   for (let i = 0; i < lines.length; i++) {
-    if (lines[i].includes('id="bottomNav"')) { bnStart = i; break; }
+    if (lines[i].includes('id="bottomNav"')) { ns = i; break; }
   }
-  if (bnStart !== -1) {
+  if (ns !== -1) {
     let d = 0;
-    for (let i = bnStart; i < lines.length; i++) {
-      d += (lines[i].match(/<nav[\s>]/g)||[]).length
-         - (lines[i].match(/<\/nav>/g)||[]).length;
-      if (i > bnStart && d <= 0) { bnEnd = i; break; }
+    for (let i = ns; i < lines.length; i++) {
+      d += (lines[i].match(/<nav[\s>]/g) || []).length;
+      d -= (lines[i].match(/<\/nav>/g) || []).length;
+      if (i > ns && d <= 0) { ne = i; break; }
     }
   }
-  const bnav = bnStart !== -1 ? lines.slice(bnStart, bnEnd + 1).join('\n') : '';
-  write('html/drawer.html', [overlay, sidebar, bnav].join('\n\n'));
+  const bnav = ns !== -1 ? lines.slice(ns, ne + 1).join('\n') : '';
+  W('html/drawer.html', [overlay, sidebar, bnav].join('\n\n'));
 }
 
-/* app-layout = skip-link + div#mainApp */
 {
-  let skipLine = '';
-  for (let i = 0; i < lines.length; i++) {
-    if (lines[i].includes('class="skip-link"')) { skipLine = lines[i]; break; }
-  }
-  write('html/app-layout.html', skipLine + '\n\n' + extractById('mainApp'));
+  const skip = lines.find(l => l.includes('class="skip-link"')) || '';
+  W('html/app-layout.html', skip + '\n\n' + byId('mainApp'));
 }
 
-/* Modal singoli */
-for (const [relPath, id] of [
+[
   ['html/modal-messages.html',     'messagesModalBackdrop'],
   ['html/modal-client.html',       'clientModalBackdrop'],
   ['html/modal-packages.html',     'packagesModalBackdrop'],
@@ -150,140 +114,69 @@ for (const [relPath, id] of [
   ['html/modal-confirm.html',      'confirmModalBackdrop'],
   ['html/modal-fsc.html',          'fscBackdrop'],
   ['html/modal-month-picker.html', 'mpBackdrop'],
-]) write(relPath, extractById(id));
+].forEach(([p, id]) => W(p, byId(id)));
 
-/* modal-account = password + account + hidden inputs */
 {
-  const pw      = extractById('passwordUpdateModalBackdrop');
-  const account = extractById('accountModalBackdrop');
-  let extra = '';
-  for (let i = 0; i < lines.length; i++) {
-    if (lines[i].includes('id="calendarQuickSearch"')) { extra = lines[i]; break; }
-  }
-  write('html/modal-account.html', [pw, account, extra].join('\n\n'));
+  const extra = lines.find(l => l.includes('id="calendarQuickSearch"')) || '';
+  W('html/modal-account.html',
+    byId('passwordUpdateModalBackdrop') + '\n\n' +
+    byId('accountModalBackdrop') + '\n\n' + extra);
 }
 
-/* modal-misc = 4 modal operativi */
-write('html/modal-misc.html',
+W('html/modal-misc.html',
   ['completamentoModalBackdrop','paymentQuickModalBackdrop',
-   'operazioniModalBackdrop','atRiskModalBackdrop']
-  .map(extractById).join('\n\n'));
+   'operazioniModalBackdrop','atRiskModalBackdrop'].map(byId).join('\n\n'));
 
-/* ============================================================
-   STEP 3 — JavaScript
-   ============================================================ */
-console.log('\n[3/6] JavaScript...');
-
-const JS_SPLITS = [
-  ['js/constants.js',            4108, 4155],
-  ['js/state.js',                4156, 4363],
-  ['js/utils.js',                4364, 4479],
-  ['js/data-helpers-a.js',       4480, 4695],
-  ['js/storage.js',              4696, 4868],
-  ['js/cloud-sync.js',           4869, 5119],
-  ['js/google-calendar.js',      5120, 5426],
-  ['js/data-helpers-b.js',       5427, 6125],
-  ['js/data-helpers-c.js',       6126, 6463],
-  ['js/render-client-modal.js',  6464, 6619],
-  ['js/render-packages.js',      6620, 6653],
-  ['js/render-hero.js',          6654, 6738],
-  ['js/render-ops-modals.js',    6739, 6938],
-  ['js/render-selected-client.js',6939,7182],
-  ['js/render-clients.js',       7183, 7368],
-  ['js/render-calendar.js',      7369, 7921],
-  ['js/lesson-actions.js',       7922, 8217],
-  ['js/renew-report-auth.js',    8218, 8696],
-  ['js/render-all.js',           8697, 8720],
-  ['js/actions.js',              8721, 9218],
-  ['js/pwa.js',                  9219, 9639],
-  ['js/init.js',                 9640, 9727],
-  ['js/mobile-ui.js',            9728, 9840],
-  ['js/realtime.js',             9841, 9977],
-  ['js/render-messages.js',      9978,10339],
-  ['js/misc.js',                10340,10420],
+// ── JS ─────────────────────────────────────────────────────────
+console.log('\n[3/5] JavaScript...');
+// IMPORTANTE: initApp e' alla riga 9639 — va in init.js, NON in pwa.js
+const JS = [
+  ['js/constants.js',            4107, 4154],
+  ['js/state.js',                4155, 4362],
+  ['js/utils.js',                4363, 4478],
+  ['js/data-helpers-a.js',       4479, 4694],
+  ['js/storage.js',              4695, 4867],
+  ['js/cloud-sync.js',           4868, 5118],
+  ['js/google-calendar.js',      5119, 5425],
+  ['js/data-helpers-b.js',       5426, 6124],
+  ['js/data-helpers-c.js',       6125, 6462],
+  ['js/render-client-modal.js',  6463, 6618],
+  ['js/render-packages.js',      6619, 6652],
+  ['js/render-hero.js',          6653, 6737],
+  ['js/render-ops-modals.js',    6738, 6937],
+  ['js/render-selected-client.js',6938,7181],
+  ['js/render-clients.js',       7182, 7367],
+  ['js/render-calendar.js',      7368, 7920],
+  ['js/lesson-actions.js',       7921, 8216],
+  ['js/renew-report-auth.js',    8217, 8695],
+  ['js/render-all.js',           8696, 8719],
+  ['js/actions.js',              8720, 9217],
+  ['js/pwa.js',                  9218, 9638], // finisce riga 9638, PRIMA di initApp
+  ['js/init.js',                 9639, 9726], // initApp parte qui (riga 9639)
+  ['js/mobile-ui.js',            9727, 9839],
+  ['js/realtime.js',             9840, 9976],
+  ['js/render-messages.js',      9977,10338],
+  ['js/misc.js',                10339,10419],
 ];
+JS.forEach(([p, s, e]) => W(p, L(s, e)));
 
-for (const [relPath, from, to] of JS_SPLITS) write(relPath, L(from, to));
-
-/* ============================================================
-   STEP 4 — Bug fix automatici
-   ============================================================ */
-console.log('\n[4/6] Bug fix...');
-
-function patch(relPath, desc, search, replace) {
-  const abs = path.join(SRC, relPath);
-  if (!fs.existsSync(abs)) { console.log(`  --  ${relPath} mancante, skip`); return; }
-  let c = fs.readFileSync(abs, 'utf8');
-  if (!c.includes(search)) { console.log(`  --  pattern non trovato: ${desc}`); return; }
-  fs.writeFileSync(abs, c.replace(search, replace), 'utf8');
-  console.log(`  ok  ${desc}`);
-}
-
-/* FIX 1: gap duplicato in .messages-sidebar */
-patch('css/messages.css',
-  'CSS: rimuove gap:1px duplicato in .messages-sidebar',
-  'gap: 1px;\n  overflow-y: auto;\n  border-right: 1px solid rgba(255,255,255,0.07);\n  background: rgba(255,255,255,0.02);\n  padding: 8px;\n  gap: 6px;',
-  'overflow-y: auto;\n  border-right: 1px solid rgba(255,255,255,0.07);\n  background: rgba(255,255,255,0.02);\n  padding: 8px;\n  gap: 6px;'
-);
-
-/* FIX 2: clientPortalUrl piu robusta */
-patch('js/utils.js',
-  "JS: clientPortalUrl usa pathname split",
-  "function clientPortalUrl(token) {\n  const base = window.location.origin + window.location.pathname.replace('app.html','').replace('index.html','') + 'client.html';",
-  "function clientPortalUrl(token) {\n  const dir  = window.location.pathname.replace(/\\/[^\\/]*$/, '/');\n  const base = window.location.origin + dir + 'client.html';"
-);
-
-/* FIX 3: sendMsgChatReply doppia fetch — sostituisce tutte le occorrenze */
+// ── shell.html ─────────────────────────────────────────────────
+console.log('\n[4/5] shell.html...');
 {
-  const abs = require('path').join(SRC, 'js/render-messages.js');
-  if (require('fs').existsSync(abs)) {
-    let c = require('fs').readFileSync(abs, 'utf8');
-    const old3 = "showToast('Risposta inviata!', 'ok');\n    openMsgChat(client);\n    loadClientMessages(client);";
-    const new3 = "showToast('Risposta inviata!', 'ok');\n    /* FIX: una sola fetch */\n    loadClientMessages(client);";
-    const n = (c.match(new RegExp(old3.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length;
-    c = c.split(old3).join(new3);
-    require('fs').writeFileSync(abs, c, 'utf8');
-    console.log('  ok  JS: sendMsgChatReply rimuove openMsgChat duplicata (' + n + ' occorrenze)');
+  let headLines = [];
+  for (const line of lines) {
+    if (line.trim() === '</head>') break;
+    headLines.push(line);
   }
-}
+  const head = headLines.join('\n').replace(/\s*<style>[\s\S]*?<\/style>/, '');
+  const cssInc = CSS.map(([p]) => `/* @@include src/${p} */`).join('\n');
+  const jsInc  = JS.map(([p])  => `// @@include src/${p}`)  .join('\n');
+  // ExcelJS loader (righe 4093-4105)
+  const excel = L(4093, 4105).replace(/^    /gm, '  ');
 
-/* FIX 4: autoCompleteElapsedLessons fuori da renderAll */
-patch('js/render-all.js',
-  'JS: rimuove autoCompleteElapsedLessons da renderAll',
-  "  try { autoCompleteElapsedLessons(); } catch(e) { console.error(e); }\n",
-  "  /* autoComplete gestita da scheduleNextAutoComplete in init.js */\n"
-);
-
-/* FIX 5: debounce su refreshUnreadMessages */
-patch('js/realtime.js',
-  'JS: aggiunge _debouncedRefreshUnread',
-  "async function refreshUnreadMessages() {",
-  "const _debouncedRefreshUnread = (function(){\n  let t; return function(){ clearTimeout(t); t = setTimeout(refreshUnreadMessages, 200); };\n})();\n\nasync function refreshUnreadMessages() {"
-);
-
-/* ============================================================
-   STEP 5 — Genera shell.html con ordine preciso
-   ============================================================ */
-console.log('\n[5/6] shell.html...');
-
-/* Estrai head originale senza il blocco <style> */
-let headLines = [];
-for (let i = 0; i < lines.length; i++) {
-  if (lines[i].trim() === '</head>') break;
-  headLines.push(lines[i]);
-}
-const headNoStyle = headLines.join('\n')
-  .replace(/\s*<style>[\s\S]*?<\/style>/, '');
-
-/* ExcelJS loader inline (righe 4094-4106 originale) */
-const excelLoader = L(4094, 4106).replace(/^    /gm, '  ');
-
-const cssBlock = CSS_SPLITS.map(([p]) => `/* @@include src/${p} */`).join('\n');
-const jsBlock  = JS_SPLITS.map(([p]) => `// @@include src/${p}`).join('\n');
-
-const shellHtml = `${headNoStyle}
+  const shell = `${head}
   <style>
-${cssBlock}
+${cssInc}
   </style>
 </head>
 <body class="signed-out">
@@ -307,22 +200,16 @@ ${cssBlock}
 
   <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 
-${excelLoader}
+${excel}
 
-  <!-- Supabase JS: carica da CDN, con fallback automatico -->
+  <!-- Supabase JS: carica da CDN, avvio tramite waitForSupabase in misc.js -->
   <script>
     (function () {
       function tryLoad(urls, idx) {
-        if (idx >= urls.length) {
-          console.error('[DSWORLD] Impossibile caricare supabase-js.');
-          return;
-        }
+        if (idx >= urls.length) { console.error('[DSWORLD] supabase-js non caricato.'); return; }
         var s = document.createElement('script');
         s.src = urls[idx];
-        s.onerror = function () {
-          document.head.removeChild(s);
-          tryLoad(urls, idx + 1);
-        };
+        s.onerror = function () { document.head.removeChild(s); tryLoad(urls, idx + 1); };
         document.head.appendChild(s);
       }
       tryLoad([
@@ -334,21 +221,21 @@ ${excelLoader}
   </script>
 
   <script>
-${jsBlock}
+${jsInc}
   </script>
 
 </body>
 </html>
 `;
+  const abs = path.join(SRC, 'html', 'shell.html');
+  fs.mkdirSync(path.dirname(abs), { recursive: true });
+  fs.writeFileSync(abs, shell.trimEnd() + '\n', 'utf8');
+  const kb = (fs.statSync(abs).size / 1024).toFixed(1);
+  console.log(`  ok  src/html/shell.html${' '.repeat(27)} ${kb.padStart(6)} KB`);
+}
 
-writeRaw('html/shell.html', shellHtml);
-
-/* ============================================================
-   STEP 6 — File di configurazione progetto
-   ============================================================ */
-console.log('\n[6/6] Config files...');
-
-/* netlify.toml — build automatico prima di ogni deploy */
+// ── Config files ───────────────────────────────────────────────
+console.log('\n[5/5] Config files...');
 fs.writeFileSync(path.join(ROOT, 'netlify.toml'),
 `# DSWORLD — Netlify esegue "node build.js" prima di ogni deploy
 [build]
@@ -360,45 +247,35 @@ fs.writeFileSync(path.join(ROOT, 'netlify.toml'),
 `, 'utf8');
 console.log('  ok  netlify.toml');
 
-/* .gitignore */
 fs.writeFileSync(path.join(ROOT, '.gitignore'),
 `node_modules/
-
-# app.html e' generato da build.js — non modificare a mano
+# app.html e' generato da build.js
 app.html
 `, 'utf8');
 console.log('  ok  .gitignore');
 
-/* package.json */
 fs.writeFileSync(path.join(ROOT, 'package.json'),
 JSON.stringify({
-  name: 'dsworld',
-  version: '1.0.0',
-  private: true,
-  scripts: {
-    build: 'node build.js',
-    dev:   'node build.js --watch',
-    extract: 'node extract.js'
-  },
+  name: 'dsworld', version: '1.0.0', private: true,
+  scripts: { build: 'node build.js', dev: 'node build.js --watch' },
   engines: { node: '>=16' }
 }, null, 2) + '\n', 'utf8');
 console.log('  ok  package.json');
 
-/* ============================================================
-   RIEPILOGO FINALE
-   ============================================================ */
+// ── Verifica finale ────────────────────────────────────────────
+console.log('\n── Verifica ──────────────────────────────────────');
+const pwa  = fs.readFileSync(path.join(SRC, 'js/pwa.js'), 'utf8');
+const init = fs.readFileSync(path.join(SRC, 'js/init.js'), 'utf8');
+const mob  = fs.readFileSync(path.join(SRC, 'js/mobile-ui.js'), 'utf8');
+const css  = fs.readFileSync(path.join(SRC, 'css/forms.css'), 'utf8');
+console.log('  initApp in pwa.js:   ', !pwa.includes('async function initApp') ? 'OK (assente)' : 'ERRORE');
+console.log('  initApp in init.js:  ', init.includes('async function initApp') ? 'OK (presente)' : 'ERRORE');
+console.log('  IIFE mobile-ui:      ', mob.includes('(function initMobileUI') ? 'OK' : 'ERRORE');
+console.log('  filter:blur rimosso: ', !css.includes('filter: blur(8px)') ? 'OK' : 'ERRORE');
+
 console.log(`
 ==================================================
-  Estrazione completata!
-  ${CSS_SPLITS.length} CSS  |  16 HTML  |  ${JS_SPLITS.length} JS  |  5 bug fix
-==================================================
-
-  Verifica:
-    node build.js          <- ricostruisce app.html
-    npm run dev            <- watch (ricostruisce ad ogni salvataggio)
-
-  Deploy su Netlify:
-    git add . && git push  <- Netlify chiama "node build.js" in automatico
-    (niente configurazione extra — netlify.toml e' gia' fatto)
+  Fatto! Prossimo passo:
+    node build.js
 ==================================================
 `);

@@ -1,3 +1,4 @@
+let _rendering = false;
 function renderAll() {
   if (_rendering) return;
   _rendering = true;

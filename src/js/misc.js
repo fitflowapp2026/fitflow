@@ -1,3 +1,4 @@
+
 function initFormKeyboardNav() {
   document.addEventListener('keydown', e => {
     if (e.key !== 'Enter') return;
@@ -78,4 +79,3 @@ window.addEventListener('offline', () => {
     // Avvia comunque l'app in modalità solo locale
     initApp();
   }
-})(40); // 40 × 150ms = 6 secondi max di attesa

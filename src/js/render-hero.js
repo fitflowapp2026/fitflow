@@ -1,3 +1,4 @@
+
 function renderHero() {
   const snapshot = getMonthSnapshot(state.viewDate);
   const alerts = getAlerts();
@@ -80,6 +81,3 @@ function renderHero() {
     toggleBtn.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openModal('operazioniModalBackdrop'); } });
   }
 }
-
-
-/* ── Modal pagamento rapido ──────────────────────── */

@@ -1,3 +1,4 @@
+
 function openNewClientModal(trigger = document.activeElement) {
   requestAnimationFrame(() => renderClientModal(null, trigger));
 }
@@ -495,4 +496,3 @@ window.addEventListener('beforeunload', () => {
 
 /* ═══════════════════════════════════════════════════════════
    HERO GREETING & TODAY STRIP
-═══════════════════════════════════════════════════════════ */

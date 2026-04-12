@@ -1,3 +1,4 @@
+
 function resetGoogleState() {
   cloud.google = {
     connected: false,

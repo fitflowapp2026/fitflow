@@ -1,3 +1,4 @@
+  <script>
 const STORAGE_KEY = 'dsworld_clienti_v2';
 const LEGACY_KEY = 'fitplanner_clienti_v1';
 const BACKUP_LATEST_KEY = 'dsworld_clienti_backup_latest_v1';
@@ -45,4 +46,3 @@ async function loadRemoteConfig() {
     } catch (_) { /* prova il prossimo endpoint */ }
   }
   console.info('[DSWORLD] Usando config locale (Netlify Function non ancora attiva)');
-}

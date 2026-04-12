@@ -1,3 +1,4 @@
+
 function buildRecurringPreviewDates({ startDate, weekdays, lessonsTotal }) {
   const selectedDays = sortWeekdays(weekdays);
   const total = Number(lessonsTotal || 0);

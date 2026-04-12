@@ -1,3 +1,4 @@
+
 function buildPackageSummary(pkg, priceOverride = null) {
   if (!pkg) return '<div class="muted">Nessun pacchetto</div>';
   const total = Number(priceOverride != null ? priceOverride : (pkg.totalPrice || 0));

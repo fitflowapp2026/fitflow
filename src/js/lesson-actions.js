@@ -1,3 +1,4 @@
+
 function selectClient(clientId) {
   state.selectedClientId = clientId;
   saveState(true);

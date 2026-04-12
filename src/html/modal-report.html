@@ -1,85 +1,85 @@
-<div class="modal-backdrop" id="reportModalBackdrop">
-    <div class="modal" role="dialog" aria-modal="true">
-      <div class="modal-top">
-        <div>
-          <h3 class="modal-title">Gestionale mensile</h3>
-          <div class="muted small" id="reportMonthLabel"></div>
-        </div></div>
-        <div class="section-block"><div class="section-title">Azioni</div><div class="inline-actions">
-          <button class="btn btn-soft btn-small" id="exportManagedXlsxBtn">Excel mese</button>
-          <button class="btn btn-ghost btn-small" data-close="reportModalBackdrop">Chiudi</button>
-        </div>
-      </div>
-
-      <div class="report-grid" id="reportStats"></div>
-
-      <div class="inline-actions" id="reportFilterBar" style="margin-bottom:12px;flex-wrap:wrap;">
-        <button class="btn btn-soft btn-small active" type="button" data-report-filter="all">Tutto</button>
-        <button class="btn btn-ghost btn-small" type="button" data-report-filter="free_session">FREE SESSION</button>
-        <button class="btn btn-ghost btn-small" type="button" data-report-filter="pack99">PACK99</button>
-        <button class="btn btn-ghost btn-small" type="button" data-report-filter="personal">CLIENTI</button>
-        <button class="btn btn-ghost btn-small" type="button" data-report-filter="outstanding">DA INCASSARE</button>
-        <button class="btn btn-ghost btn-small" type="button" data-report-filter="installments">RATE APERTE</button>
-      </div>
-
-      <div class="report-title">
-        <strong id="reportMoodTitle"></strong>
-        <span class="muted small" id="reportMoodText"></span>
-      </div>
-
-      <div class="package-grid">
-        <div class="summary-list">
-          <strong>Inseriti nel mese</strong>
-          <div id="reportNewClients"></div>
-        </div>
-        <div class="summary-list">
-          <strong>Movimenti commerciali</strong>
-          <div id="reportTopPackages"></div>
-        </div>
-      </div>
-
-      <div class="package-grid">
-        <div class="summary-list" id="reportSectionFreeSession">
-          <strong>FREE SESSION</strong>
-          <div id="reportFreeSession"></div>
-        </div>
-        <div class="summary-list" id="reportSectionPack99">
-          <strong>PACK99</strong>
-          <div id="reportPack99"></div>
-        </div>
-      </div>
-
-      <div class="package-grid">
-        <div class="summary-list" id="reportSectionPersonal">
-          <strong>CLIENTI / PERSONAL</strong>
-          <div id="reportPersonal"></div>
-        </div>
-        <div class="summary-list">
-          <strong>Conversioni da free session</strong>
-          <div id="reportFollowups"></div>
-        </div>
-      </div>
-
-      <div class="package-grid" id="reportFinanceGrid">
-        <div class="summary-list" id="reportSectionOutstanding">
-          <strong>Da incassare</strong>
-          <div id="reportOutstanding"></div>
-        </div>
-        <div class="summary-list" id="reportSectionInstallments">
-          <strong>Rate aperte</strong>
-          <div id="reportInstallments"></div>
-        </div>
-      </div>
-
-      <div class="package-grid">
-        <div class="summary-list">
-          <strong>Clienti che annullano di più</strong>
-          <div id="reportCancelRanking"></div>
-        </div>
-        <div class="summary-list">
-          <strong>Promemoria mese</strong>
-          <div id="reportMoodTextPanel"></div>
-        </div>
-      </div>
+  <div class="modal-backdrop" id="reportModalBackdrop">
+<div class="modal" role="dialog" aria-modal="true">
+  <div class="modal-top">
+    <div>
+      <h3 class="modal-title">Gestionale mensile</h3>
+      <div class="muted small" id="reportMonthLabel"></div>
+    </div></div>
+    <div class="section-block"><div class="section-title">Azioni</div><div class="inline-actions">
+      <button class="btn btn-soft btn-small" id="exportManagedXlsxBtn">Excel mese</button>
+      <button class="btn btn-ghost btn-small" data-close="reportModalBackdrop">Chiudi</button>
     </div>
+  </div>
+
+  <div class="report-grid" id="reportStats"></div>
+
+  <div class="inline-actions" id="reportFilterBar" style="margin-bottom:12px;flex-wrap:wrap;">
+    <button class="btn btn-soft btn-small active" type="button" data-report-filter="all">Tutto</button>
+    <button class="btn btn-ghost btn-small" type="button" data-report-filter="free_session">FREE SESSION</button>
+    <button class="btn btn-ghost btn-small" type="button" data-report-filter="pack99">PACK99</button>
+    <button class="btn btn-ghost btn-small" type="button" data-report-filter="personal">CLIENTI</button>
+    <button class="btn btn-ghost btn-small" type="button" data-report-filter="outstanding">DA INCASSARE</button>
+    <button class="btn btn-ghost btn-small" type="button" data-report-filter="installments">RATE APERTE</button>
+  </div>
+
+  <div class="report-title">
+    <strong id="reportMoodTitle"></strong>
+    <span class="muted small" id="reportMoodText"></span>
+  </div>
+
+  <div class="package-grid">
+    <div class="summary-list">
+      <strong>Inseriti nel mese</strong>
+      <div id="reportNewClients"></div>
+    </div>
+    <div class="summary-list">
+      <strong>Movimenti commerciali</strong>
+      <div id="reportTopPackages"></div>
+    </div>
+  </div>
+
+  <div class="package-grid">
+    <div class="summary-list" id="reportSectionFreeSession">
+      <strong>FREE SESSION</strong>
+      <div id="reportFreeSession"></div>
+    </div>
+    <div class="summary-list" id="reportSectionPack99">
+      <strong>PACK99</strong>
+      <div id="reportPack99"></div>
+    </div>
+  </div>
+
+  <div class="package-grid">
+    <div class="summary-list" id="reportSectionPersonal">
+      <strong>CLIENTI / PERSONAL</strong>
+      <div id="reportPersonal"></div>
+    </div>
+    <div class="summary-list">
+      <strong>Conversioni da free session</strong>
+      <div id="reportFollowups"></div>
+    </div>
+  </div>
+
+  <div class="package-grid" id="reportFinanceGrid">
+    <div class="summary-list" id="reportSectionOutstanding">
+      <strong>Da incassare</strong>
+      <div id="reportOutstanding"></div>
+    </div>
+    <div class="summary-list" id="reportSectionInstallments">
+      <strong>Rate aperte</strong>
+      <div id="reportInstallments"></div>
+    </div>
+  </div>
+
+  <div class="package-grid">
+    <div class="summary-list">
+      <strong>Clienti che annullano di più</strong>
+      <div id="reportCancelRanking"></div>
+    </div>
+    <div class="summary-list">
+      <strong>Promemoria mese</strong>
+      <div id="reportMoodTextPanel"></div>
+    </div>
+  </div>
+</div>
   </div>

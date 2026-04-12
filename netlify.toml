@@ -1,7 +1,3 @@
-# DSWORLD — Netlify esegue "node build.js" prima di ogni deploy
+# DSWORLD — deploy diretto, senza build
 [build]
-  command   = "node build.js"
-  publish   = "."
-
-[build.environment]
-  NODE_VERSION = "18"
+  publish = "."

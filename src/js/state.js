@@ -1,3 +1,4 @@
+}
 const cloud = { client: null, session: null, user: null, config: null, saveTimer: null, listenerBound: false, saving: false, allowLocalOnly: false, hydrated: false, google: { connected: false, calendarId: '', calendarName: '', googleEmail: '', lastError: '', lastSyncAt: '', syncing: false }, googleQueue: Promise.resolve() };
 
 const state = {
@@ -204,5 +205,3 @@ const el = {
   connectGoogleBtn: document.getElementById('connectGoogleBtn'),
   googleResyncBtn: document.getElementById('googleResyncBtn'),
   disconnectGoogleBtn: document.getElementById('disconnectGoogleBtn')
-
-};

@@ -1,3 +1,4 @@
+
 function openRenewModal() {
   const client = getClient(state.selectedClientId);
   if (!client) { showToast('Seleziona un cliente.'); return; }
@@ -475,5 +476,3 @@ function applyResponsiveDefaults() {
     state.selectedDay = todayISO();
   }
 }
-
-let _rendering = false;

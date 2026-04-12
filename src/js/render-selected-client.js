@@ -1,3 +1,4 @@
+
 function renderSelectedClient() {
   const client = getClient(state.selectedClientId);
   if (!client) {

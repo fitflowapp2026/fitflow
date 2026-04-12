@@ -1,3 +1,4 @@
+};
 
 function uid(prefix = 'id') {
   let rand;

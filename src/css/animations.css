@@ -1,3 +1,4 @@
+
 /* ── Scrollbar hidden globally ───────────────────────────── */
 * {
   scrollbar-width: none;
@@ -293,4 +294,3 @@ button:focus-visible {
 
 .mobile-selected-client-wrap {
   display: none;
-}

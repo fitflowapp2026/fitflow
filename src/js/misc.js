@@ -67,15 +67,5 @@ window.addEventListener('offline', () => {
   updateSyncBadge('Offline');
 });
 
-// Attende che window.supabase sia disponibile (necessario con CDN di fallback asincroni)
-(function waitForSupabase(attempts) {
-  if (window.supabase && window.supabase.createClient) {
-    initApp();
-  } else if (attempts > 0) {
-    setTimeout(function () { waitForSupabase(attempts - 1); }, 150);
-  } else {
-    console.error('[DSWORLD] supabase-js non caricato dopo tutti i tentativi CDN.');
-    // Avvia comunque l'app in modalità solo locale
-    initApp();
-  }
-})(40); // 40 × 150ms = 6 secondi max di attesa
+/* initApp() viene chiamata dalla callback onLoad del loader Supabase in shell.html.
+   Non serve un secondo meccanismo di polling qui. */

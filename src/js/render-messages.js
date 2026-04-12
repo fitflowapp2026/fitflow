@@ -1,4 +1,5 @@
 async function loadClientMessages(client) {
+  if (!cloud.user || !cloud.client) return;
   const panel = document.getElementById('clientMessagesPanel');
   if (!panel || !client.shareToken) return;
 

@@ -69,12 +69,9 @@
       -webkit-user-select: none;
     }
     body.modal-scroll-lock {
-      position: fixed;
-      inset: 0;
-      width: 100%;
       overflow: hidden;
       overscroll-behavior: none;
-      /* touch-action:none rimosso — bloccava i tap su iOS se la classe restava attiva */
+      /* iOS fix: rimosso position:fixed che rompe elementi fixed-position */
     }
     html.modal-scroll-lock {
       overflow: hidden;
@@ -10419,5 +10416,24 @@ function renderClientFormStickySummary() {
       }
     })(40); // 40 × 150ms = 6 secondi max di attesa
   </script>
+
+  <script>
+  /* DEBUG TEMPORANEO — rimuovere dopo il test */
+  document.addEventListener('DOMContentLoaded', function() {
+    ['bnavClienti','bnavCalendario','bnavAddCliente','bnavResoconto','bnavPacchetti'].forEach(function(id) {
+      var btn = document.getElementById(id);
+      if (btn) {
+        btn.addEventListener('touchend', function(e) {
+          e.stopPropagation();
+          alert('TAP OK su: ' + id);
+        }, {passive:false});
+      } else {
+        console.error('BOTTONE MANCANTE:', id);
+      }
+    });
+    console.log('DEBUG NAV: listener attaccati');
+  });
+  </script>
+
 </body>
 </html>

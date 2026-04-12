@@ -75,6 +75,7 @@ window.addEventListener('offline', () => {
     setTimeout(function () { waitForSupabase(attempts - 1); }, 150);
   } else {
     console.error('[DSWORLD] supabase-js non caricato dopo tutti i tentativi CDN.');
+    // Avvia comunque l'app in modalità solo locale
     initApp();
   }
-})(40); // 40 x 150ms = 6 secondi max di attesa
+})(40); // 40 × 150ms = 6 secondi max di attesa

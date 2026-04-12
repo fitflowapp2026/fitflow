@@ -174,14 +174,12 @@ input:invalid:not(:placeholder-shown), select:invalid:not(:placeholder-shown) {
   flex-direction: column;
   line-height: 1;
   gap: 2px;
-  text-decoration: none;
 }
 .brand-main {
   font-size: 1.3rem;
   font-weight: 900;
   letter-spacing: 0.12em;
   color: var(--accent);
-  line-height: 1;
 }
 .brand-sub {
   font-size: 0.52rem;
@@ -190,7 +188,6 @@ input:invalid:not(:placeholder-shown), select:invalid:not(:placeholder-shown) {
   color: var(--accent);
   opacity: 0.72;
   text-transform: uppercase;
-  line-height: 1;
   padding-left: 0.08em;
 }
 
@@ -2661,9 +2658,7 @@ button:focus-visible {
     justify-content: space-around;
     align-items: flex-end;
     gap: 2px;
-    /* Garantisce risposta ai tap anche se body ha touch-action:none */
     touch-action: manipulation;
-    -webkit-touch-callout: none;
     isolation: isolate;
   }
   .bnav-btn {
@@ -2680,10 +2675,6 @@ button:focus-visible {
     transition: color 150ms ease, background 150ms ease;
     min-width: 60px;
     flex: 1;
-    touch-action: manipulation;
-    pointer-events: auto;
-    position: relative;
-    z-index: 36;
   }
   .bnav-btn.active { color: var(--accent); }
   .bnav-btn:active { background: rgba(255,255,255,0.07); }
@@ -3234,10 +3225,7 @@ button:focus-visible {
 
   <aside class="sidebar-drawer" id="sidebarDrawer">
 <div class="drawer-close-row">
-  <div class="brand" style="font-size:0.9em;">
-      <span class="brand-main">DSWORLD</span>
-      <span class="brand-sub">FITNESS</span>
-    </div>
+  <div class="brand" style="font-size:0.9em;"><span class="brand-main">DSWORLD</span><span class="brand-sub">FITNESS</span></div>
   <button class="drawer-close-btn" id="drawerCloseBtn">✕ Chiudi</button>
 </div>
 <section class="panel" style="flex:1;min-height:0;">
@@ -3948,10 +3936,7 @@ button:focus-visible {
 
   <div class="app" id="mainApp">
 <header class="topbar">
-  <div class="brand">
-    <span class="brand-main">DSWORLD</span>
-    <span class="brand-sub">FITNESS</span>
-  </div>
+  <div class="brand"><span class="brand-main">DSWORLD</span><span class="brand-sub">FITNESS</span></div>
   <div class="top-actions">
     <span class="user-badge" id="userBadge">Non connesso</span>
     <span id="syncBadge" style="display:none;">Cloud disattivato</span>
@@ -4156,21 +4141,21 @@ button:focus-visible {
   }
   </script>
 
-  <!-- Supabase JS: carica da jsDelivr, con fallback automatico su unpkg se offline -->
+  <!-- Supabase JS — CDN con fallback, usa onload invece di polling -->
   <script>
     (function () {
+      var _loaded = false;
+      function onLoad() {
+        if (_loaded) return; _loaded = true;
+        if (typeof initApp === 'function') initApp();
+        else window._supabaseReadyCallback = true;
+      }
       function tryLoad(urls, idx) {
-        if (idx >= urls.length) {
-          console.error('[DSWORLD] Impossibile caricare supabase-js da tutti i CDN disponibili.');
-          return;
-        }
+        if (idx >= urls.length) { onLoad(); return; }
         var s = document.createElement('script');
         s.src = urls[idx];
-        s.onerror = function () {
-          console.warn('[DSWORLD] CDN non disponibile:', urls[idx], '— provo il successivo…');
-          document.head.removeChild(s);
-          tryLoad(urls, idx + 1);
-        };
+        s.onload = onLoad;
+        s.onerror = function() { document.head.removeChild(s); tryLoad(urls, idx + 1); };
         document.head.appendChild(s);
       }
       tryLoad([
@@ -5509,43 +5494,6 @@ function getActivePlan(clientId) {
   if (!client) return null;
   return getPlan(client.activePlanId) || state.plans.filter(plan => plan.clientId === clientId).sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt))).slice(-1)[0] || null;
 }
-
-/* Restituisce il piano "in attesa" (nuovo pacchetto rinnovato ma non ancora attivo) */
-function getPendingPlan(clientId) {
-  const client = getClient(clientId);
-  if (!client?.pendingPlanId) return null;
-  return getPlan(client.pendingPlanId) || null;
-}
-
-/* Restituisce tutti i piani attivi per un cliente:
-   - Se c'è un pendingPlan: [activePlan, pendingPlan]
-   - Altrimenti: [activePlan]
-   Usato per mostrare entrambi i pacchetti nel calendario */
-function getAllActivePlans(clientId) {
-  const active = getActivePlan(clientId);
-  const pending = getPendingPlan(clientId);
-  const plans = [];
-  if (active) plans.push(active);
-  if (pending && pending.id !== active?.id) plans.push(pending);
-  return plans;
-}
-
-/* Controlla se il piano attivo è esaurito e, se sì, promuove
-   automaticamente il pendingPlan ad activePlan */
-function maybePromotePendingPlan(clientId) {
-  const client = getClient(clientId);
-  if (!client?.pendingPlanId) return false;
-  const activePlan = getActivePlan(clientId);
-  if (!activePlan) return false;
-  const stats = planStats(activePlan);
-  if (stats.remaining > 0) return false;
-  /* Piano esaurito → promuovi il pending */
-  client.activePlanId = client.pendingPlanId;
-  client.pendingPlanId = null;
-  saveState(true);
-  return true;
-}
-
 function getLesson(id) { return state.lessons.find(item => item.id === id) || null; }
 function getLessonsForClient(clientId) {
   return state.lessons.filter(item => item.clientId === clientId).sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`));
@@ -5744,11 +5692,6 @@ function autoCompleteElapsedLessons() {
     }
   });
   if (changed) {
-    /* Dopo aver segnato lezioni come svolte, controlla se qualche
-       piano attivo è ora esaurito e ha un pending da promuovere */
-    state.clients.forEach(client => {
-      if (client.pendingPlanId) maybePromotePendingPlan(client.id);
-    });
     saveState();
     changedLessons.forEach(id => requestGoogleLessonSync('upsert', id));
     /* Free session auto-completata → proponi conversione se nessun modal è aperto */
@@ -7125,23 +7068,8 @@ function renderSelectedClient() {
     <div class="inline-actions">
       <button class="btn btn-soft btn-small" id="editClientBtn">Modifica</button>
       <button class="btn btn-primary btn-small" id="renewClientBtn">Rinnova</button>
-      <button class="btn btn-soft btn-small" id="sharePortalBtn" title="Invia link portale al cliente">🔗 Portale</button>
+      <button class="btn btn-soft btn-small" id="sharePortalBtn" title="Apri portale cliente">🔗 Portale</button>
     </div>
-    ${client.pendingPlanId ? (() => {
-      const pending = getPendingPlan(client.id);
-      const pendingPkg = getPackage(pending?.packageId);
-      return pending && pendingPkg ? `
-        <div class="mini-card" style="border-color:rgba(29,185,84,0.3);background:rgba(29,185,84,0.06);margin-top:4px;">
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
-            <div>
-              <div style="font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--good);">Nuovo pacchetto in attesa</div>
-              <div class="muted small" style="margin-top:2px;">${escapeHtml(pendingPkg.name)} · ${pendingPkg.lessonsTotal} lezioni · dal ${formatDateShort(pending.startDate)}</div>
-            </div>
-            <button class="btn btn-good btn-small" id="schedulePendingPlanBtn">Pianifica →</button>
-          </div>
-        </div>
-      ` : '';
-    })() : ''}
     <div id="clientMessagesPanel" style="display:none;margin-top:4px;"></div>
   `;
   if (el.mobileSelectedClientCard) {
@@ -7222,19 +7150,8 @@ function renderSelectedClient() {
   document.getElementById('mobilePaymentStatusTag')?.addEventListener('click', openPaymentQuickModal);
   document.getElementById('editClientBtn').addEventListener('click', () => renderClientModal(client));
   document.getElementById('renewClientBtn').addEventListener('click', openRenewModal);
-  document.getElementById('schedulePendingPlanBtn')?.addEventListener('click', () => {
-    const pending = getPendingPlan(client.id);
-    const pendingPkg = getPackage(pending?.packageId);
-    if (pending && pendingPkg) {
-      openScheduleNewPlanModal(client, pending, pendingPkg, {
-        showOldPlan: true,
-        oldPlan: getActivePlan(client.id),
-        carryOver: planStats(getActivePlan(client.id)).remaining
-      });
-    }
-  });
 
-  /* Portale cliente — invia direttamente il link al cliente */
+  /* Portale cliente — apre il portale + condividi link */
   const sharePortalFn = () => {
     if (!client.shareToken) { showToast('Token non trovato, modifica e salva il cliente.', 'warn'); return; }
     const url = clientPortalUrl(client.shareToken);
@@ -8104,7 +8021,7 @@ function createLesson({ clientId, planId, date, time, duration, setFixedTime = f
   };
   state.lessons.push(lesson);
   if (setFixedTime && client.scheduleMode === 'same' && !client.fixedTime) client.fixedTime = time;
-saveState(true);
+  saveState(true);
   autoCompleteElapsedLessons();
   renderAll();
   requestGoogleLessonSync('upsert', lesson, { allowCreateWithoutEventId: true });
@@ -8178,6 +8095,7 @@ function applyLessonStatus(status) {
     requestGoogleLessonSync('upsert', duoPartnerStatus);
   }
   saveState(true);
+  autoCompleteElapsedLessons();
   renderAll();
   requestGoogleLessonSync('upsert', lesson);
   openLessonModal(lesson.id);
@@ -8203,6 +8121,7 @@ function applyLessonTime(time) {
   const client = getClient(lesson.clientId);
   if (client?.scheduleMode === 'same') client.fixedTime = time;
   saveState(true);
+  autoCompleteElapsedLessons();
   renderAll();
   requestGoogleLessonSync('upsert', lesson);
   openLessonModal(lesson.id);
@@ -8336,44 +8255,22 @@ function deleteLesson() {
 function openRenewModal() {
   const client = getClient(state.selectedClientId);
   if (!client) { showToast('Seleziona un cliente.'); return; }
-
-  /* Se c'è già un pending plan non ancora promosso, mostra direttamente
-     il modal di pianificazione invece di aprire un nuovo rinnovo */
-  if (client.pendingPlanId) {
-    const pending = getPendingPlan(client.id);
-    const pendingPkg = getPackage(pending?.packageId);
-    if (pending && pendingPkg) {
-      showConfirm(
-        'Rinnovo già registrato',
-        `Hai già un pacchetto "${pendingPkg.name}" in attesa. Vuoi pianificare le lezioni del vecchio o del nuovo pacchetto?`,
-        () => openScheduleNewPlanModal(client, pending, pendingPkg, {
-          showOldPlan: true,
-          oldPlan: getActivePlan(client.id),
-          carryOver: planStats(getActivePlan(client.id)).remaining
-        }),
-        'Pianifica lezioni'
-      );
-      return;
-    }
-  }
-
   const activePlan = getActivePlan(client.id);
   renderPackageOptions(el.renewPackage, activePlan?.packageId || state.packages[0]?.id || '');
   el.renewCheckMode.value = normalizeCheckMode(activePlan?.checkMode);
   const lastLesson = getLessonsForClient(client.id).filter(item => item.status !== 'cancelled').map(item => item.date).sort().slice(-1)[0];
   el.renewStartDate.value = lastLesson || todayISO();
 
-  const oldStats = activePlan ? planStats(activePlan) : { remaining: 0 };
-  const carryPreview = Math.max(0, oldStats.remaining || 0);
+  const oldPlanForPreview = getActivePlan(client.id);
+  const oldStatsForPreview = oldPlanForPreview ? planStats(oldPlanForPreview) : { remaining: 0 };
+  const carryPreview = Math.max(0, oldStatsForPreview.remaining || 0);
 
   const syncPrice = () => {
     const pkg = getPackage(el.renewPackage.value);
     const defaultPrice = Number(client.packagePrice || pkg?.totalPrice || 0);
     if (el.renewPrice && !el.renewPrice._touched) el.renewPrice.value = defaultPrice;
-    const statusNote = carryPreview > 0
-      ? ` · ${carryPreview} lezioni rimanenti dal pacchetto corrente`
-      : ' · Pacchetto corrente completato';
-    if (el.renewPriceHint) el.renewPriceHint.textContent = `Default: ${formatCurrency(defaultPrice)}${statusNote}`;
+    const carryNote = carryPreview > 0 ? ` · +${carryPreview} lezioni riportate` : '';
+    if (el.renewPriceHint) el.renewPriceHint.textContent = `Default: ${formatCurrency(defaultPrice)}${carryNote}`;
     el.renewPreview.innerHTML = buildPackageSummary(pkg, Number(el.renewPrice?.value || defaultPrice));
   };
   syncPrice();
@@ -8383,151 +8280,6 @@ function openRenewModal() {
   }
   el.renewPackage.onchange = () => { if (el.renewPrice) el.renewPrice._touched = false; syncPrice(); };
   openModal('renewModalBackdrop');
-}
-
-/* ── Modal pianificazione dopo rinnovo ──────────────────────────
-   Appare dopo aver confermato il rinnovo e permette con un click
-   di pianificare le lezioni del vecchio pacchetto rimanenti
-   e/o le prime lezioni del nuovo pacchetto.
-──────────────────────────────────────────────────────────────── */
-function openScheduleNewPlanModal(client, newPlan, newPkg, { showOldPlan = false, oldPlan = null, carryOver = 0 } = {}) {
-  if (!client || !newPlan || !newPkg) return;
-
-  const hasSchedule = (client.scheduleMode === 'same' && client.fixedTime && (client.fixedDays || []).length > 0)
-                   || (client.scheduleMode === 'different' && (client.variableSchedule || []).length > 0);
-
-  const oldStats = oldPlan ? planStats(oldPlan) : { remaining: 0 };
-  const oldRemaining = Math.max(0, oldStats.remaining || 0);
-
-  /* Costruisce il contenuto del modal dinamicamente */
-  const existingBackdrop = document.getElementById('scheduleAfterRenewBackdrop');
-  if (existingBackdrop) existingBackdrop.remove();
-
-  const backdrop = document.createElement('div');
-  backdrop.id = 'scheduleAfterRenewBackdrop';
-  backdrop.className = 'modal-backdrop';
-  backdrop.style.cssText = 'display:flex;z-index:80;';
-
-  const oldPlanSection = (showOldPlan && oldPlan && oldRemaining > 0) ? `
-    <div class="mini-card" style="border-color:rgba(245,158,11,0.3);background:rgba(245,158,11,0.06);cursor:pointer;" id="scheduleOldPlanCard">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
-        <div>
-          <div class="section-title" style="color:var(--warn);">Pacchetto precedente — ancora attivo</div>
-          <div class="muted small" style="margin-top:6px;">${oldRemaining} lezioni rimanenti da completare.</div>
-        </div>
-        <span style="color:var(--warn);font-size:1.1rem;flex-shrink:0;">›</span>
-      </div>
-      ${hasSchedule ? `
-        <button class="btn btn-soft btn-small" style="margin-top:10px;width:100%;" id="scheduleOldPlanBtn">
-          Pianifica le ${oldRemaining} lezioni rimanenti →
-        </button>
-      ` : `
-        <button class="btn btn-soft btn-small" style="margin-top:10px;width:100%;" id="scheduleOldPlanOpenClientBtn">
-          Imposta orario fisso →
-        </button>
-      `}
-    </div>
-  ` : '';
-
-  const newPlanSection = `
-    <div class="mini-card" style="border-color:rgba(29,185,84,0.3);background:rgba(29,185,84,0.06);cursor:pointer;" id="scheduleNewPlanCard">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
-        <div>
-          <div class="section-title" style="color:var(--good);">Nuovo pacchetto — ${escapeHtml(newPkg.name)}</div>
-          <div class="muted small" style="margin-top:6px;">${newPkg.lessonsTotal} lezioni · inizia ${formatDateShort(newPlan.startDate)}</div>
-        </div>
-        <span style="color:var(--good);font-size:1.1rem;flex-shrink:0;">›</span>
-      </div>
-      ${hasSchedule ? `
-        <button class="btn btn-primary btn-small" style="margin-top:10px;width:100%;" id="scheduleNewPlanBtn">
-          Pianifica tutte le ${newPkg.lessonsTotal} lezioni del nuovo pacchetto →
-        </button>
-      ` : `
-        <button class="btn btn-soft btn-small" style="margin-top:10px;width:100%;" id="scheduleNewPlanOpenClientBtn">
-          Imposta orario fisso →
-        </button>
-      `}
-    </div>
-  `;
-
-  backdrop.innerHTML = `
-    <div class="modal narrow" role="dialog" aria-modal="true" style="max-width:480px;">
-      <div class="modal-top">
-        <div>
-          <h3 class="modal-title">Pianifica lezioni</h3>
-          <div class="muted small">${escapeHtml(getClientFullName(client))}</div>
-        </div>
-        <button class="btn btn-ghost btn-small" id="scheduleAfterRenewClose">Chiudi</button>
-      </div>
-      <div style="display:grid;gap:14px;">
-        ${oldPlanSection}
-        ${newPlanSection}
-      </div>
-    </div>
-  `;
-
-  document.body.appendChild(backdrop);
-
-  /* Chiudi */
-  backdrop.querySelector('#scheduleAfterRenewClose').addEventListener('click', () => backdrop.remove());
-  backdrop.addEventListener('click', e => { if (e.target === backdrop) backdrop.remove(); });
-
-  /* Pianifica lezioni vecchio pacchetto */
-  backdrop.querySelector('#scheduleOldPlanBtn')?.addEventListener('click', () => {
-    if (!oldPlan) return;
-    const oldPkg = getPackage(oldPlan.packageId);
-    if (!oldPkg) return;
-    const weekdays = client.scheduleMode === 'same' ? (client.fixedDays || []) : (client.variableSchedule || []).map(v => v.weekday);
-    const timesByWeekday = client.scheduleMode === 'different'
-      ? Object.fromEntries((client.variableSchedule || []).map(v => [v.weekday, v.time]))
-      : null;
-    const count = createRecurringLessonsForClient({
-      client, plan: oldPlan, pkg: { ...oldPkg, lessonsTotal: oldRemaining },
-      startDate: todayISO(),
-      weekdays,
-      time: client.fixedTime || '',
-      timesByWeekday
-    });
-    if (count > 0) {
-      showToast(`${count} lezioni del vecchio pacchetto pianificate.`, 'ok');
-      backdrop.querySelector('#scheduleOldPlanBtn').disabled = true;
-      backdrop.querySelector('#scheduleOldPlanBtn').textContent = `✓ ${count} lezioni pianificate`;
-    } else {
-      showToast('Nessuno slot disponibile. Controlla il calendario.', 'warn');
-    }
-  });
-
-  /* Pianifica lezioni nuovo pacchetto */
-  backdrop.querySelector('#scheduleNewPlanBtn')?.addEventListener('click', () => {
-    const weekdays = client.scheduleMode === 'same' ? (client.fixedDays || []) : (client.variableSchedule || []).map(v => v.weekday);
-    const timesByWeekday = client.scheduleMode === 'different'
-      ? Object.fromEntries((client.variableSchedule || []).map(v => [v.weekday, v.time]))
-      : null;
-    const count = createRecurringLessonsForClient({
-      client, plan: newPlan, pkg: newPkg,
-      startDate: newPlan.startDate || todayISO(),
-      weekdays,
-      time: client.fixedTime || '',
-      timesByWeekday
-    });
-    /* Se il vecchio piano era già esaurito, promuovi automaticamente */
-    maybePromotePendingPlan(client.id);
-    if (count > 0) {
-      showToast(`${count} lezioni del nuovo pacchetto pianificate.`, 'ok');
-      backdrop.querySelector('#scheduleNewPlanBtn').disabled = true;
-      backdrop.querySelector('#scheduleNewPlanBtn').textContent = `✓ ${count} lezioni pianificate`;
-    } else {
-      showToast('Nessuno slot disponibile. Controlla il calendario.', 'warn');
-    }
-  });
-
-  /* Imposta orario fisso — apre scheda cliente (quando non c'è orario fisso) */
-  const openClientAndClose = () => {
-    backdrop.remove();
-    requestAnimationFrame(() => renderClientModal(client));
-  };
-  backdrop.querySelector('#scheduleOldPlanOpenClientBtn')?.addEventListener('click', openClientAndClose);
-  backdrop.querySelector('#scheduleNewPlanOpenClientBtn')?.addEventListener('click', openClientAndClose);
 }
 
 function renderReport() {
@@ -9410,10 +9162,10 @@ el.renewForm.addEventListener('submit', event => {
   const pkg = getPackage(el.renewPackage.value);
   if (!client || !pkg) return;
 
+  // Calcola le lezioni rimanenti dal piano attuale da riportare
   const oldPlan = getActivePlan(client.id);
   const oldStats = oldPlan ? planStats(oldPlan) : { remaining: 0 };
   const carryOver = Math.max(0, oldStats.remaining || 0);
-  const oldPlanIsFinished = oldStats.remaining === 0;
 
   const newPlanId = uid('plan');
   state.plans.push({
@@ -9425,10 +9177,11 @@ el.renewForm.addEventListener('submit', event => {
     saleType: 'renewal',
     planType: 'personal',
     totalPrice: Number(el.renewPrice?.value ?? client.packagePrice ?? pkg.totalPrice ?? 0),
-    carryOverLessons: 0,   // carryOver non serve più: le lezioni restano sul vecchio piano
+    carryOverLessons: carryOver,   // lezioni riportate dal pacchetto precedente
     createdAt: new Date().toISOString()
   });
 
+  // Resetta sempre il pagamento per il nuovo pacchetto
   client.paymentStatus = 'unpaid';
   if (!client.paymentMode) client.paymentMode = 'single';
 
@@ -9438,8 +9191,10 @@ el.renewForm.addEventListener('submit', event => {
     client.conversionStatus = 'path_started';
   }
 
+  // Dismetti gli alert vecchi di rinnovo e pagamento per questo cliente
   if (!Array.isArray(state.dismissedAlerts)) state.dismissedAlerts = [];
   ['renewal', 'payment'].forEach(type => {
+    // Rimuovi qualsiasi alert precedente di questo tipo per il cliente
     state.dismissedAlerts = state.dismissedAlerts.filter(id => !id.startsWith(`${type}_${client.id}_`));
   });
 
@@ -9452,26 +9207,12 @@ el.renewForm.addEventListener('submit', event => {
     startDate: el.renewStartDate.value,
     carryOverLessons: carryOver
   });
-
-  if (oldPlanIsFinished) {
-    /* Piano vecchio già esaurito → passa subito al nuovo */
-    client.activePlanId = newPlanId;
-    client.pendingPlanId = null;
-    saveState(true);
-    renderAll();
-    closeModal('renewModalBackdrop');
-    showToast('Rinnovo registrato.', 'ok');
-    openScheduleNewPlanModal(client, getPlan(newPlanId), pkg);
-  } else {
-    /* Piano vecchio ancora in corso → il nuovo va in attesa */
-    client.pendingPlanId = newPlanId;
-    saveState(true);
-    renderAll();
-    closeModal('renewModalBackdrop');
-    const carryMsg = carryOver > 0 ? ` (${carryOver} lezioni rimanenti dal vecchio pacchetto)` : '';
-    showToast(`Rinnovo registrato${carryMsg}. Vecchio pacchetto ancora attivo.`, 'ok');
-    openScheduleNewPlanModal(client, getPlan(newPlanId), pkg, { showOldPlan: true, oldPlan, carryOver });
-  }
+  client.activePlanId = newPlanId;
+  saveState(true);
+  renderAll();
+  closeModal('renewModalBackdrop');
+  const carryMsg = carryOver > 0 ? ` (+ ${carryOver} lezioni riportate)` : '';
+  showToast(`Rinnovo registrato${carryMsg}.`, 'ok');
 });
 
 // "Chiudi senza rinnovo": rimuove gli alert di pagamento/rinnovo senza creare un nuovo piano
@@ -10020,16 +9761,11 @@ function openMonthPicker(defaultDate, onConfirm) {
 /* ═══════════════════════════════════════════════════════════
    MOBILE DRAWER & BOTTOM NAV
 ═══════════════════════════════════════════════════════════ */
-/* ── Mobile UI — drawer, bottom nav, sync badge ──────────────
-   Chiamata da initApp() invece che come IIFE, così eventuali
-   errori nei file precedenti non la bloccano.
-   Usa anche event delegation sul bottomNav come fallback.
-─────────────────────────────────────────────────────────────── */
 function initMobileUI() {
   const drawerOverlay = document.getElementById('drawerOverlay');
   const sidebarDrawer = document.getElementById('sidebarDrawer');
   const drawerCloseBtn = document.getElementById('drawerCloseBtn');
-  const bnavClienti    = document.getElementById('bnavClienti');
+  const bnavClienti   = document.getElementById('bnavClienti');
   const bnavCalendario = document.getElementById('bnavCalendario');
   const bnavAddCliente = document.getElementById('bnavAddCliente');
   const bnavResoconto  = document.getElementById('bnavResoconto');
@@ -10037,7 +9773,6 @@ function initMobileUI() {
   const openAccountBtnMobile = document.getElementById('openAccountBtnMobile');
 
   function openDrawer() {
-    if (!sidebarDrawer || !drawerOverlay) return;
     sidebarDrawer.classList.add('open');
     drawerOverlay.classList.add('open');
     lockBodyScroll();
@@ -10045,56 +9780,27 @@ function initMobileUI() {
     if (search) setTimeout(() => search.focus(), 260);
   }
   function closeDrawer() {
-    if (!sidebarDrawer || !drawerOverlay) return;
     sidebarDrawer.classList.remove('open');
     drawerOverlay.classList.remove('open');
     unlockBodyScroll();
   }
 
-  function setActiveBnav(activeBtn) {
-    document.querySelectorAll('.bnav-btn').forEach(b => b.classList.remove('active'));
-    if (activeBtn) activeBtn.classList.add('active');
-  }
-
   if (drawerOverlay) drawerOverlay.addEventListener('click', closeDrawer);
   if (drawerCloseBtn) drawerCloseBtn.addEventListener('click', closeDrawer);
-
-  /* Safeguard: rimuovi eventuali lock rimasti sul body prima di ogni azione nav */
-  function safeNavAction(fn) {
-    document.body.classList.remove('modal-scroll-lock');
-    document.documentElement.classList.remove('modal-scroll-lock');
-    fn();
-  }
-
-  if (bnavClienti) bnavClienti.addEventListener('click', () => safeNavAction(() => { openDrawer(); setActiveBnav(bnavClienti); }));
-  if (bnavCalendario) bnavCalendario.addEventListener('click', () => safeNavAction(() => {
+  if (bnavClienti) bnavClienti.addEventListener('click', () => { openDrawer(); setActiveBnav(bnavClienti); });
+  if (bnavCalendario) bnavCalendario.addEventListener('click', () => {
     closeDrawer();
     document.querySelector('.calendar-wrap')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     setActiveBnav(bnavCalendario);
-  }));
-  if (bnavAddCliente) bnavAddCliente.addEventListener('click', event => safeNavAction(() => { closeDrawer(); openNewClientModal(event.currentTarget); }));
-  if (bnavResoconto) bnavResoconto.addEventListener('click', () => safeNavAction(() => { closeDrawer(); renderReport(); openModal('reportModalBackdrop'); }));
-  if (bnavPacchetti) bnavPacchetti.addEventListener('click', () => safeNavAction(() => { closeDrawer(); renderPackages(); openModal('packagesModalBackdrop'); }));
-  if (openAccountBtnMobile) openAccountBtnMobile.addEventListener('click', async () => {
-    populateCloudConfigInputs();
-    await refreshGoogleStatus();
-    openModal('accountModalBackdrop');
   });
+  if (bnavAddCliente) bnavAddCliente.addEventListener('click', event => { closeDrawer(); openNewClientModal(event.currentTarget); });
+  if (bnavResoconto) bnavResoconto.addEventListener('click', () => { closeDrawer(); renderReport(); openModal('reportModalBackdrop'); });
+  if (bnavPacchetti) bnavPacchetti.addEventListener('click', () => { closeDrawer(); renderPackages(); openModal('packagesModalBackdrop'); });
+  if (openAccountBtnMobile) openAccountBtnMobile.addEventListener('click', async () => { populateCloudConfigInputs(); await refreshGoogleStatus(); openModal('accountModalBackdrop'); });
 
-  /* Event delegation come fallback — cattura i click sul bottomNav
-     anche se i listener diretti non fossero stati attaccati */
-  const bottomNav = document.getElementById('bottomNav');
-  if (bottomNav) {
-    bottomNav.addEventListener('click', event => {
-      const btn = event.target.closest('[id^="bnav"]');
-      if (!btn) return;
-      const id = btn.id;
-      if (id === 'bnavClienti')    { openDrawer(); setActiveBnav(btn); }
-      if (id === 'bnavCalendario') { closeDrawer(); document.querySelector('.calendar-wrap')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); setActiveBnav(btn); }
-      if (id === 'bnavAddCliente') { closeDrawer(); openNewClientModal(btn); }
-      if (id === 'bnavResoconto')  { closeDrawer(); renderReport(); openModal('reportModalBackdrop'); }
-      if (id === 'bnavPacchetti')  { closeDrawer(); renderPackages(); openModal('packagesModalBackdrop'); }
-    });
+  function setActiveBnav(activeBtn) {
+    document.querySelectorAll('.bnav-btn').forEach(b => b.classList.remove('active'));
+    if (activeBtn) activeBtn.classList.add('active');
   }
 
   /* Sync drawer client search/filter with main state */
@@ -10115,6 +9821,7 @@ function initMobileUI() {
           b.classList.toggle('active', isActive);
           b.setAttribute('aria-pressed', isActive ? 'true' : 'false');
         });
+        /* sync main sidebar filter row */
         el.clientFilterRow?.querySelectorAll('[data-client-filter]').forEach(b => {
           const isActive = b.getAttribute('data-client-filter') === state.clientFilter;
           b.classList.toggle('active', isActive);
@@ -10124,7 +9831,6 @@ function initMobileUI() {
       });
     });
   }
-
   const exportBtnDrawer = document.getElementById('exportBtnDrawer');
   if (exportBtnDrawer) exportBtnDrawer.addEventListener('click', exportBackup);
 
@@ -10138,8 +9844,9 @@ function initMobileUI() {
     syncBadgeMobile.style.color = isOk ? '#1db954' : 'rgba(255,255,255,0.4)';
     syncBadgeMobile.title = main.textContent;
   }
+  const syncObserver = new MutationObserver(mirrorSyncBadge);
   const syncBadgeEl = document.getElementById('syncBadge');
-  if (syncBadgeEl) new MutationObserver(mirrorSyncBadge).observe(syncBadgeEl, { characterData: true, subtree: true, childList: true });
+  if (syncBadgeEl) syncObserver.observe(syncBadgeEl, { characterData: true, subtree: true, childList: true });
 
   /* Offline retry button */
   const offlineRetryBtn = document.getElementById('offlineRetryBtn');
@@ -10151,8 +9858,20 @@ function initMobileUI() {
       else showToast('Ancora offline. Riprova più tardi.', 'error');
     });
   }
+
+  /* Patch renderClientList to also populate drawer */
+  const _origRenderAll = window._renderAllOrig || null;
 }
 
+/* ── Navigazione automatica tra campi form con tasto Enter ── */
+/* ═══════════════════════════════════════════════════════════
+   PORTALE CLIENTE — messaggi in arrivo (vista trainer)
+═══════════════════════════════════════════════════════════ */
+
+/* Sostituisci con l'URL della tua Edge Function Supabase */
+/* ═══════════════════════════════════════════════════════════
+   BADGE MESSAGGI NON LETTI — aggiorna tutti i badge
+═══════════════════════════════════════════════════════════ */
 let _unreadMsgCount = 0;
 function updateMsgBadges(count) {
   _unreadMsgCount = count;
@@ -10295,7 +10014,6 @@ async function callPortalEdge(token, action, payload = {}) {
   } catch(e) { return null; }
 }
 async function loadClientMessages(client) {
-  if (!cloud.user || !cloud.client) return;
   const panel = document.getElementById('clientMessagesPanel');
   if (!panel || !client.shareToken) return;
 
@@ -10733,9 +10451,10 @@ window.addEventListener('offline', () => {
     setTimeout(function () { waitForSupabase(attempts - 1); }, 150);
   } else {
     console.error('[DSWORLD] supabase-js non caricato dopo tutti i tentativi CDN.');
+    // Avvia comunque l'app in modalità solo locale
     initApp();
   }
-})(40); // 40 x 150ms = 6 secondi max di attesa
+})(40); // 40 × 150ms = 6 secondi max di attesa
 </script>
 
 </body>

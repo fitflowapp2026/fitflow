@@ -65,7 +65,7 @@ function createLesson({ clientId, planId, date, time, duration, setFixedTime = f
   };
   state.lessons.push(lesson);
   if (setFixedTime && client.scheduleMode === 'same' && !client.fixedTime) client.fixedTime = time;
-saveState(true);
+  saveState(true);
   autoCompleteElapsedLessons();
   renderAll();
   requestGoogleLessonSync('upsert', lesson, { allowCreateWithoutEventId: true });
@@ -139,6 +139,7 @@ function applyLessonStatus(status) {
     requestGoogleLessonSync('upsert', duoPartnerStatus);
   }
   saveState(true);
+  autoCompleteElapsedLessons();
   renderAll();
   requestGoogleLessonSync('upsert', lesson);
   openLessonModal(lesson.id);
@@ -164,6 +165,7 @@ function applyLessonTime(time) {
   const client = getClient(lesson.clientId);
   if (client?.scheduleMode === 'same') client.fixedTime = time;
   saveState(true);
+  autoCompleteElapsedLessons();
   renderAll();
   requestGoogleLessonSync('upsert', lesson);
   openLessonModal(lesson.id);

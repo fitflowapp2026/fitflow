@@ -1,13 +1,8 @@
-/* ── Mobile UI — drawer, bottom nav, sync badge ──────────────
-   Chiamata da initApp() invece che come IIFE, così eventuali
-   errori nei file precedenti non la bloccano.
-   Usa anche event delegation sul bottomNav come fallback.
-─────────────────────────────────────────────────────────────── */
 function initMobileUI() {
   const drawerOverlay = document.getElementById('drawerOverlay');
   const sidebarDrawer = document.getElementById('sidebarDrawer');
   const drawerCloseBtn = document.getElementById('drawerCloseBtn');
-  const bnavClienti    = document.getElementById('bnavClienti');
+  const bnavClienti   = document.getElementById('bnavClienti');
   const bnavCalendario = document.getElementById('bnavCalendario');
   const bnavAddCliente = document.getElementById('bnavAddCliente');
   const bnavResoconto  = document.getElementById('bnavResoconto');
@@ -15,7 +10,6 @@ function initMobileUI() {
   const openAccountBtnMobile = document.getElementById('openAccountBtnMobile');
 
   function openDrawer() {
-    if (!sidebarDrawer || !drawerOverlay) return;
     sidebarDrawer.classList.add('open');
     drawerOverlay.classList.add('open');
     lockBodyScroll();
@@ -23,56 +17,27 @@ function initMobileUI() {
     if (search) setTimeout(() => search.focus(), 260);
   }
   function closeDrawer() {
-    if (!sidebarDrawer || !drawerOverlay) return;
     sidebarDrawer.classList.remove('open');
     drawerOverlay.classList.remove('open');
     unlockBodyScroll();
   }
 
-  function setActiveBnav(activeBtn) {
-    document.querySelectorAll('.bnav-btn').forEach(b => b.classList.remove('active'));
-    if (activeBtn) activeBtn.classList.add('active');
-  }
-
   if (drawerOverlay) drawerOverlay.addEventListener('click', closeDrawer);
   if (drawerCloseBtn) drawerCloseBtn.addEventListener('click', closeDrawer);
-
-  /* Safeguard: rimuovi eventuali lock rimasti sul body prima di ogni azione nav */
-  function safeNavAction(fn) {
-    document.body.classList.remove('modal-scroll-lock');
-    document.documentElement.classList.remove('modal-scroll-lock');
-    fn();
-  }
-
-  if (bnavClienti) bnavClienti.addEventListener('click', () => safeNavAction(() => { openDrawer(); setActiveBnav(bnavClienti); }));
-  if (bnavCalendario) bnavCalendario.addEventListener('click', () => safeNavAction(() => {
+  if (bnavClienti) bnavClienti.addEventListener('click', () => { openDrawer(); setActiveBnav(bnavClienti); });
+  if (bnavCalendario) bnavCalendario.addEventListener('click', () => {
     closeDrawer();
     document.querySelector('.calendar-wrap')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     setActiveBnav(bnavCalendario);
-  }));
-  if (bnavAddCliente) bnavAddCliente.addEventListener('click', event => safeNavAction(() => { closeDrawer(); openNewClientModal(event.currentTarget); }));
-  if (bnavResoconto) bnavResoconto.addEventListener('click', () => safeNavAction(() => { closeDrawer(); renderReport(); openModal('reportModalBackdrop'); }));
-  if (bnavPacchetti) bnavPacchetti.addEventListener('click', () => safeNavAction(() => { closeDrawer(); renderPackages(); openModal('packagesModalBackdrop'); }));
-  if (openAccountBtnMobile) openAccountBtnMobile.addEventListener('click', async () => {
-    populateCloudConfigInputs();
-    await refreshGoogleStatus();
-    openModal('accountModalBackdrop');
   });
+  if (bnavAddCliente) bnavAddCliente.addEventListener('click', event => { closeDrawer(); openNewClientModal(event.currentTarget); });
+  if (bnavResoconto) bnavResoconto.addEventListener('click', () => { closeDrawer(); renderReport(); openModal('reportModalBackdrop'); });
+  if (bnavPacchetti) bnavPacchetti.addEventListener('click', () => { closeDrawer(); renderPackages(); openModal('packagesModalBackdrop'); });
+  if (openAccountBtnMobile) openAccountBtnMobile.addEventListener('click', async () => { populateCloudConfigInputs(); await refreshGoogleStatus(); openModal('accountModalBackdrop'); });
 
-  /* Event delegation come fallback — cattura i click sul bottomNav
-     anche se i listener diretti non fossero stati attaccati */
-  const bottomNav = document.getElementById('bottomNav');
-  if (bottomNav) {
-    bottomNav.addEventListener('click', event => {
-      const btn = event.target.closest('[id^="bnav"]');
-      if (!btn) return;
-      const id = btn.id;
-      if (id === 'bnavClienti')    { openDrawer(); setActiveBnav(btn); }
-      if (id === 'bnavCalendario') { closeDrawer(); document.querySelector('.calendar-wrap')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); setActiveBnav(btn); }
-      if (id === 'bnavAddCliente') { closeDrawer(); openNewClientModal(btn); }
-      if (id === 'bnavResoconto')  { closeDrawer(); renderReport(); openModal('reportModalBackdrop'); }
-      if (id === 'bnavPacchetti')  { closeDrawer(); renderPackages(); openModal('packagesModalBackdrop'); }
-    });
+  function setActiveBnav(activeBtn) {
+    document.querySelectorAll('.bnav-btn').forEach(b => b.classList.remove('active'));
+    if (activeBtn) activeBtn.classList.add('active');
   }
 
   /* Sync drawer client search/filter with main state */
@@ -93,6 +58,7 @@ function initMobileUI() {
           b.classList.toggle('active', isActive);
           b.setAttribute('aria-pressed', isActive ? 'true' : 'false');
         });
+        /* sync main sidebar filter row */
         el.clientFilterRow?.querySelectorAll('[data-client-filter]').forEach(b => {
           const isActive = b.getAttribute('data-client-filter') === state.clientFilter;
           b.classList.toggle('active', isActive);
@@ -102,7 +68,6 @@ function initMobileUI() {
       });
     });
   }
-
   const exportBtnDrawer = document.getElementById('exportBtnDrawer');
   if (exportBtnDrawer) exportBtnDrawer.addEventListener('click', exportBackup);
 
@@ -116,8 +81,9 @@ function initMobileUI() {
     syncBadgeMobile.style.color = isOk ? '#1db954' : 'rgba(255,255,255,0.4)';
     syncBadgeMobile.title = main.textContent;
   }
+  const syncObserver = new MutationObserver(mirrorSyncBadge);
   const syncBadgeEl = document.getElementById('syncBadge');
-  if (syncBadgeEl) new MutationObserver(mirrorSyncBadge).observe(syncBadgeEl, { characterData: true, subtree: true, childList: true });
+  if (syncBadgeEl) syncObserver.observe(syncBadgeEl, { characterData: true, subtree: true, childList: true });
 
   /* Offline retry button */
   const offlineRetryBtn = document.getElementById('offlineRetryBtn');
@@ -129,6 +95,18 @@ function initMobileUI() {
       else showToast('Ancora offline. Riprova più tardi.', 'error');
     });
   }
+
+  /* Patch renderClientList to also populate drawer */
+  const _origRenderAll = window._renderAllOrig || null;
 }
 
+/* ── Navigazione automatica tra campi form con tasto Enter ── */
+/* ═══════════════════════════════════════════════════════════
+   PORTALE CLIENTE — messaggi in arrivo (vista trainer)
+═══════════════════════════════════════════════════════════ */
+
+/* Sostituisci con l'URL della tua Edge Function Supabase */
+/* ═══════════════════════════════════════════════════════════
+   BADGE MESSAGGI NON LETTI — aggiorna tutti i badge
+═══════════════════════════════════════════════════════════ */
 let _unreadMsgCount = 0;

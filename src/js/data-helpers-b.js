@@ -10,43 +10,6 @@ function getActivePlan(clientId) {
   if (!client) return null;
   return getPlan(client.activePlanId) || state.plans.filter(plan => plan.clientId === clientId).sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt))).slice(-1)[0] || null;
 }
-
-/* Restituisce il piano "in attesa" (nuovo pacchetto rinnovato ma non ancora attivo) */
-function getPendingPlan(clientId) {
-  const client = getClient(clientId);
-  if (!client?.pendingPlanId) return null;
-  return getPlan(client.pendingPlanId) || null;
-}
-
-/* Restituisce tutti i piani attivi per un cliente:
-   - Se c'è un pendingPlan: [activePlan, pendingPlan]
-   - Altrimenti: [activePlan]
-   Usato per mostrare entrambi i pacchetti nel calendario */
-function getAllActivePlans(clientId) {
-  const active = getActivePlan(clientId);
-  const pending = getPendingPlan(clientId);
-  const plans = [];
-  if (active) plans.push(active);
-  if (pending && pending.id !== active?.id) plans.push(pending);
-  return plans;
-}
-
-/* Controlla se il piano attivo è esaurito e, se sì, promuove
-   automaticamente il pendingPlan ad activePlan */
-function maybePromotePendingPlan(clientId) {
-  const client = getClient(clientId);
-  if (!client?.pendingPlanId) return false;
-  const activePlan = getActivePlan(clientId);
-  if (!activePlan) return false;
-  const stats = planStats(activePlan);
-  if (stats.remaining > 0) return false;
-  /* Piano esaurito → promuovi il pending */
-  client.activePlanId = client.pendingPlanId;
-  client.pendingPlanId = null;
-  saveState(true);
-  return true;
-}
-
 function getLesson(id) { return state.lessons.find(item => item.id === id) || null; }
 function getLessonsForClient(clientId) {
   return state.lessons.filter(item => item.clientId === clientId).sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`));
@@ -245,11 +208,6 @@ function autoCompleteElapsedLessons() {
     }
   });
   if (changed) {
-    /* Dopo aver segnato lezioni come svolte, controlla se qualche
-       piano attivo è ora esaurito e ha un pending da promuovere */
-    state.clients.forEach(client => {
-      if (client.pendingPlanId) maybePromotePendingPlan(client.id);
-    });
     saveState();
     changedLessons.forEach(id => requestGoogleLessonSync('upsert', id));
     /* Free session auto-completata → proponi conversione se nessun modal è aperto */

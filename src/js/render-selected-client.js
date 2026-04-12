@@ -77,8 +77,7 @@ function renderSelectedClient() {
     <div class="inline-actions">
       <button class="btn btn-soft btn-small" id="editClientBtn">Modifica</button>
       <button class="btn btn-primary btn-small" id="renewClientBtn">Rinnova</button>
-      <button class="btn btn-soft btn-small" id="sharePortalBtn" title="Apri portale cliente">🔗 Portale</button>
-      <button class="btn btn-ghost btn-small" id="sharePortalLinkBtn" title="Condividi link portale">↗ Condividi</button>
+      <button class="btn btn-soft btn-small" id="sharePortalBtn" title="Invia link portale al cliente">🔗 Portale</button>
     </div>
     ${client.pendingPlanId ? (() => {
       const pending = getPendingPlan(client.id);
@@ -138,7 +137,6 @@ function renderSelectedClient() {
         <button class="btn btn-soft btn-small" id="mobileEditClientBtn" type="button">Modifica cliente</button>
         <button class="btn btn-primary btn-small" id="mobileRenewClientBtn" type="button">Rinnova pacchetto</button>
         <button class="btn btn-soft btn-small" id="mobileSharePortalBtn" type="button">🔗 Portale</button>
-        <button class="btn btn-ghost btn-small" id="mobileSharePortalLinkBtn" type="button">↗ Condividi</button>
         <button class="btn btn-soft btn-small" id="mobileMsgClientBtn" type="button" style="position:relative;">
           💬 Messaggi
           <span class="msg-badge" id="msgBadgeClientCard" style="top:-6px;right:-6px;">0</span>
@@ -188,16 +186,9 @@ function renderSelectedClient() {
     }
   });
 
-  /* Portale cliente — apre il portale + condividi link */
+  /* Portale cliente — invia direttamente il link al cliente */
   const sharePortalFn = () => {
     if (!client.shareToken) { showToast('Token non trovato, modifica e salva il cliente.', 'warn'); return; }
-    const url = clientPortalUrl(client.shareToken);
-    /* Apre il portale in una nuova scheda */
-    window.open(url, '_blank');
-    haptic(8);
-  };
-  const sharePortalLinkFn = () => {
-    if (!client.shareToken) return;
     const url = clientPortalUrl(client.shareToken);
     if (navigator.share) {
       navigator.share({ title: `DSWORLD — Portale di ${getClientFullName(client)}`, url })
@@ -210,12 +201,6 @@ function renderSelectedClient() {
   };
   document.getElementById('sharePortalBtn')?.addEventListener('click', sharePortalFn);
   document.getElementById('mobileSharePortalBtn')?.addEventListener('click', sharePortalFn);
-  /* Tasto destro / long press → condivide il link */
-  document.getElementById('sharePortalBtn')?.addEventListener('contextmenu', e => { e.preventDefault(); sharePortalLinkFn(); });
-  document.getElementById('mobileSharePortalBtn')?.addEventListener('contextmenu', e => { e.preventDefault(); sharePortalLinkFn(); });
-  /* Bottoni condividi dedicati */
-  document.getElementById('sharePortalLinkBtn')?.addEventListener('click', sharePortalLinkFn);
-  document.getElementById('mobileSharePortalLinkBtn')?.addEventListener('click', sharePortalLinkFn);
 
   /* Carica messaggi del cliente */
   loadClientMessages(client);

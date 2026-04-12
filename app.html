@@ -9724,7 +9724,8 @@ function openMonthPicker(defaultDate, onConfirm) {
   }
   renderAll();
   initInteractionDelegation();
-  initMobileUI();
+  /* Ri-inizializza mobile UI dopo login (sovrascrive listeners dell'IIFE pre-login) */
+  try { initMobileUI(); } catch(e) {}
   updateGoogleUi();
   renderHeroGreeting();
   initDebouncedSearch();
@@ -9761,11 +9762,21 @@ function openMonthPicker(defaultDate, onConfirm) {
 /* ═══════════════════════════════════════════════════════════
    MOBILE DRAWER & BOTTOM NAV
 ═══════════════════════════════════════════════════════════ */
+/* ── Mobile UI — bottom nav, drawer, badge ─────────────────
+   L'IIFE garantisce che i listener vengano attaccati sempre,
+   indipendentemente dal flusso asincrono di initApp.
+   initMobileUI() viene anche chiamata da initApp per
+   ri-attaccare i listener dopo il login se necessario.
+─────────────────────────────────────────────────────────── */
+
+/* Attacca i listener al bottom nav — chiamata sia come IIFE
+   che da initApp() per garantire doppia copertura */
 function initMobileUI() {
-  const drawerOverlay = document.getElementById('drawerOverlay');
-  const sidebarDrawer = document.getElementById('sidebarDrawer');
+
+  const drawerOverlay  = document.getElementById('drawerOverlay');
+  const sidebarDrawer  = document.getElementById('sidebarDrawer');
   const drawerCloseBtn = document.getElementById('drawerCloseBtn');
-  const bnavClienti   = document.getElementById('bnavClienti');
+  const bnavClienti    = document.getElementById('bnavClienti');
   const bnavCalendario = document.getElementById('bnavCalendario');
   const bnavAddCliente = document.getElementById('bnavAddCliente');
   const bnavResoconto  = document.getElementById('bnavResoconto');
@@ -9773,6 +9784,7 @@ function initMobileUI() {
   const openAccountBtnMobile = document.getElementById('openAccountBtnMobile');
 
   function openDrawer() {
+    if (!sidebarDrawer || !drawerOverlay) return;
     sidebarDrawer.classList.add('open');
     drawerOverlay.classList.add('open');
     lockBodyScroll();
@@ -9780,30 +9792,32 @@ function initMobileUI() {
     if (search) setTimeout(() => search.focus(), 260);
   }
   function closeDrawer() {
+    if (!sidebarDrawer || !drawerOverlay) return;
     sidebarDrawer.classList.remove('open');
     drawerOverlay.classList.remove('open');
     unlockBodyScroll();
   }
+  function setActiveBnav(activeBtn) {
+    document.querySelectorAll('.bnav-btn').forEach(b => b.classList.remove('active'));
+    if (activeBtn) activeBtn.classList.add('active');
+  }
 
   if (drawerOverlay) drawerOverlay.addEventListener('click', closeDrawer);
   if (drawerCloseBtn) drawerCloseBtn.addEventListener('click', closeDrawer);
-  if (bnavClienti) bnavClienti.addEventListener('click', () => { openDrawer(); setActiveBnav(bnavClienti); });
+
+  if (bnavClienti)    bnavClienti.addEventListener('click',    () => { openDrawer(); setActiveBnav(bnavClienti); });
   if (bnavCalendario) bnavCalendario.addEventListener('click', () => {
     closeDrawer();
     document.querySelector('.calendar-wrap')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     setActiveBnav(bnavCalendario);
   });
   if (bnavAddCliente) bnavAddCliente.addEventListener('click', event => { closeDrawer(); openNewClientModal(event.currentTarget); });
-  if (bnavResoconto) bnavResoconto.addEventListener('click', () => { closeDrawer(); renderReport(); openModal('reportModalBackdrop'); });
-  if (bnavPacchetti) bnavPacchetti.addEventListener('click', () => { closeDrawer(); renderPackages(); openModal('packagesModalBackdrop'); });
-  if (openAccountBtnMobile) openAccountBtnMobile.addEventListener('click', async () => { populateCloudConfigInputs(); await refreshGoogleStatus(); openModal('accountModalBackdrop'); });
+  if (bnavResoconto)  bnavResoconto.addEventListener('click',  () => { closeDrawer(); renderReport(); openModal('reportModalBackdrop'); });
+  if (bnavPacchetti)  bnavPacchetti.addEventListener('click',  () => { closeDrawer(); renderPackages(); openModal('packagesModalBackdrop'); });
+  if (openAccountBtnMobile) openAccountBtnMobile.addEventListener('click', async () => {
+    populateCloudConfigInputs(); await refreshGoogleStatus(); openModal('accountModalBackdrop');
+  });
 
-  function setActiveBnav(activeBtn) {
-    document.querySelectorAll('.bnav-btn').forEach(b => b.classList.remove('active'));
-    if (activeBtn) activeBtn.classList.add('active');
-  }
-
-  /* Sync drawer client search/filter with main state */
   const drawerSearch = document.getElementById('clientSearchDrawer');
   if (drawerSearch) {
     drawerSearch.addEventListener('input', event => {
@@ -9821,7 +9835,6 @@ function initMobileUI() {
           b.classList.toggle('active', isActive);
           b.setAttribute('aria-pressed', isActive ? 'true' : 'false');
         });
-        /* sync main sidebar filter row */
         el.clientFilterRow?.querySelectorAll('[data-client-filter]').forEach(b => {
           const isActive = b.getAttribute('data-client-filter') === state.clientFilter;
           b.classList.toggle('active', isActive);
@@ -9831,10 +9844,10 @@ function initMobileUI() {
       });
     });
   }
+
   const exportBtnDrawer = document.getElementById('exportBtnDrawer');
   if (exportBtnDrawer) exportBtnDrawer.addEventListener('click', exportBackup);
 
-  /* Mirror sync badge to mobile topbar */
   const syncBadgeMobile = document.getElementById('syncBadgeMobile');
   function mirrorSyncBadge() {
     if (!syncBadgeMobile) return;
@@ -9844,11 +9857,9 @@ function initMobileUI() {
     syncBadgeMobile.style.color = isOk ? '#1db954' : 'rgba(255,255,255,0.4)';
     syncBadgeMobile.title = main.textContent;
   }
-  const syncObserver = new MutationObserver(mirrorSyncBadge);
   const syncBadgeEl = document.getElementById('syncBadge');
-  if (syncBadgeEl) syncObserver.observe(syncBadgeEl, { characterData: true, subtree: true, childList: true });
+  if (syncBadgeEl) new MutationObserver(mirrorSyncBadge).observe(syncBadgeEl, { characterData: true, subtree: true, childList: true });
 
-  /* Offline retry button */
   const offlineRetryBtn = document.getElementById('offlineRetryBtn');
   if (offlineRetryBtn) {
     offlineRetryBtn.addEventListener('click', async () => {
@@ -9858,20 +9869,20 @@ function initMobileUI() {
       else showToast('Ancora offline. Riprova più tardi.', 'error');
     });
   }
-
-  /* Patch renderClientList to also populate drawer */
-  const _origRenderAll = window._renderAllOrig || null;
 }
 
-/* ── Navigazione automatica tra campi form con tasto Enter ── */
-/* ═══════════════════════════════════════════════════════════
-   PORTALE CLIENTE — messaggi in arrivo (vista trainer)
-═══════════════════════════════════════════════════════════ */
+/* IIFE: gira subito al parse, garantisce listener anche se initApp
+   non riesce a completarsi per qualsiasi motivo */
+(function() {
+  /* Aspetta che il DOM sia pronto (lo script è a fine body,
+     quindi document è già disponibile) */
+  try { initMobileUI(); } catch(e) {
+    /* Se initMobileUI fallisce (funzioni non ancora definite),
+       riprova dopo che initApp le ha caricate */
+    window._mobileUIRetry = true;
+  }
+})();
 
-/* Sostituisci con l'URL della tua Edge Function Supabase */
-/* ═══════════════════════════════════════════════════════════
-   BADGE MESSAGGI NON LETTI — aggiorna tutti i badge
-═══════════════════════════════════════════════════════════ */
 let _unreadMsgCount = 0;
 function updateMsgBadges(count) {
   _unreadMsgCount = count;

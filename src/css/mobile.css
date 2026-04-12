@@ -225,6 +225,10 @@
     justify-content: space-around;
     align-items: flex-end;
     gap: 2px;
+    /* Garantisce risposta ai tap anche se body ha touch-action:none */
+    touch-action: manipulation;
+    -webkit-touch-callout: none;
+    isolation: isolate;
   }
   .bnav-btn {
     display: flex;
@@ -240,6 +244,10 @@
     transition: color 150ms ease, background 150ms ease;
     min-width: 60px;
     flex: 1;
+    touch-action: manipulation;
+    pointer-events: auto;
+    position: relative;
+    z-index: 36;
   }
   .bnav-btn.active { color: var(--accent); }
   .bnav-btn:active { background: rgba(255,255,255,0.07); }

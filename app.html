@@ -2661,6 +2661,10 @@ button:focus-visible {
     justify-content: space-around;
     align-items: flex-end;
     gap: 2px;
+    /* Garantisce risposta ai tap anche se body ha touch-action:none */
+    touch-action: manipulation;
+    -webkit-touch-callout: none;
+    isolation: isolate;
   }
   .bnav-btn {
     display: flex;
@@ -2676,6 +2680,10 @@ button:focus-visible {
     transition: color 150ms ease, background 150ms ease;
     min-width: 60px;
     flex: 1;
+    touch-action: manipulation;
+    pointer-events: auto;
+    position: relative;
+    z-index: 36;
   }
   .bnav-btn.active { color: var(--accent); }
   .bnav-btn:active { background: rgba(255,255,255,0.07); }
@@ -10051,26 +10059,22 @@ function initMobileUI() {
   if (drawerOverlay) drawerOverlay.addEventListener('click', closeDrawer);
   if (drawerCloseBtn) drawerCloseBtn.addEventListener('click', closeDrawer);
 
-  if (bnavClienti) bnavClienti.addEventListener('click', () => { openDrawer(); setActiveBnav(bnavClienti); });
-  if (bnavCalendario) bnavCalendario.addEventListener('click', () => {
+  /* Safeguard: rimuovi eventuali lock rimasti sul body prima di ogni azione nav */
+  function safeNavAction(fn) {
+    document.body.classList.remove('modal-scroll-lock');
+    document.documentElement.classList.remove('modal-scroll-lock');
+    fn();
+  }
+
+  if (bnavClienti) bnavClienti.addEventListener('click', () => safeNavAction(() => { openDrawer(); setActiveBnav(bnavClienti); }));
+  if (bnavCalendario) bnavCalendario.addEventListener('click', () => safeNavAction(() => {
     closeDrawer();
     document.querySelector('.calendar-wrap')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     setActiveBnav(bnavCalendario);
-  });
-  if (bnavAddCliente) bnavAddCliente.addEventListener('click', event => {
-    closeDrawer();
-    openNewClientModal(event.currentTarget);
-  });
-  if (bnavResoconto) bnavResoconto.addEventListener('click', () => {
-    closeDrawer();
-    renderReport();
-    openModal('reportModalBackdrop');
-  });
-  if (bnavPacchetti) bnavPacchetti.addEventListener('click', () => {
-    closeDrawer();
-    renderPackages();
-    openModal('packagesModalBackdrop');
-  });
+  }));
+  if (bnavAddCliente) bnavAddCliente.addEventListener('click', event => safeNavAction(() => { closeDrawer(); openNewClientModal(event.currentTarget); }));
+  if (bnavResoconto) bnavResoconto.addEventListener('click', () => safeNavAction(() => { closeDrawer(); renderReport(); openModal('reportModalBackdrop'); }));
+  if (bnavPacchetti) bnavPacchetti.addEventListener('click', () => safeNavAction(() => { closeDrawer(); renderPackages(); openModal('packagesModalBackdrop'); }));
   if (openAccountBtnMobile) openAccountBtnMobile.addEventListener('click', async () => {
     populateCloudConfigInputs();
     await refreshGoogleStatus();

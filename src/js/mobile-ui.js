@@ -37,26 +37,22 @@ function initMobileUI() {
   if (drawerOverlay) drawerOverlay.addEventListener('click', closeDrawer);
   if (drawerCloseBtn) drawerCloseBtn.addEventListener('click', closeDrawer);
 
-  if (bnavClienti) bnavClienti.addEventListener('click', () => { openDrawer(); setActiveBnav(bnavClienti); });
-  if (bnavCalendario) bnavCalendario.addEventListener('click', () => {
+  /* Safeguard: rimuovi eventuali lock rimasti sul body prima di ogni azione nav */
+  function safeNavAction(fn) {
+    document.body.classList.remove('modal-scroll-lock');
+    document.documentElement.classList.remove('modal-scroll-lock');
+    fn();
+  }
+
+  if (bnavClienti) bnavClienti.addEventListener('click', () => safeNavAction(() => { openDrawer(); setActiveBnav(bnavClienti); }));
+  if (bnavCalendario) bnavCalendario.addEventListener('click', () => safeNavAction(() => {
     closeDrawer();
     document.querySelector('.calendar-wrap')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     setActiveBnav(bnavCalendario);
-  });
-  if (bnavAddCliente) bnavAddCliente.addEventListener('click', event => {
-    closeDrawer();
-    openNewClientModal(event.currentTarget);
-  });
-  if (bnavResoconto) bnavResoconto.addEventListener('click', () => {
-    closeDrawer();
-    renderReport();
-    openModal('reportModalBackdrop');
-  });
-  if (bnavPacchetti) bnavPacchetti.addEventListener('click', () => {
-    closeDrawer();
-    renderPackages();
-    openModal('packagesModalBackdrop');
-  });
+  }));
+  if (bnavAddCliente) bnavAddCliente.addEventListener('click', event => safeNavAction(() => { closeDrawer(); openNewClientModal(event.currentTarget); }));
+  if (bnavResoconto) bnavResoconto.addEventListener('click', () => safeNavAction(() => { closeDrawer(); renderReport(); openModal('reportModalBackdrop'); }));
+  if (bnavPacchetti) bnavPacchetti.addEventListener('click', () => safeNavAction(() => { closeDrawer(); renderPackages(); openModal('packagesModalBackdrop'); }));
   if (openAccountBtnMobile) openAccountBtnMobile.addEventListener('click', async () => {
     populateCloudConfigInputs();
     await refreshGoogleStatus();

@@ -74,7 +74,7 @@
       width: 100%;
       overflow: hidden;
       overscroll-behavior: none;
-      /* touch-action:none rimosso */
+      touch-action: none;
     }
     html.modal-scroll-lock {
       overflow: hidden;
@@ -3140,22 +3140,6 @@
 
       /* Hero stat boxes: 2 col */
       .hero-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    }
-
-    /* OVERRIDE FORZATO — nav sopra qualsiasi overlay */
-    .bottom-nav {
-      z-index: 9999 !important;
-      position: fixed !important;
-      touch-action: manipulation !important;
-      pointer-events: auto !important;
-    }
-    .bnav-btn {
-      z-index: 10000 !important;
-      position: relative !important;
-      touch-action: manipulation !important;
-      pointer-events: auto !important;
-      -webkit-tap-highlight-color: rgba(229,9,20,0.2) !important;
-      cursor: pointer !important;
     }
   </style>
 </head>
@@ -10437,18 +10421,40 @@ function renderClientFormStickySummary() {
   </script>
 
   <script>
-  document.addEventListener('DOMContentLoaded', function() {
+  /* DEBUG: trova cosa blocca i tap sul nav */
+  setTimeout(function() {
     var nav = document.getElementById('bottomNav');
-    if (nav) {
-      nav.addEventListener('touchstart', function(e) {
-        console.log('TOUCHSTART sul nav, target:', e.target.id || e.target.className);
-      }, {passive:true});
-      nav.addEventListener('click', function(e) {
-        console.log('CLICK sul nav, target:', e.target.id || e.target.className);
-        alert('CLICK: ' + (e.target.id || e.target.className));
-      });
-    }
-  });
+    if (!nav) { alert('bottomNav NON TROVATO nel DOM'); return; }
+    
+    var rect = nav.getBoundingClientRect();
+    var msg = 'bottomNav: ' + JSON.stringify({
+      top: Math.round(rect.top),
+      bottom: Math.round(rect.bottom),
+      left: Math.round(rect.left),
+      right: Math.round(rect.right),
+      display: getComputedStyle(nav).display,
+      zIndex: getComputedStyle(nav).zIndex,
+      pointerEvents: getComputedStyle(nav).pointerEvents,
+      visibility: getComputedStyle(nav).visibility
+    });
+    
+    // Controlla cosa c'e' SOPRA il centro di ciascun bottone
+    var btns = ['bnavClienti','bnavCalendario','bnavAddCliente','bnavResoconto','bnavPacchetti'];
+    var overlays = [];
+    btns.forEach(function(id) {
+      var btn = document.getElementById(id);
+      if (!btn) { overlays.push(id + ': MANCANTE'); return; }
+      var r = btn.getBoundingClientRect();
+      var cx = Math.round(r.left + r.width/2);
+      var cy = Math.round(r.top + r.height/2);
+      var topEl = document.elementFromPoint(cx, cy);
+      var topId = topEl ? (topEl.id || topEl.tagName + '.' + topEl.className.split(' ').join('.')) : 'null';
+      var isBtn = topEl === btn || btn.contains(topEl);
+      overlays.push(id + (isBtn ? ' OK' : ' BLOCCATO DA: ' + topId.slice(0,40)));
+    });
+    
+    alert(msg + '\n\n' + overlays.join('\n'));
+  }, 2000);
   </script>
 
 </body>

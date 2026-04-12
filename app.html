@@ -8392,26 +8392,44 @@ function openScheduleNewPlanModal(client, newPlan, newPkg, { showOldPlan = false
   backdrop.style.cssText = 'display:flex;z-index:80;';
 
   const oldPlanSection = (showOldPlan && oldPlan && oldRemaining > 0) ? `
-    <div class="mini-card" style="border-color:rgba(245,158,11,0.3);background:rgba(245,158,11,0.06);">
-      <div class="section-title" style="color:var(--warn);">Pacchetto precedente — ancora attivo</div>
-      <div class="muted small" style="margin-top:6px;">${oldRemaining} lezioni rimanenti da completare.</div>
+    <div class="mini-card" style="border-color:rgba(245,158,11,0.3);background:rgba(245,158,11,0.06);cursor:pointer;" id="scheduleOldPlanCard">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+        <div>
+          <div class="section-title" style="color:var(--warn);">Pacchetto precedente — ancora attivo</div>
+          <div class="muted small" style="margin-top:6px;">${oldRemaining} lezioni rimanenti da completare.</div>
+        </div>
+        <span style="color:var(--warn);font-size:1.1rem;flex-shrink:0;">›</span>
+      </div>
       ${hasSchedule ? `
         <button class="btn btn-soft btn-small" style="margin-top:10px;width:100%;" id="scheduleOldPlanBtn">
           Pianifica le ${oldRemaining} lezioni rimanenti →
         </button>
-      ` : `<div class="muted small" style="margin-top:8px;">Nessun orario fisso impostato — aggiungile manualmente dal calendario.</div>`}
+      ` : `
+        <button class="btn btn-soft btn-small" style="margin-top:10px;width:100%;" id="scheduleOldPlanOpenClientBtn">
+          Imposta orario fisso →
+        </button>
+      `}
     </div>
   ` : '';
 
   const newPlanSection = `
-    <div class="mini-card" style="border-color:rgba(29,185,84,0.3);background:rgba(29,185,84,0.06);">
-      <div class="section-title" style="color:var(--good);">Nuovo pacchetto — ${escapeHtml(newPkg.name)}</div>
-      <div class="muted small" style="margin-top:6px;">${newPkg.lessonsTotal} lezioni · inizia ${formatDateShort(newPlan.startDate)}</div>
+    <div class="mini-card" style="border-color:rgba(29,185,84,0.3);background:rgba(29,185,84,0.06);cursor:pointer;" id="scheduleNewPlanCard">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+        <div>
+          <div class="section-title" style="color:var(--good);">Nuovo pacchetto — ${escapeHtml(newPkg.name)}</div>
+          <div class="muted small" style="margin-top:6px;">${newPkg.lessonsTotal} lezioni · inizia ${formatDateShort(newPlan.startDate)}</div>
+        </div>
+        <span style="color:var(--good);font-size:1.1rem;flex-shrink:0;">›</span>
+      </div>
       ${hasSchedule ? `
         <button class="btn btn-primary btn-small" style="margin-top:10px;width:100%;" id="scheduleNewPlanBtn">
           Pianifica tutte le ${newPkg.lessonsTotal} lezioni del nuovo pacchetto →
         </button>
-      ` : `<div class="muted small" style="margin-top:8px;">Nessun orario fisso impostato — aggiungile manualmente dal calendario.</div>`}
+      ` : `
+        <button class="btn btn-soft btn-small" style="margin-top:10px;width:100%;" id="scheduleNewPlanOpenClientBtn">
+          Imposta orario fisso →
+        </button>
+      `}
     </div>
   `;
 
@@ -8427,12 +8445,6 @@ function openScheduleNewPlanModal(client, newPlan, newPkg, { showOldPlan = false
       <div style="display:grid;gap:14px;">
         ${oldPlanSection}
         ${newPlanSection}
-        ${!hasSchedule ? `
-          <div class="mini-card">
-            <div class="muted small">Per la pianificazione automatica, imposta un orario fisso nella scheda cliente.</div>
-            <button class="btn btn-soft btn-small" style="margin-top:10px;" id="scheduleOpenClientBtn">Apri scheda cliente →</button>
-          </div>
-        ` : ''}
       </div>
     </div>
   `;
@@ -8492,11 +8504,13 @@ function openScheduleNewPlanModal(client, newPlan, newPkg, { showOldPlan = false
     }
   });
 
-  /* Apri scheda cliente */
-  backdrop.querySelector('#scheduleOpenClientBtn')?.addEventListener('click', () => {
+  /* Imposta orario fisso — apre scheda cliente (quando non c'è orario fisso) */
+  const openClientAndClose = () => {
     backdrop.remove();
     requestAnimationFrame(() => renderClientModal(client.id));
-  });
+  };
+  backdrop.querySelector('#scheduleOldPlanOpenClientBtn')?.addEventListener('click', openClientAndClose);
+  backdrop.querySelector('#scheduleNewPlanOpenClientBtn')?.addEventListener('click', openClientAndClose);
 }
 
 function renderReport() {

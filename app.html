@@ -8019,7 +8019,8 @@ function createLesson({ clientId, planId, date, time, duration, setFixedTime = f
   };
   state.lessons.push(lesson);
   if (setFixedTime && client.scheduleMode === 'same' && !client.fixedTime) client.fixedTime = time;
-  saveState(true);
+saveState(true);
+  autoCompleteElapsedLessons();
   renderAll();
   requestGoogleLessonSync('upsert', lesson, { allowCreateWithoutEventId: true });
   showToast(`Lezione inserita: ${formatDateFancy(date)} • ${time}`);
@@ -10009,6 +10010,7 @@ async function callPortalEdge(token, action, payload = {}) {
   } catch(e) { return null; }
 }
 async function loadClientMessages(client) {
+  if (!cloud.user || !cloud.client) return;
   const panel = document.getElementById('clientMessagesPanel');
   if (!panel || !client.shareToken) return;
 

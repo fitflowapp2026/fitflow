@@ -65,7 +65,8 @@ function createLesson({ clientId, planId, date, time, duration, setFixedTime = f
   };
   state.lessons.push(lesson);
   if (setFixedTime && client.scheduleMode === 'same' && !client.fixedTime) client.fixedTime = time;
-  saveState(true);
+saveState(true);
+  autoCompleteElapsedLessons();
   renderAll();
   requestGoogleLessonSync('upsert', lesson, { allowCreateWithoutEventId: true });
   showToast(`Lezione inserita: ${formatDateFancy(date)} • ${time}`);

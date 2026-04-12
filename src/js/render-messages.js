@@ -306,7 +306,7 @@ async function sendMsgChatReply() {
       body: JSON.stringify({ client_token: _activeMsgClientToken, user_id: cloud.user.id, client_id: client.id, sender: 'trainer', text, type: 'message', read: false })
     });
     showToast('Risposta inviata!', 'ok');
-    /* FIX: una sola fetch */
+    openMsgChat(client);
     loadClientMessages(client);
     /* Broadcast al portale cliente — notifica istantanea */
     broadcastToClient(_activeMsgClientToken, 'new_message');

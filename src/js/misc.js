@@ -79,25 +79,3 @@ window.addEventListener('offline', () => {
     initApp();
   }
 })(40); // 40 × 150ms = 6 secondi max di attesa
-
-/* ── DEBUG NAV (rimuovere dopo il test) ───────────────── */
-setTimeout(function() {
-  var nav = document.getElementById('bottomNav');
-  if (!nav) { alert('ERRORE: bottomNav non trovato'); return; }
-  var btns = ['bnavClienti','bnavCalendario','bnavAddCliente','bnavResoconto','bnavPacchetti'];
-  var results = [];
-  var navRect = nav.getBoundingClientRect();
-  results.push('Nav: top=' + Math.round(navRect.top) + ' h=' + Math.round(navRect.height) + ' z=' + getComputedStyle(nav).zIndex + ' display=' + getComputedStyle(nav).display);
-  btns.forEach(function(id) {
-    var btn = document.getElementById(id);
-    if (!btn) { results.push(id + ': MANCANTE'); return; }
-    var r = btn.getBoundingClientRect();
-    var cx = Math.round(r.left + r.width/2);
-    var cy = Math.round(r.top + r.height/2);
-    var top = document.elementFromPoint(cx, cy);
-    var topDesc = top ? (top.id || top.tagName + (top.className ? '.' + top.className.trim().split(/\s+/).join('.') : '')) : 'null';
-    var isBtn = top === btn || (btn.contains && btn.contains(top));
-    results.push(id + ': ' + (isBtn ? 'OK' : 'BLOCCATO da ' + topDesc.slice(0, 50)));
-  });
-  alert(results.join('\n'));
-}, 3000);

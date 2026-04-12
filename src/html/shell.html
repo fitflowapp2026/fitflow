@@ -60,7 +60,7 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 
-  <script>
+<script>
   let _excelJsLoaded = false;
   function ensureExcelJS() {
     if (_excelJsLoaded || window.ExcelJS) { _excelJsLoaded = true; return Promise.resolve(); }
@@ -72,22 +72,16 @@
       document.head.appendChild(s);
     });
   }
-  </script>
+</script>
 
-  <!-- Supabase JS: carica da CDN, con fallback automatico -->
+  <!-- Supabase JS — CDN con fallback -->
   <script>
     (function () {
       function tryLoad(urls, idx) {
-        if (idx >= urls.length) {
-          console.error('[DSWORLD] Impossibile caricare supabase-js.');
-          return;
-        }
+        if (idx >= urls.length) { console.error('[DSWORLD] Impossibile caricare supabase-js.'); return; }
         var s = document.createElement('script');
         s.src = urls[idx];
-        s.onerror = function () {
-          document.head.removeChild(s);
-          tryLoad(urls, idx + 1);
-        };
+        s.onerror = function () { document.head.removeChild(s); tryLoad(urls, idx + 1); };
         document.head.appendChild(s);
       }
       tryLoad([

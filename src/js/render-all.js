@@ -2,7 +2,7 @@ function renderAll() {
   if (_rendering) return;
   _rendering = true;
   applyResponsiveDefaults();
-  /* autoComplete gestita da scheduleNextAutoComplete in init.js */
+  try { autoCompleteElapsedLessons(); } catch(e) { console.error(e); }
   renderHero();
   renderHeroGreeting();
   // opsBoard rimosso

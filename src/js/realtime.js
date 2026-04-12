@@ -9,10 +9,6 @@ function updateMsgBadges(count) {
   });
 }
 
-const _debouncedRefreshUnread = (function(){
-  let t; return function(){ clearTimeout(t); t = setTimeout(refreshUnreadMessages, 200); };
-})();
-
 async function refreshUnreadMessages() {
   if (!cloud.user || !cloud.client || cloud.allowLocalOnly) return;
   try {

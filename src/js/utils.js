@@ -23,8 +23,7 @@ function generateShareToken() {
 
 /* URL del portale cliente — adatta al tuo dominio */
 function clientPortalUrl(token) {
-  const dir  = window.location.pathname.replace(/\/[^\/]*$/, '/');
-  const base = window.location.origin + dir + 'client.html';
+  const base = window.location.origin + window.location.pathname.replace('app.html','').replace('index.html','') + 'client.html';
   return `${base}?t=${token}`;
 }
 

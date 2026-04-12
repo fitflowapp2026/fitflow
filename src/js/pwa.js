@@ -418,3 +418,5 @@ function openMonthPicker(defaultDate, onConfirm) {
   lockBodyScroll();
   requestAnimationFrame(() => document.getElementById('mpConfirmBtn')?.focus());
 }
+
+    async function initApp() {

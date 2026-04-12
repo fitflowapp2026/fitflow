@@ -120,25 +120,10 @@ input:invalid:not(:placeholder-shown), select:invalid:not(:placeholder-shown) {
 }
 
 .brand {
-  display: flex;
-  flex-direction: column;
-  line-height: 1;
-  gap: 2px;
-}
-.brand-main {
   font-size: 1.3rem;
   font-weight: 900;
   letter-spacing: 0.12em;
   color: var(--accent);
-}
-.brand-sub {
-  font-size: 0.52rem;
-  font-weight: 700;
-  letter-spacing: 0.28em;
-  color: var(--accent);
-  opacity: 0.72;
-  text-transform: uppercase;
-  padding-left: 0.08em;
 }
 
 .top-actions, .inline-actions, .pill-row, .chip-row, .quick-grid {

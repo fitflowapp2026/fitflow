@@ -225,8 +225,6 @@
     justify-content: space-around;
     align-items: flex-end;
     gap: 2px;
-    touch-action: manipulation;
-    isolation: isolate;
   }
   .bnav-btn {
     display: flex;

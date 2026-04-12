@@ -78,7 +78,23 @@ function renderSelectedClient() {
       <button class="btn btn-soft btn-small" id="editClientBtn">Modifica</button>
       <button class="btn btn-primary btn-small" id="renewClientBtn">Rinnova</button>
       <button class="btn btn-soft btn-small" id="sharePortalBtn" title="Apri portale cliente">🔗 Portale</button>
+      <button class="btn btn-ghost btn-small" id="sharePortalLinkBtn" title="Condividi link portale">↗ Condividi</button>
     </div>
+    ${client.pendingPlanId ? (() => {
+      const pending = getPendingPlan(client.id);
+      const pendingPkg = getPackage(pending?.packageId);
+      return pending && pendingPkg ? `
+        <div class="mini-card" style="border-color:rgba(29,185,84,0.3);background:rgba(29,185,84,0.06);margin-top:4px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+            <div>
+              <div style="font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--good);">Nuovo pacchetto in attesa</div>
+              <div class="muted small" style="margin-top:2px;">${escapeHtml(pendingPkg.name)} · ${pendingPkg.lessonsTotal} lezioni · dal ${formatDateShort(pending.startDate)}</div>
+            </div>
+            <button class="btn btn-good btn-small" id="schedulePendingPlanBtn">Pianifica →</button>
+          </div>
+        </div>
+      ` : '';
+    })() : ''}
     <div id="clientMessagesPanel" style="display:none;margin-top:4px;"></div>
   `;
   if (el.mobileSelectedClientCard) {
@@ -122,6 +138,7 @@ function renderSelectedClient() {
         <button class="btn btn-soft btn-small" id="mobileEditClientBtn" type="button">Modifica cliente</button>
         <button class="btn btn-primary btn-small" id="mobileRenewClientBtn" type="button">Rinnova pacchetto</button>
         <button class="btn btn-soft btn-small" id="mobileSharePortalBtn" type="button">🔗 Portale</button>
+        <button class="btn btn-ghost btn-small" id="mobileSharePortalLinkBtn" type="button">↗ Condividi</button>
         <button class="btn btn-soft btn-small" id="mobileMsgClientBtn" type="button" style="position:relative;">
           💬 Messaggi
           <span class="msg-badge" id="msgBadgeClientCard" style="top:-6px;right:-6px;">0</span>
@@ -159,10 +176,28 @@ function renderSelectedClient() {
   document.getElementById('mobilePaymentStatusTag')?.addEventListener('click', openPaymentQuickModal);
   document.getElementById('editClientBtn').addEventListener('click', () => renderClientModal(client));
   document.getElementById('renewClientBtn').addEventListener('click', openRenewModal);
+  document.getElementById('schedulePendingPlanBtn')?.addEventListener('click', () => {
+    const pending = getPendingPlan(client.id);
+    const pendingPkg = getPackage(pending?.packageId);
+    if (pending && pendingPkg) {
+      openScheduleNewPlanModal(client, pending, pendingPkg, {
+        showOldPlan: true,
+        oldPlan: getActivePlan(client.id),
+        carryOver: planStats(getActivePlan(client.id)).remaining
+      });
+    }
+  });
 
   /* Portale cliente — apre il portale + condividi link */
   const sharePortalFn = () => {
     if (!client.shareToken) { showToast('Token non trovato, modifica e salva il cliente.', 'warn'); return; }
+    const url = clientPortalUrl(client.shareToken);
+    /* Apre il portale in una nuova scheda */
+    window.open(url, '_blank');
+    haptic(8);
+  };
+  const sharePortalLinkFn = () => {
+    if (!client.shareToken) return;
     const url = clientPortalUrl(client.shareToken);
     if (navigator.share) {
       navigator.share({ title: `DSWORLD — Portale di ${getClientFullName(client)}`, url })
@@ -175,6 +210,12 @@ function renderSelectedClient() {
   };
   document.getElementById('sharePortalBtn')?.addEventListener('click', sharePortalFn);
   document.getElementById('mobileSharePortalBtn')?.addEventListener('click', sharePortalFn);
+  /* Tasto destro / long press → condivide il link */
+  document.getElementById('sharePortalBtn')?.addEventListener('contextmenu', e => { e.preventDefault(); sharePortalLinkFn(); });
+  document.getElementById('mobileSharePortalBtn')?.addEventListener('contextmenu', e => { e.preventDefault(); sharePortalLinkFn(); });
+  /* Bottoni condividi dedicati */
+  document.getElementById('sharePortalLinkBtn')?.addEventListener('click', sharePortalLinkFn);
+  document.getElementById('mobileSharePortalLinkBtn')?.addEventListener('click', sharePortalLinkFn);
 
   /* Carica messaggi del cliente */
   loadClientMessages(client);

@@ -3,8 +3,8 @@
    Cache-first for app shell, network-first for API calls
    ============================================================ */
 
-const CACHE_NAME = 'dsworld-v2';
-const CACHE_STATIC = 'dsworld-static-v2';
+const CACHE_NAME = 'fitflow-v1';
+const CACHE_STATIC = 'fitflow-static-v1';
 
 /* App shell — files to precache on install */
 const PRECACHE_URLS = [

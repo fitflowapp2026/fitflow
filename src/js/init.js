@@ -1,4 +1,3 @@
-    async function initApp() {
   loadStateLocal();
   resetPackageForm();
   el.clientStartDate.value = todayISO();
@@ -50,8 +49,6 @@
   }
   renderAll();
   initInteractionDelegation();
-  /* Ri-inizializza mobile UI dopo login (sovrascrive listeners dell'IIFE pre-login) */
-  try { initMobileUI(); } catch(e) {}
   updateGoogleUi();
   renderHeroGreeting();
   initDebouncedSearch();

@@ -42,11 +42,11 @@ return;
   }
 
   el.clientAppointmentsList.innerHTML = lessons.map((lesson, index) => {
-    const dateFormatted = fromISO(lesson.date).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
-    const statusTag = lesson.status === 'done'
-      ? '<span class="tag green" style="flex-shrink:0;">Svolta</span>'
-      : '<span class="tag blue" style="flex-shrink:0;">Programmata</span>';
-    return `<div class="summary-row">
+const dateFormatted = fromISO(lesson.date).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+const statusTag = lesson.status === 'done'
+  ? '<span class="tag green" style="flex-shrink:0;">Svolta</span>'
+  : '<span class="tag blue" style="flex-shrink:0;">Programmata</span>';
+return `<div class="summary-row">
   <span>Lezione ${index + 1}: ${escapeHtml(dateFormatted)} ore ${escapeHtml(lesson.time)}</span>
   ${statusTag}
 </div>`;
@@ -59,8 +59,8 @@ function buildAppointmentsText(clientId) {
   const lessons = getLessonsForClient(clientId).filter(item => item.status !== 'cancelled');
   if (!lessons.length) return '';
   const lines = lessons.map((lesson, index) => {
-    const dateFormatted = fromISO(lesson.date).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
-    return `Lezione ${index + 1}: ${dateFormatted} ore ${lesson.time}`;
+const dateFormatted = fromISO(lesson.date).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+return `Lezione ${index + 1}: ${dateFormatted} ore ${lesson.time}`;
   });
   return lines.join('\n');
 }
@@ -69,28 +69,28 @@ function copyAppointmentsToClipboard() {
   const clientId = el.clientId.value;
   const text = buildAppointmentsText(clientId);
   if (!text) {
-    showToast('Nessun appuntamento da copiare.');
-    return;
+showToast('Nessun appuntamento da copiare.');
+return;
   }
   /* Web Share API — apre il foglio nativo iOS (WhatsApp, Mail, AirDrop…) */
   if (navigator.share) {
-    navigator.share({ title: 'Appuntamenti DSWORLD', text })
-      .then(() => showToast('Appuntamenti condivisi!', 'ok'))
-      .catch(err => { if (err.name !== 'AbortError') showToast('Condivisione annullata.'); });
-    return;
+navigator.share({ title: 'Appuntamenti DSWORLD', text })
+  .then(() => showToast('Appuntamenti condivisi!', 'ok'))
+  .catch(err => { if (err.name !== 'AbortError') showToast('Condivisione annullata.'); });
+return;
   }
   /* Fallback clipboard */
   navigator.clipboard.writeText(text).then(() => {
-    showToast('Appuntamenti copiati!', 'ok');
+showToast('Appuntamenti copiati!', 'ok');
   }).catch(() => {
-    const textarea = document.createElement('textarea');
-    textarea.value = text;
-    textarea.style.cssText = 'position:fixed;opacity:0;';
-    document.body.appendChild(textarea);
-    textarea.select();
-    document.execCommand('copy');
-    textarea.remove();
-    showToast('Appuntamenti copiati!', 'ok');
+const textarea = document.createElement('textarea');
+textarea.value = text;
+textarea.style.cssText = 'position:fixed;opacity:0;';
+document.body.appendChild(textarea);
+textarea.select();
+document.execCommand('copy');
+textarea.remove();
+showToast('Appuntamenti copiati!', 'ok');
   });
 }
 
@@ -103,10 +103,10 @@ function applyReportFilter() {
   toggle(el.reportSectionOutstanding, filter === 'all' || filter === 'outstanding');
   toggle(el.reportSectionInstallments, filter === 'all' || filter === 'installments');
   if (el.reportFilterBar) {
-    el.reportFilterBar.querySelectorAll('[data-report-filter]').forEach(button => {
-      const active = button.getAttribute('data-report-filter') === filter;
-      button.className = active ? 'btn btn-soft btn-small active' : 'btn btn-ghost btn-small';
-    });
+el.reportFilterBar.querySelectorAll('[data-report-filter]').forEach(button => {
+  const active = button.getAttribute('data-report-filter') === filter;
+  button.className = active ? 'btn btn-soft btn-small active' : 'btn btn-ghost btn-small';
+});
   }
 }
 

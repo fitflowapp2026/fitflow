@@ -74,21 +74,21 @@
   }
   </script>
 
-  <!-- Supabase JS — CDN con fallback, usa onload invece di polling -->
+  <!-- Supabase JS: carica da jsDelivr, con fallback automatico su unpkg se offline -->
   <script>
     (function () {
-      var _loaded = false;
-      function onLoad() {
-        if (_loaded) return; _loaded = true;
-        if (typeof initApp === 'function') initApp();
-        else window._supabaseReadyCallback = true;
-      }
       function tryLoad(urls, idx) {
-        if (idx >= urls.length) { onLoad(); return; }
+        if (idx >= urls.length) {
+          console.error('[DSWORLD] Impossibile caricare supabase-js da tutti i CDN disponibili.');
+          return;
+        }
         var s = document.createElement('script');
         s.src = urls[idx];
-        s.onload = onLoad;
-        s.onerror = function() { document.head.removeChild(s); tryLoad(urls, idx + 1); };
+        s.onerror = function () {
+          console.warn('[DSWORLD] CDN non disponibile:', urls[idx], '— provo il successivo…');
+          document.head.removeChild(s);
+          tryLoad(urls, idx + 1);
+        };
         document.head.appendChild(s);
       }
       tryLoad([

@@ -1,0 +1,13 @@
+{
+  "name": "dsworld",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "node build.js",
+    "dev": "node build.js --watch",
+    "extract": "node extract.js"
+  },
+  "engines": {
+    "node": ">=16"
+  }
+}

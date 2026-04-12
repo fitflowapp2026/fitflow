@@ -1,0 +1,66 @@
+  <div class="modal-backdrop" id="lessonModalBackdrop">
+<div class="modal narrow" role="dialog" aria-modal="true">
+  <div class="modal-top">
+    <div>
+      <h3 class="modal-title" id="lessonModalTitle">Lezione</h3>
+      <div class="muted small" id="lessonModalSubtitle"></div>
+    </div>
+    <button class="btn btn-ghost btn-small" data-close="lessonModalBackdrop">Chiudi</button>
+  </div>
+
+  <div style="display:grid;gap:14px;">
+    <div class="quick-grid">
+      <button class="btn btn-soft" id="statusScheduledBtn">Programmata</button>
+      <button class="btn btn-good" id="statusDoneBtn">Svolta</button>
+      <button class="btn btn-danger" id="statusCancelledBtn">Annullata</button>
+    </div>
+
+    <div style="display:grid;gap:10px;">
+      <div class="muted small">Orario rapido</div>
+      <div class="chip-row" id="lessonQuickTimes"></div>
+    </div>
+
+    <div class="form-grid-2">
+      <label>Orario
+        <input id="lessonTimeInput" type="time" />
+      </label>
+      <label>Nota
+        <input id="lessonNoteInput" type="text" placeholder="Nota" />
+      </label>
+    </div>
+
+    <div class="inline-actions">
+      <button class="btn btn-primary" id="saveLessonBtn">Salva</button>
+      <button class="btn btn-soft" id="quickRecoverBtn">Recupero rapido</button>
+      <button class="btn btn-danger" id="deleteLessonBtn">Elimina</button>
+    </div>
+
+    <!-- ── SEZIONE DUO ─────────────────────────────── -->
+    <div class="duo-section" id="duoSection">
+      <div class="duo-section-title">👥 Lezione DUO</div>
+
+      <!-- Partner già collegato -->
+      <div id="duoPartnerRow" class="duo-partner-row" style="display:none">
+        <span class="duo-badge" id="duoPartnerBadge">—</span>
+        <button class="btn btn-ghost btn-small" id="duoUnlinkBtn">Scollega</button>
+      </div>
+
+      <!-- Nessun partner → mostra selector -->
+      <div id="duoAddRow" style="display:none; display:grid; gap:8px;">
+        <div class="muted small">Aggiungi un secondo cliente allo stesso orario</div>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <select id="duoClientSelect" style="flex:1"></select>
+          <button class="btn btn-primary btn-small" id="duoLinkBtn">Collega</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div style="display:grid;gap:10px;">
+      <div class="muted small">Suggerimenti recupero</div>
+      <div class="suggestion-grid" id="rescheduleList"></div>
+    </div>
+  </div>
+</div>
+  </div>

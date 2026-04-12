@@ -1,0 +1,53 @@
+  <div class="auth-shell" id="authShell">
+<div class="auth-card">
+  <div class="auth-brand">DSWORLD Cloud</div>
+  <div>
+    <h2>Account</h2>
+    <div class="muted">Accedi per sincronizzare clienti, lezioni e pacchetti.</div>
+  </div>
+
+  
+  <div class="auth-note" id="supabaseConfigStatus">Cloud collegato. Accedi o registrati.</div>
+  <input id="sbProjectUrl" type="hidden" value="" />
+  <input id="sbAnonKey" type="hidden" value="" />
+  <button class="btn" type="button" id="saveSupabaseConfigBtn" style="display:none">Salva configurazione</button>
+  <button class="btn" type="button" id="useDemoLocalBtn" style="display:none">Solo cache locale</button>
+
+  <div class="auth-tabs">
+    <button class="auth-tab active" type="button" data-auth-tab="login">Accedi</button>
+    <button class="auth-tab" type="button" data-auth-tab="signup">Registrati</button>
+    <button class="auth-tab" type="button" data-auth-tab="reset">Reset</button>
+  </div>
+
+  <form class="auth-panel active" id="loginPanel" novalidate>
+    <label>Email
+      <input id="authLoginEmail" type="email" placeholder="nome@email.com" autocomplete="email" required />
+    </label>
+    <label>Password
+      <input id="authLoginPassword" type="password" placeholder="Password" autocomplete="current-password" required minlength="6" />
+    </label>
+    <button class="btn btn-primary" type="submit">Accedi</button>
+    <button class="btn btn-ghost" type="button" id="showResetTabBtn">Password dimenticata?</button>
+  </form>
+
+  <form class="auth-panel" id="signupPanel" novalidate>
+    <label>Email
+      <input id="authSignupEmail" type="email" placeholder="nome@email.com" autocomplete="email" required />
+    </label>
+    <label>Password
+      <input id="authSignupPassword" type="password" placeholder="Minimo 8 caratteri" autocomplete="new-password" required minlength="8" />
+    </label>
+    <button class="btn btn-primary" type="submit">Crea account</button>
+  </form>
+
+  <form class="auth-panel" id="resetPanel" novalidate>
+    <label>Email
+      <input id="authResetEmail" type="email" placeholder="nome@email.com" autocomplete="email" required />
+    </label>
+    <button class="btn btn-primary" type="submit">Invia link reset</button>
+    <div class="muted small">Ti mandiamo un link per impostare una nuova password.</div>
+  </form>
+
+  <div class="auth-note" id="authMessage">Quando il login è attivo, i dati vengono caricati dal tuo spazio cloud personale.</div>
+</div>
+  </div>

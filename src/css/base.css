@@ -1,0 +1,134 @@
+
+* { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: radial-gradient(circle at top, #1f1f1f 0%, #141414 55%, #090909 100%); color: var(--text); }
+body {
+  padding: 16px;
+  /* Blocca pull-to-refresh Safari che ricarica la pagina */
+  overscroll-behavior-y: none;
+}
+/* Rimuove il flash grigio/blu al tap su iOS */
+* { -webkit-tap-highlight-color: transparent; }
+/* Impedisce il menu contestuale sul long-press (testo, immagini) */
+body, .btn, .bnav-btn, .client-row, .stat-box, .hero, .panel, .card, .alert-chip, .day-lesson {
+  -webkit-touch-callout: none;
+}
+/* Impedisce la selezione accidentale di testo su elementi UI */
+.btn, .bnav-btn, .client-row, .stat-box, .hero, .panel,
+.alert-chip, .day-lesson, .filter-chip, .topbar, .bottom-nav,
+.panel-head, .panel-title, .eyebrow, .brand {
+  user-select: none;
+  -webkit-user-select: none;
+}
+body.modal-scroll-lock {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: none;
+}
+html.modal-scroll-lock {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+button, input, select, textarea { font: inherit; }
+button { cursor: pointer; }
+
+/* Skip to content — accessibility */
+.skip-link {
+  position: absolute;
+  top: -100px;
+  left: 16px;
+  background: var(--accent);
+  color: #fff;
+  padding: 10px 18px;
+  border-radius: 0 0 12px 12px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  z-index: 200;
+  text-decoration: none;
+  transition: top 120ms ease;
+}
+.skip-link:focus { top: 0; }
+
+/* Visually hidden but screen-reader accessible */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+  white-space: nowrap;
+  border: 0;
+}
+
+input, select, textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  background: #151515;
+  color: var(--text);
+  border-radius: 14px;
+  padding: 12px 14px;
+  outline: none;
+}
+input:focus, select:focus, textarea:focus { border-color: rgba(229,9,20,0.6); box-shadow: 0 0 0 3px rgba(229,9,20,0.14); }
+textarea { min-height: 90px; resize: vertical; }
+
+/* Inline form validation error messages */
+.field-error {
+  color: #ffa5a5;
+  font-size: 0.8rem;
+  margin-top: 5px;
+  display: none;
+  align-items: center;
+  gap: 5px;
+}
+.field-error.show { display: flex; }
+input:invalid:not(:placeholder-shown), select:invalid:not(:placeholder-shown) {
+  border-color: rgba(239,68,68,0.5);
+}
+
+.app {
+  max-width: 1600px;
+  margin: 0 auto;
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.hero, .hero-left, .hero-right, .panel, .panel-body, .layout, .calendar-wrap,
+.selected-card, .mobile-selected-client-card, .hero-insights, .hero-stats,
+.selected-metrics, .client-data-points, .ops-board, .report-grid, .package-grid,
+.agenda-wrap, .calendar-toolbar, .calendar-toolbar-left, .calendar-top-tools {
+  min-width: 0;
+}
+
+/* content-visibility: browser salta il rendering di ciò che è fuori schermo */
+.calendar-wrap, .ops-board {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 500px;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 2px;
+}
+
+.brand {
+  font-size: 1.3rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  color: var(--accent);
+}
+
+.top-actions, .inline-actions, .pill-row, .chip-row, .quick-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}

@@ -1,0 +1,31 @@
+  <div class="modal-backdrop" id="messagesModalBackdrop">
+<div class="modal modal-messages" role="dialog" aria-modal="true" aria-labelledby="messagesModalTitle">
+  <div class="modal-top">
+    <div>
+      <h3 class="modal-title" id="messagesModalTitle">Messaggi</h3>
+      <div class="muted small" id="messagesModalSub">Conversazioni con i clienti</div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <button class="btn btn-ghost btn-small" id="markAllReadBtn" style="display:none;font-size:0.78rem;">✓ Segna tutti letti</button>
+      <button class="btn btn-ghost btn-small" data-close="messagesModalBackdrop">Chiudi</button>
+    </div>
+  </div>
+  <div class="messages-modal-body">
+    <!-- Lista clienti -->
+    <div class="messages-sidebar" id="messagesClientList"></div>
+    <!-- Chat -->
+    <div class="messages-chat-area" id="messagesChat" style="display:none;">
+      <div class="messages-chat-header">
+        <button class="btn btn-ghost btn-small" id="msgBackBtn">← Indietro</button>
+        <strong id="msgChatClientName"></strong>
+      </div>
+      <div id="msgChatList" class="messages-chat-list"></div>
+      <div class="messages-chat-input-row">
+        <input id="msgChatInput" type="text" placeholder="Scrivi una risposta…"
+          autocapitalize="sentences" autocorrect="off" enterkeyhint="send" />
+        <button class="btn btn-primary" id="msgChatSendBtn">Invia</button>
+      </div>
+    </div>
+  </div>
+</div>
+  </div>

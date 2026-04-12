@@ -1,0 +1,28 @@
+  <div class="fsc-backdrop" id="fscBackdrop" role="dialog" aria-modal="true" aria-labelledby="fscTitle">
+<div class="fsc-modal">
+  <div class="fsc-header">
+    <div class="fsc-icon">🎯</div>
+    <div>
+      <h3 id="fscTitle">Free Session completata!</h3>
+      <p id="fscSubtitle">Ha deciso di iniziare un percorso?</p>
+    </div>
+  </div>
+  <!-- Sezione pacchetto + prezzo: visibile solo se ha acquistato -->
+  <div id="fscPurchaseSection" style="display:grid;gap:14px;">
+    <div>
+      <span class="fsc-label">Pacchetto scelto</span>
+      <select id="fscPackageSelect" class="fsc-select"></select>
+    </div>
+    <div>
+      <span class="fsc-label">Prezzo concordato (€)</span>
+      <input id="fscPriceInput" class="fsc-input" type="number" min="0" step="0.01" placeholder="Es. 480" />
+    </div>
+    <div class="fsc-preview" id="fscPreview"></div>
+  </div>
+  <div class="fsc-actions">
+    <button class="btn btn-danger btn-small" id="fscNoBtn" type="button">No, da ricontattare</button>
+    <button class="btn btn-ghost btn-small" id="fscSkipBtn" type="button">Deciderà dopo</button>
+    <button class="btn btn-primary btn-small" id="fscYesBtn" type="button">Sì, avvia percorso →</button>
+  </div>
+</div>
+  </div>

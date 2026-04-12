@@ -1,0 +1,129 @@
+.calendar-wrap {
+  display: grid;
+  gap: 12px;
+}
+
+.calendar-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 18px 20px 0;
+}
+
+.month-title {
+  font-size: clamp(1.35rem, 3vw, 2rem);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+}
+
+.mini-meta { color: var(--muted); font-size: 0.92rem; }
+
+.calendar-head {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 10px;
+  color: rgba(255,255,255,0.62);
+  text-transform: uppercase;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  padding: 0 20px;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 10px;
+  padding: 0 20px 20px;
+}
+
+.day-cell {
+  min-height: 136px;
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.03));
+  border: 1px solid var(--line);
+  padding: 10px;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: 10px;
+  cursor: pointer;
+  transition: transform 120ms ease, border-color 120ms ease, background 120ms ease;
+}
+.day-cell:hover { transform: translateY(-1px); border-color: rgba(229,9,20,0.18); }
+.day-cell.other-month { opacity: 0.38; }
+.day-cell.today { border-color: rgba(229,9,20,0.34); }
+.day-cell.selected-day { border-color: rgba(255,255,255,0.18); background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.026)); }
+
+.day-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+.day-top-main {
+  display: grid;
+  gap: 4px;
+  justify-items: start;
+}
+.day-weekday {
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.52);
+  line-height: 1;
+}
+
+.day-number {
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  background: rgba(255,255,255,0.08);
+}
+.today .day-number { background: var(--accent); }
+.day-add {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  border: 0;
+  background: transparent;
+  color: rgba(255,255,255,0.46);
+  font-size: 1rem;
+  transition: background 120ms ease, color 120ms ease, transform 120ms ease;
+}
+.day-add:hover { background: rgba(255,255,255,0.08); color: var(--text); transform: translateY(-1px); }
+
+.day-events {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  min-height: 80px;
+  overflow: auto;
+}
+
+.lesson-pill {
+  border: 0;
+  border-radius: 12px;
+  padding: 8px 9px;
+  text-align: left;
+  display: grid;
+  gap: 3px;
+  background: rgba(255,255,255,0.08);
+  color: var(--text);
+  font-size: 0.86rem;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+.lesson-pill strong { font-size: 0.83rem; }
+.lesson-pill span { color: rgba(255,255,255,0.72); font-size: 0.76rem; }
+.lesson-pill.status-done { border-color: rgba(29,185,84,0.24); background: rgba(29,185,84,0.14); }
+.lesson-pill.duo { border-color: rgba(59,130,246,0.32); background: rgba(59,130,246,0.10); }
+.lesson-pill.duo.status-done { border-color: rgba(29,185,84,0.24); background: rgba(29,185,84,0.14); }
+.lesson-pill.duo.status-cancelled { border-color: rgba(239,68,68,0.26); background: rgba(239,68,68,0.16); }

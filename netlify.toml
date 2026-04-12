@@ -1,23 +1,7 @@
-# ─────────────────────────────────────────────────────────
-#  netlify.toml — Configurazione deploy FitFlow Evolution
-# ─────────────────────────────────────────────────────────
-
+# DSWORLD — Netlify esegue "node build.js" prima di ogni deploy
 [build]
-  # Cartella che contiene le Netlify Functions
-  functions = "netlify/functions"
+  command   = "node build.js"
+  publish   = "."
 
-# Redirect: /api/config → /.netlify/functions/config
-# Permette di usare l'URL "pulito" /api/config nel codice frontend
-[[redirects]]
-  from   = "/api/config"
-  to     = "/.netlify/functions/config"
-  status = 200
-
-# Header di sicurezza applicati a tutte le pagine
-[[headers]]
-  for = "/*"
-  [headers.values]
-    X-Frame-Options        = "DENY"
-    X-Content-Type-Options = "nosniff"
-    Referrer-Policy        = "strict-origin-when-cross-origin"
-    Permissions-Policy     = "camera=(), microphone=(), geolocation=()"
+[build.environment]
+  NODE_VERSION = "18"

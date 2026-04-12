@@ -1,0 +1,37 @@
+  <div class="modal-backdrop" id="renewModalBackdrop">
+<div class="modal narrow" role="dialog" aria-modal="true">
+  <div class="modal-top">
+    <div>
+      <h3 class="modal-title">Rinnovo</h3>
+      <div class="muted small">Nuovo pacchetto per il cliente selezionato</div>
+    </div>
+    <button class="btn btn-ghost btn-small" data-close="renewModalBackdrop">Chiudi</button>
+  </div>
+  <form id="renewForm" style="display:grid;gap:14px;">
+    <label>Pacchetto
+      <select id="renewPackage"></select>
+    </label>
+    <div class="mini-card" id="renewPreview"></div>
+    <div class="form-grid-2">
+      <label>Inizio
+        <input id="renewStartDate" type="date" required />
+      </label>
+      <label>Check
+        <select id="renewCheckMode">
+          <option value="12">12 settimane</option>
+          <option value="8">8 settimane</option>
+          <option value="none">Off</option>
+        </select>
+      </label>
+    </div>
+    <label>Prezzo pacchetto (€)
+      <input id="renewPrice" type="number" min="0" step="0.01" placeholder="Prezzo personalizzato" />
+      <div class="muted small" id="renewPriceHint" style="margin-top:4px;"></div>
+    </label>
+    <div class="section-block"><div class="section-title">Azioni</div><div class="inline-actions">
+      <button class="btn btn-primary" type="submit">Conferma rinnovo</button>
+      <button class="btn btn-ghost btn-small" type="button" id="closeWithoutRenewBtn">Chiudi senza rinnovo</button>
+    </div></div>
+  </form>
+</div>
+  </div>

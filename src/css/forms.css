@@ -183,7 +183,6 @@ body.signed-out #mainApp {
   opacity: 0.18;
   pointer-events: none;
   user-select: none;
-  filter: blur(8px);
 }
 
 .auth-shell {

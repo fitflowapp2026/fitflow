@@ -494,5 +494,3 @@ window.addEventListener('beforeunload', () => {
   try { saveLocalState(); } catch (error) { console.error(error); }
 });
 
-/* ═══════════════════════════════════════════════════════════
-   HERO GREETING & TODAY STRIP

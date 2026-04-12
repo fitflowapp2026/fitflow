@@ -1,5 +1,5 @@
 
-    async function initApp() {
+async function initApp() {
   loadStateLocal();
   resetPackageForm();
   el.clientStartDate.value = todayISO();
@@ -83,6 +83,3 @@
     }, delay);
   })();
 }
-
-/* ═══════════════════════════════════════════════════════════
-   MOBILE DRAWER & BOTTOM NAV

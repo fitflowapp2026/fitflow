@@ -1,3 +1,5 @@
+/* ═══════════════════════════════════════════════════════════
+   HERO GREETING & TODAY STRIP
 ═══════════════════════════════════════════════════════════ */
 function renderHeroGreeting() {
   const dateLabel = document.getElementById('heroDateLabel');

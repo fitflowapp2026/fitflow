@@ -46,3 +46,4 @@ async function loadRemoteConfig() {
     } catch (_) { /* prova il prossimo endpoint */ }
   }
   console.info('[DSWORLD] Usando config locale (Netlify Function non ancora attiva)');
+}

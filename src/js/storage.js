@@ -45,7 +45,7 @@ function persistBackupSnapshot(snapshot) {
   }
 }
 
-    function saveLocalState() {
+function saveLocalState() {
   // ATTENZIONE: I dati sensibili dei clienti memorizzati localmente (localStorage)
   // non sono crittografati. Per una sicurezza enterprise, questi dati dovrebbero
   // essere crittografati prima di essere salvati e decrittografati al recupero.

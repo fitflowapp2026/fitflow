@@ -160,7 +160,7 @@ async function refreshGoogleBlockingAvailability(force = false) {
   try {
     const result = await googleApi('google-availability', { method: 'POST', body: range });
     state.googleBlockingBusy = Array.isArray(result.busy) ? result.busy : [];
-    if (el.dayModalBackdrop?.classList.contains('show') && state.selectedDay) renderDayModal(state.selectedDay);
+    if (el.dayModalBackdrop?.classList.contains('open') && state.selectedDay) renderDayModal(state.selectedDay);
     if (state.calendarView === 'week') renderWeekAgenda(getCalendarAnchorDate());
     if (state.calendarView === 'day') renderDayAgenda(state.selectedDay || todayISO());
   } catch (error) {

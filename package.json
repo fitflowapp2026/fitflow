@@ -4,10 +4,7 @@
   "private": true,
   "scripts": {
     "build": "node build.js",
-    "dev": "node build.js --watch",
-    "extract": "node extract.js"
+    "dev": "node build.js --watch"
   },
-  "engines": {
-    "node": ">=16"
-  }
+  "engines": { "node": ">=16" }
 }

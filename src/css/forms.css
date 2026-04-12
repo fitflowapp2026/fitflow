@@ -183,7 +183,6 @@ body.signed-out #mainApp {
   opacity: 0.22;
   pointer-events: none;
   user-select: none;
-  /* filter:blur rimosso: su iOS rompe position:fixed dei figli */
 }
 
 .auth-shell {

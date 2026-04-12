@@ -1,24 +1,24 @@
 <div class="modal-backdrop" id="timeModalBackdrop">
-<div class="modal narrow" role="dialog" aria-modal="true">
-  <div class="modal-top">
-    <div>
-      <h3 class="modal-title" id="timeModalTitle">Scegli orario</h3>
-      <div class="muted small" id="timeModalSubtitle"></div>
-    </div>
-    <button class="btn btn-ghost btn-small" data-close="timeModalBackdrop">Chiudi</button>
-  </div>
+    <div class="modal narrow" role="dialog" aria-modal="true">
+      <div class="modal-top">
+        <div>
+          <h3 class="modal-title" id="timeModalTitle">Scegli orario</h3>
+          <div class="muted small" id="timeModalSubtitle"></div>
+        </div>
+        <button class="btn btn-ghost btn-small" data-close="timeModalBackdrop">Chiudi</button>
+      </div>
 
-  <div style="display:grid;gap:14px;">
-    <div style="display:grid;gap:10px;">
-      <div class="muted small">Suggeriti</div>
-      <div class="chip-row" id="timeSuggestionChips"></div>
+      <div style="display:grid;gap:14px;">
+        <div style="display:grid;gap:10px;">
+          <div class="muted small">Suggeriti</div>
+          <div class="chip-row" id="timeSuggestionChips"></div>
+        </div>
+        <label>Orario manuale
+          <input id="timeManualInput" type="time" />
+        </label>
+        <div class="inline-actions">
+          <button class="btn btn-primary" id="confirmTimeBtn">Conferma</button>
+        </div>
+      </div>
     </div>
-    <label>Orario manuale
-      <input id="timeManualInput" type="time" />
-    </label>
-    <div class="inline-actions">
-      <button class="btn btn-primary" id="confirmTimeBtn">Conferma</button>
-    </div>
-  </div>
-</div>
   </div>

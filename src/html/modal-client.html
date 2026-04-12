@@ -1,141 +1,141 @@
 <div class="modal-backdrop" id="clientModalBackdrop">
-<div class="modal narrow" role="dialog" aria-modal="true" aria-labelledby="clientModalTitle">
-  <div class="modal-top">
-    <div>
-      <h3 class="modal-title" id="clientModalTitle">Nuovo cliente</h3>
-      
-    </div>
-    <div class="modal-top-actions">
-      <button class="btn btn-danger btn-small" type="button" id="deleteClientBtn" style="display:none">🗑 Elimina</button>
-      <button class="btn btn-primary btn-small" type="submit" form="clientForm">Salva</button>
-      <button class="btn btn-ghost btn-small" type="button" data-close="clientModalBackdrop">Chiudi</button>
-    </div>
-  </div>
-
-  <form id="clientForm">
-    <input type="hidden" id="clientId" />
-    <input type="hidden" id="clientPlanId" />
-    <div class="section-block"><div class="section-title">Identità</div><div class="form-grid-2">
-      <label>Nome
-        <input id="clientName" type="text" placeholder="Nome" required autocapitalize="words" autocorrect="off" autocomplete="given-name" enterkeyhint="next" />
-      </label>
-      <label>Cognome
-        <input id="clientSurname" type="text" placeholder="Cognome" required autocapitalize="words" autocorrect="off" autocomplete="family-name" enterkeyhint="next" />
-      </label>
-    </div>
-    <div class="form-grid-2">
-      <label>Email cliente
-        <input id="clientEmail" type="email" placeholder="email@cliente.com" autocomplete="email" autocapitalize="none" autocorrect="off" enterkeyhint="next" />
-      </label>
-      <label>Invia appuntamenti calendario
-        <select id="clientSendCalendarInvite">
-          <option value="no">No</option>
-          <option value="yes">Sì</option>
-        </select>
-      </label>
-    </div></div>
-    <div class="section-block"><div class="section-title">Vendita</div><div class="form-grid-2">
-      <label>Tipo
-        <select id="clientServiceType">
-          <option value="personal">PERSONAL</option>
-          <option value="free_session">FREE SESSION</option>
-        </select>
-      </label>
-      <label>Inizio
-        <input id="clientStartDate" type="date" required />
-      </label>
-    </div>
-    <div class="form-grid-3">
-      <label id="clientPackageLabel">Pacchetto
-        <select id="clientPackage" required></select>
-      </label>
-      <label id="clientPackagePriceLabel">Prezzo cliente (€)
-        <input id="clientPackagePrice" type="number" min="0" step="0.01" value="0" inputmode="decimal" enterkeyhint="next" />
-      </label>
-      <label id="clientFreeSessionDoneLabel">Free session già fatta
-        <select id="clientFreeSessionDone">
-          <option value="no">No</option>
-          <option value="yes">Sì</option>
-        </select>
-      </label>
-    </div>
-    <div class="form-grid-2">
-      <label id="clientPackagePurchasedLabel">Pacchetto acquistato
-        <select id="clientPackagePurchased">
-          <option value="no">No</option>
-          <option value="yes">Sì</option>
-        </select>
-      </label>
-      <label>Esito
-        <select id="clientConversionStatus">
-          <option value="path_started">Ha intrapreso un percorso</option>
-          <option value="follow_up">Da ricontattare</option>
-          <option value="no_path">Non ha intrapreso un percorso</option>
-        </select>
-      </label>
-    </div>
-    <div class="form-grid-2">
-      <label id="clientPaymentStatusLabel">Pagamento
-        <select id="clientPaymentStatus">
-          <option value="unpaid">Da pagare</option>
-          <option value="partial">Acconto</option>
-          <option value="paid">Saldato</option>
-        </select>
-      </label>
-      <label id="clientPaymentModeLabel">Modalità
-        <select id="clientPaymentMode">
-          <option value="single">Unica soluzione</option>
-          <option value="installments">Rateizzato</option>
-        </select>
-      </label>
-    </div>
-    <div class="form-grid-2" id="clientInstallmentsRow" hidden>
-      <label>Rate totali
-        <input id="clientInstallmentsTotal" type="number" min="2" step="1" value="2" inputmode="numeric" enterkeyhint="next" />
-      </label>
-      <label>Rate pagate
-        <input id="clientInstallmentsPaid" type="number" min="0" step="1" value="0" inputmode="numeric" enterkeyhint="next" />
-      </label>
-    </div>
-    <div class="mini-card" id="packagePreview"></div></div>
-    <div class="section-block"><div class="section-title">Programmazione</div><div style="display:grid;gap:8px;">
-      <div class="muted small">Orari</div>
-      <div class="choice-row">
-        <label class="choice"><input type="radio" name="scheduleMode" value="same" checked /> Sempre stesso orario</label>
-        <label class="choice"><input type="radio" name="scheduleMode" value="different" /> Orari differenti</label>
-      </div>
-    </div>
-    <div class="mini-card quick-plan-card" id="fixedScheduleBlock">
-      <strong>Pianificazione veloce</strong>
-      <div class="quick-plan-hint" id="fixedScheduleHint">Scegli ora e giorni fissi. Al salvataggio creo tutte le lezioni del pacchetto con un solo tap.</div>
-      <div class="form-grid-2" id="sameScheduleFields">
-        <label>Ora fissa
-          <input id="clientFixedTime" type="time" />
-        </label>
-        <div style="display:grid;gap:8px;align-content:start;min-width:0;">
-          <div class="muted small">Giorni fissi</div>
-          <div id="clientWeekdayPicker" class="weekday-picker"></div>
+    <div class="modal narrow" role="dialog" aria-modal="true" aria-labelledby="clientModalTitle">
+      <div class="modal-top">
+        <div>
+          <h3 class="modal-title" id="clientModalTitle">Nuovo cliente</h3>
+          
+        </div>
+        <div class="modal-top-actions">
+          <button class="btn btn-danger btn-small" type="button" id="deleteClientBtn" style="display:none">🗑 Elimina</button>
+          <button class="btn btn-primary btn-small" type="submit" form="clientForm">Salva</button>
+          <button class="btn btn-ghost btn-small" type="button" data-close="clientModalBackdrop">Chiudi</button>
         </div>
       </div>
-      <div id="variableScheduleBlock" style="display:none;gap:8px;">
-        <div class="muted small">Seleziona i giorni con l'orario specifico. Utile per esempio: martedì 09:00 e sabato 12:00.</div>
-        <div id="clientVariableScheduleGrid" style="display:grid;gap:8px;"></div>
-      </div>
-      <div class="quick-plan-summary" id="fixedScheduleQuickText"></div>
-      <div class="fixed-preview-list" id="fixedSchedulePreview"></div>
+
+      <form id="clientForm">
+        <input type="hidden" id="clientId" />
+        <input type="hidden" id="clientPlanId" />
+        <div class="section-block"><div class="section-title">Identità</div><div class="form-grid-2">
+          <label>Nome
+            <input id="clientName" type="text" placeholder="Nome" required autocapitalize="words" autocorrect="off" autocomplete="given-name" enterkeyhint="next" />
+          </label>
+          <label>Cognome
+            <input id="clientSurname" type="text" placeholder="Cognome" required autocapitalize="words" autocorrect="off" autocomplete="family-name" enterkeyhint="next" />
+          </label>
+        </div>
+        <div class="form-grid-2">
+          <label>Email cliente
+            <input id="clientEmail" type="email" placeholder="email@cliente.com" autocomplete="email" autocapitalize="none" autocorrect="off" enterkeyhint="next" />
+          </label>
+          <label>Invia appuntamenti calendario
+            <select id="clientSendCalendarInvite">
+              <option value="no">No</option>
+              <option value="yes">Sì</option>
+            </select>
+          </label>
+        </div></div>
+        <div class="section-block"><div class="section-title">Vendita</div><div class="form-grid-2">
+          <label>Tipo
+            <select id="clientServiceType">
+              <option value="personal">PERSONAL</option>
+              <option value="free_session">FREE SESSION</option>
+            </select>
+          </label>
+          <label>Inizio
+            <input id="clientStartDate" type="date" required />
+          </label>
+        </div>
+        <div class="form-grid-3">
+          <label id="clientPackageLabel">Pacchetto
+            <select id="clientPackage" required></select>
+          </label>
+          <label id="clientPackagePriceLabel">Prezzo cliente (€)
+            <input id="clientPackagePrice" type="number" min="0" step="0.01" value="0" inputmode="decimal" enterkeyhint="next" />
+          </label>
+          <label id="clientFreeSessionDoneLabel">Free session già fatta
+            <select id="clientFreeSessionDone">
+              <option value="no">No</option>
+              <option value="yes">Sì</option>
+            </select>
+          </label>
+        </div>
+        <div class="form-grid-2">
+          <label id="clientPackagePurchasedLabel">Pacchetto acquistato
+            <select id="clientPackagePurchased">
+              <option value="no">No</option>
+              <option value="yes">Sì</option>
+            </select>
+          </label>
+          <label>Esito
+            <select id="clientConversionStatus">
+              <option value="path_started">Ha intrapreso un percorso</option>
+              <option value="follow_up">Da ricontattare</option>
+              <option value="no_path">Non ha intrapreso un percorso</option>
+            </select>
+          </label>
+        </div>
+        <div class="form-grid-2">
+          <label id="clientPaymentStatusLabel">Pagamento
+            <select id="clientPaymentStatus">
+              <option value="unpaid">Da pagare</option>
+              <option value="partial">Acconto</option>
+              <option value="paid">Saldato</option>
+            </select>
+          </label>
+          <label id="clientPaymentModeLabel">Modalità
+            <select id="clientPaymentMode">
+              <option value="single">Unica soluzione</option>
+              <option value="installments">Rateizzato</option>
+            </select>
+          </label>
+        </div>
+        <div class="form-grid-2" id="clientInstallmentsRow" hidden>
+          <label>Rate totali
+            <input id="clientInstallmentsTotal" type="number" min="2" step="1" value="2" inputmode="numeric" enterkeyhint="next" />
+          </label>
+          <label>Rate pagate
+            <input id="clientInstallmentsPaid" type="number" min="0" step="1" value="0" inputmode="numeric" enterkeyhint="next" />
+          </label>
+        </div>
+        <div class="mini-card" id="packagePreview"></div></div>
+        <div class="section-block"><div class="section-title">Programmazione</div><div style="display:grid;gap:8px;">
+          <div class="muted small">Orari</div>
+          <div class="choice-row">
+            <label class="choice"><input type="radio" name="scheduleMode" value="same" checked /> Sempre stesso orario</label>
+            <label class="choice"><input type="radio" name="scheduleMode" value="different" /> Orari differenti</label>
+          </div>
+        </div>
+        <div class="mini-card quick-plan-card" id="fixedScheduleBlock">
+          <strong>Pianificazione veloce</strong>
+          <div class="quick-plan-hint" id="fixedScheduleHint">Scegli ora e giorni fissi. Al salvataggio creo tutte le lezioni del pacchetto con un solo tap.</div>
+          <div class="form-grid-2" id="sameScheduleFields">
+            <label>Ora fissa
+              <input id="clientFixedTime" type="time" />
+            </label>
+            <div style="display:grid;gap:8px;align-content:start;min-width:0;">
+              <div class="muted small">Giorni fissi</div>
+              <div id="clientWeekdayPicker" class="weekday-picker"></div>
+            </div>
+          </div>
+          <div id="variableScheduleBlock" style="display:none;gap:8px;">
+            <div class="muted small">Seleziona i giorni con l'orario specifico. Utile per esempio: martedì 09:00 e sabato 12:00.</div>
+            <div id="clientVariableScheduleGrid" style="display:grid;gap:8px;"></div>
+          </div>
+          <div class="quick-plan-summary" id="fixedScheduleQuickText"></div>
+          <div class="fixed-preview-list" id="fixedSchedulePreview"></div>
+        </div>
+        <div class="form-grid-2">
+          <label>Check
+            <select id="clientCheckMode">
+              <option value="12">12 settimane</option>
+              <option value="8">8 settimane</option>
+              <option value="none">Off</option>
+            </select>
+          </label>
+          <label>Note
+            <input id="clientNotes" type="text" placeholder="Note rapide" autocapitalize="sentences" enterkeyhint="done" />
+          </label>
+        </div></div>
+              </form>
     </div>
-    <div class="form-grid-2">
-      <label>Check
-        <select id="clientCheckMode">
-          <option value="12">12 settimane</option>
-          <option value="8">8 settimane</option>
-          <option value="none">Off</option>
-        </select>
-      </label>
-      <label>Note
-        <input id="clientNotes" type="text" placeholder="Note rapide" autocapitalize="sentences" enterkeyhint="done" />
-      </label>
-    </div></div>
-          </form>
-</div>
   </div>

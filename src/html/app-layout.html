@@ -1,191 +1,191 @@
   <a class="skip-link" href="#mainContent">Vai al contenuto principale</a>
 
 <div class="app" id="mainApp">
-<header class="topbar">
-  <div class="brand">DSWORLD</div>
-  <div class="top-actions">
-    <span class="user-badge" id="userBadge">Non connesso</span>
-    <span id="syncBadge" style="display:none;">Cloud disattivato</span>
-    <button class="btn btn-soft" id="openAccountBtn" style="display:inline-flex;align-items:center;gap:7px;" aria-label="Account cloud">
-      <span id="cloudDot" style="width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,0.25);flex-shrink:0;transition:background 300ms ease;" aria-hidden="true"></span>
-      Cloud
-    </button>
-    <button class="btn btn-soft" id="openPackagesBtn" aria-label="Gestisci pacchetti">Pacchetti</button>
-    <button class="btn btn-soft" id="openReportBtn" aria-label="Apri resoconto">Gestionale</button>
-    <div style="position:relative;display:inline-flex;">
-      <button class="btn btn-soft" id="openMessagesBtn" aria-label="Messaggi clienti" style="display:inline-flex;align-items:center;gap:6px;">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-        Messaggi
-      </button>
-      <span class="msg-badge" id="msgBadgeDesktop">0</span>
-    </div>
-    <button class="btn btn-primary" id="openClientBtn" aria-label="Aggiungi nuovo cliente">+ Cliente</button>
-  </div>
-  <!-- Mobile-only right side of topbar -->
-  <div class="topbar-mobile-right">
-    <span class="sync-badge" id="syncBadgeMobile" aria-label="Stato sync">●</span>
-    <div style="position:relative;">
-      <button class="btn btn-ghost" id="openMessagesMobileBtn" aria-label="Messaggi clienti">
-        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-      </button>
-      <span class="msg-badge" id="msgBadgeMobileTopbar">0</span>
-    </div>
-    <button class="btn btn-ghost" id="openAccountBtnMobile" aria-label="Account cloud">
-      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
-    </button>
-  </div>
-</header>
-
-<!-- Offline banner -->
-<div class="offline-banner" id="offlineBanner" role="alert" aria-live="polite">
-  <span>⚠ Modalità offline — stai lavorando su dati locali</span>
-  <button type="button" id="offlineRetryBtn">Riprova</button>
-</div>
-
-<!-- PWA Install Banner -->
-<div class="pwa-install-banner" id="pwaInstallBanner" role="complementary" aria-label="Installa app">
-  <div class="pwa-text">
-    <strong>📲 Installa DSWORLD</strong>
-    Accesso rapido dalla home screen, funziona anche offline
-  </div>
-  <div class="pwa-actions">
-    <button class="btn btn-primary btn-small" id="pwaInstallBtn" type="button">Installa</button>
-    <button class="btn btn-ghost btn-small" id="pwaInstallDismissBtn" type="button" aria-label="Chiudi">✕</button>
-  </div>
-</div>
-
-<section class="hero" aria-label="Panoramica dashboard">
-  <div class="hero-left">
-    <div class="eyebrow" id="heroDateLabel">Panoramica clienti</div>
-    <h1 id="heroGreeting">Calendario Clienti</h1>
-    <p id="heroSubtitle">Seleziona un cliente e tocca un giorno.</p>
-    <!-- Today's lessons strip — shown when there are lessons today -->
-    <div class="today-lessons-strip" id="todayLessonsStrip" hidden>
-      <div class="today-strip-label">Oggi</div>
-      <div class="today-strip-items" id="todayStripItems"></div>
-    </div>
-    <div class="hero-insights" id="heroInsights"></div>
-    <div class="hero-stats" id="heroStats"></div>
-    <div class="alert-strip" id="alertStrip" style="display:none"></div>
-  </div>
-  <div class="hero-right">
-    <div class="selected-card" id="selectedClientCard"></div>
-  </div>
-</section>
-
-<section class="mobile-selected-client-wrap" aria-label="Cliente selezionato su mobile">
-  <div class="mobile-selected-client-card" id="mobileSelectedClientCard"></div>
-</section>
-
-<div class="layout">
-  <aside class="sidebar">
-    <section class="panel">
-      <div class="panel-head">
-        <h2 class="panel-title">Clienti</h2>
-        <span class="tag" id="clientCountTag">0</span>
+    <header class="topbar">
+      <div class="brand">DSWORLD</div>
+      <div class="top-actions">
+        <span class="user-badge" id="userBadge">Non connesso</span>
+        <span id="syncBadge" style="display:none;">Cloud disattivato</span>
+        <button class="btn btn-soft" id="openAccountBtn" style="display:inline-flex;align-items:center;gap:7px;" aria-label="Account cloud">
+          <span id="cloudDot" style="width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,0.25);flex-shrink:0;transition:background 300ms ease;" aria-hidden="true"></span>
+          Cloud
+        </button>
+        <button class="btn btn-soft" id="openPackagesBtn" aria-label="Gestisci pacchetti">Pacchetti</button>
+        <button class="btn btn-soft" id="openReportBtn" aria-label="Apri resoconto">Gestionale</button>
+        <div style="position:relative;display:inline-flex;">
+          <button class="btn btn-soft" id="openMessagesBtn" aria-label="Messaggi clienti" style="display:inline-flex;align-items:center;gap:6px;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            Messaggi
+          </button>
+          <span class="msg-badge" id="msgBadgeDesktop">0</span>
+        </div>
+        <button class="btn btn-primary" id="openClientBtn" aria-label="Aggiungi nuovo cliente">+ Cliente</button>
       </div>
-      <div class="panel-body" style="display:grid;gap:12px;">
-        <input id="clientSearch" class="search" type="search" placeholder="Cerca cliente" aria-label="Cerca cliente" autocomplete="off" />
-        <div class="filter-row" id="clientFilterRow" role="group" aria-label="Filtra clienti">
-          <button class="filter-chip active" type="button" data-client-filter="all" aria-pressed="true">Tutti</button>
-          <button class="filter-chip" type="button" data-client-filter="urgent" aria-pressed="false">Urgenti</button>
-          <button class="filter-chip" type="button" data-client-filter="expiring" aria-pressed="false">In scadenza</button>
-          <button class="filter-chip" type="button" data-client-filter="unpaid" aria-pressed="false">Non saldati</button>
-          <button class="filter-chip" type="button" data-client-filter="free_session" aria-pressed="false">Free session</button>
+      <!-- Mobile-only right side of topbar -->
+      <div class="topbar-mobile-right">
+        <span class="sync-badge" id="syncBadgeMobile" aria-label="Stato sync">●</span>
+        <div style="position:relative;">
+          <button class="btn btn-ghost" id="openMessagesMobileBtn" aria-label="Messaggi clienti">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          </button>
+          <span class="msg-badge" id="msgBadgeMobileTopbar">0</span>
         </div>
-        <div class="client-list" id="clientList"></div>
-        <div class="inline-actions">
-          <button class="btn btn-ghost btn-small" id="exportBtn">Backup</button>
-          <label class="btn btn-ghost btn-small" style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;">
-            Importa
-            <input id="importInput" type="file" accept="application/json" hidden />
-          </label>
+        <button class="btn btn-ghost" id="openAccountBtnMobile" aria-label="Account cloud">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Offline banner -->
+    <div class="offline-banner" id="offlineBanner" role="alert" aria-live="polite">
+      <span>⚠ Modalità offline — stai lavorando su dati locali</span>
+      <button type="button" id="offlineRetryBtn">Riprova</button>
+    </div>
+
+    <!-- PWA Install Banner -->
+    <div class="pwa-install-banner" id="pwaInstallBanner" role="complementary" aria-label="Installa app">
+      <div class="pwa-text">
+        <strong>📲 Installa DSWORLD</strong>
+        Accesso rapido dalla home screen, funziona anche offline
+      </div>
+      <div class="pwa-actions">
+        <button class="btn btn-primary btn-small" id="pwaInstallBtn" type="button">Installa</button>
+        <button class="btn btn-ghost btn-small" id="pwaInstallDismissBtn" type="button" aria-label="Chiudi">✕</button>
+      </div>
+    </div>
+
+    <section class="hero" aria-label="Panoramica dashboard">
+      <div class="hero-left">
+        <div class="eyebrow" id="heroDateLabel">Panoramica clienti</div>
+        <h1 id="heroGreeting">Calendario Clienti</h1>
+        <p id="heroSubtitle">Seleziona un cliente e tocca un giorno.</p>
+        <!-- Today's lessons strip — shown when there are lessons today -->
+        <div class="today-lessons-strip" id="todayLessonsStrip" hidden>
+          <div class="today-strip-label">Oggi</div>
+          <div class="today-strip-items" id="todayStripItems"></div>
         </div>
+        <div class="hero-insights" id="heroInsights"></div>
+        <div class="hero-stats" id="heroStats"></div>
+        <div class="alert-strip" id="alertStrip" style="display:none"></div>
+      </div>
+      <div class="hero-right">
+        <div class="selected-card" id="selectedClientCard"></div>
       </div>
     </section>
-  </aside>
 
-  <main id="mainContent" role="main">
-    <section class="panel calendar-wrap" aria-label="Calendario lezioni">
-      <div class="calendar-toolbar">
-        <div class="calendar-toolbar-left">
-          <div class="month-title" id="monthLabel"></div>
-          <div class="mini-meta" id="calendarMeta"></div>
-          <div class="calendar-top-tools">
-            <div class="segmented" role="tablist" aria-label="Vista calendario">
-              <button class="seg-btn active" type="button" data-calendar-view="month" role="tab" aria-selected="true">Mese</button>
-              <button class="seg-btn" type="button" data-calendar-view="week" role="tab" aria-selected="false">Settimana</button>
-              <button class="seg-btn" type="button" data-calendar-view="day" role="tab" aria-selected="false">Giorno</button>
+    <section class="mobile-selected-client-wrap" aria-label="Cliente selezionato su mobile">
+      <div class="mobile-selected-client-card" id="mobileSelectedClientCard"></div>
+    </section>
+
+    <div class="layout">
+      <aside class="sidebar">
+        <section class="panel">
+          <div class="panel-head">
+            <h2 class="panel-title">Clienti</h2>
+            <span class="tag" id="clientCountTag">0</span>
+          </div>
+          <div class="panel-body" style="display:grid;gap:12px;">
+            <input id="clientSearch" class="search" type="search" placeholder="Cerca cliente" aria-label="Cerca cliente" autocomplete="off" />
+            <div class="filter-row" id="clientFilterRow" role="group" aria-label="Filtra clienti">
+              <button class="filter-chip active" type="button" data-client-filter="all" aria-pressed="true">Tutti</button>
+              <button class="filter-chip" type="button" data-client-filter="urgent" aria-pressed="false">Urgenti</button>
+              <button class="filter-chip" type="button" data-client-filter="expiring" aria-pressed="false">In scadenza</button>
+              <button class="filter-chip" type="button" data-client-filter="unpaid" aria-pressed="false">Non saldati</button>
+              <button class="filter-chip" type="button" data-client-filter="free_session" aria-pressed="false">Free session</button>
+            </div>
+            <div class="client-list" id="clientList"></div>
+            <div class="inline-actions">
+              <button class="btn btn-ghost btn-small" id="exportBtn">Backup</button>
+              <label class="btn btn-ghost btn-small" style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;">
+                Importa
+                <input id="importInput" type="file" accept="application/json" hidden />
+              </label>
             </div>
           </div>
-        </div>
-        <div class="inline-actions" style="justify-content:flex-end;">
-          <button class="btn btn-ghost btn-small btn-icon" id="prevMonthBtn" aria-label="Periodo precedente" title="Periodo precedente">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
-          </button>
-          <button class="btn btn-soft btn-small" id="todayBtn">Oggi</button>
-          <button class="btn btn-ghost btn-small btn-icon" id="nextMonthBtn" aria-label="Periodo successivo" title="Periodo successivo">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
-          </button>
-        </div>
-      </div>
-      <div class="calendar-head" id="calendarHead"></div>
-      <div class="calendar-grid" id="calendarGrid"></div>
-      <div class="agenda-wrap" id="agendaWrap" hidden></div>
-      <div class="hint-row">
-        <span>Mese, settimana e giorno per vedere subito buchi liberi e lezioni</span>
-        <span>Usa la ricerca nella colonna clienti e tocca la lezione per modificarla</span>
-      </div>
-    </section>
-  </main>
-</div>
+        </section>
+      </aside>
 
-<!-- Bottom navigation bar (mobile only) -->
-<nav class="bottom-nav" id="bottomNav" aria-label="Navigazione principale">
-  <button class="bnav-btn" id="bnavClienti" type="button" aria-label="Clienti">
-    <span class="bnav-icon" aria-hidden="true">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
-        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-      </svg>
-    </span>
-    <span class="bnav-label">Clienti</span>
-    <span class="msg-badge" id="msgBadgeBnav">0</span>
-  </button>
-  <button class="bnav-btn" id="bnavCalendario" type="button" aria-label="Agenda">
-    <span class="bnav-icon" aria-hidden="true">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/>
-        <line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
-      </svg>
-    </span>
-    <span class="bnav-label">Agenda</span>
-  </button>
-  <button class="bnav-btn bnav-btn-add" id="bnavAddCliente" type="button" aria-label="Aggiungi cliente">
-    <span class="bnav-icon" aria-hidden="true">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-        <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-      </svg>
-    </span>
-    <span class="bnav-label">Cliente</span>
-  </button>
-  <button class="bnav-btn" id="bnavResoconto" type="button" aria-label="Report">
-    <span class="bnav-icon" aria-hidden="true">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/>
-        <line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/>
-      </svg>
-    </span>
-    <span class="bnav-label">Report</span>
-  </button>
-  <button class="bnav-btn" id="bnavPacchetti" type="button" aria-label="Pacchetti">
-    <span class="bnav-icon" aria-hidden="true">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
-        <polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/>
-      </svg>
-    </span>
-    <span class="bnav-label">Pacchetti</span>
-  </button>
-</nav>
+      <main id="mainContent" role="main">
+        <section class="panel calendar-wrap" aria-label="Calendario lezioni">
+          <div class="calendar-toolbar">
+            <div class="calendar-toolbar-left">
+              <div class="month-title" id="monthLabel"></div>
+              <div class="mini-meta" id="calendarMeta"></div>
+              <div class="calendar-top-tools">
+                <div class="segmented" role="tablist" aria-label="Vista calendario">
+                  <button class="seg-btn active" type="button" data-calendar-view="month" role="tab" aria-selected="true">Mese</button>
+                  <button class="seg-btn" type="button" data-calendar-view="week" role="tab" aria-selected="false">Settimana</button>
+                  <button class="seg-btn" type="button" data-calendar-view="day" role="tab" aria-selected="false">Giorno</button>
+                </div>
+              </div>
+            </div>
+            <div class="inline-actions" style="justify-content:flex-end;">
+              <button class="btn btn-ghost btn-small btn-icon" id="prevMonthBtn" aria-label="Periodo precedente" title="Periodo precedente">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+              </button>
+              <button class="btn btn-soft btn-small" id="todayBtn">Oggi</button>
+              <button class="btn btn-ghost btn-small btn-icon" id="nextMonthBtn" aria-label="Periodo successivo" title="Periodo successivo">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="calendar-head" id="calendarHead"></div>
+          <div class="calendar-grid" id="calendarGrid"></div>
+          <div class="agenda-wrap" id="agendaWrap" hidden></div>
+          <div class="hint-row">
+            <span>Mese, settimana e giorno per vedere subito buchi liberi e lezioni</span>
+            <span>Usa la ricerca nella colonna clienti e tocca la lezione per modificarla</span>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <!-- Bottom navigation bar (mobile only) -->
+    <nav class="bottom-nav" id="bottomNav" aria-label="Navigazione principale">
+      <button class="bnav-btn" id="bnavClienti" type="button" aria-label="Clienti">
+        <span class="bnav-icon" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+        </span>
+        <span class="bnav-label">Clienti</span>
+        <span class="msg-badge" id="msgBadgeBnav">0</span>
+      </button>
+      <button class="bnav-btn" id="bnavCalendario" type="button" aria-label="Agenda">
+        <span class="bnav-icon" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/>
+            <line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+          </svg>
+        </span>
+        <span class="bnav-label">Agenda</span>
+      </button>
+      <button class="bnav-btn bnav-btn-add" id="bnavAddCliente" type="button" aria-label="Aggiungi cliente">
+        <span class="bnav-icon" aria-hidden="true">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+        </span>
+        <span class="bnav-label">Cliente</span>
+      </button>
+      <button class="bnav-btn" id="bnavResoconto" type="button" aria-label="Report">
+        <span class="bnav-icon" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/>
+            <line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/>
+          </svg>
+        </span>
+        <span class="bnav-label">Report</span>
+      </button>
+      <button class="bnav-btn" id="bnavPacchetti" type="button" aria-label="Pacchetti">
+        <span class="bnav-icon" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+            <polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/>
+          </svg>
+        </span>
+        <span class="bnav-label">Pacchetti</span>
+      </button>
+    </nav>
   </div>

@@ -22,7 +22,7 @@ function buildClientListMarkup(sortedClients) {
     const urgency = getClientUrgency(client);
     const revenue = activePlan ? formatCurrency(getPlanTotalPrice(activePlan, pkg, client)) : '—';
     return `
-      <div class="client-card ${client.id === state.selectedClientId ? 'active' : ''}" data-client-id="${client.id}" tabindex="0" role="button" aria-label="Apri cliente ${escapeHtml(getClientFullName(client))}" style="--i:${Math.min(idx, 12)}">>
+      <div class="client-card ${client.id === state.selectedClientId ? 'active' : ''}" data-client-id="${client.id}" tabindex="0" role="button" aria-label="Apri cliente ${escapeHtml(getClientFullName(client))}" style="--i:${Math.min(idx, 12)}">
         <div class="client-meta-row">
           <div style="display:flex;gap:10px;align-items:center;min-width:0;flex:1 1 auto;">
             <div class="avatar">${escapeHtml(initials(getClientFullName(client)))}</div>

@@ -79,3 +79,5 @@ window.addEventListener('offline', () => {
     // Avvia comunque l'app in modalità solo locale
     initApp();
   }
+
+})(50);

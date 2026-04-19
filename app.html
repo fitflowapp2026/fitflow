@@ -7233,12 +7233,12 @@ function applyReportFilter() {
       };
     }
 
-    function buildClientListMarkup(sortedClients) {
+    function buildClientListMarkup(sortedClients, urgencyMap = null) {
       return sortedClients.map((client, idx) => {
         const activePlan = getActivePlan(client.id);
         const pkg = getPackage(activePlan?.packageId);
         const packageName = getClientOfferLabel(client, activePlan, pkg);
-        const urgency = getClientUrgency(client);
+        const urgency = urgencyMap ? urgencyMap.get(client.id) : getClientUrgency(client);
         const revenue = activePlan ? formatCurrency(getPlanTotalPrice(activePlan, pkg, client)) : '—';
         return `
           <div class="client-card ${client.id === state.selectedClientId ? 'active' : ''}" data-client-id="${client.id}" tabindex="0" role="button" aria-label="Apri cliente ${escapeHtml(getClientFullName(client))}" style="--i:${Math.min(idx, 12)}">>
@@ -7298,8 +7298,10 @@ function applyReportFilter() {
 
     function renderClientList() {
       const q = state.search.trim().toLowerCase();
+      /* Pre-calcola urgency una volta sola per ogni cliente — evita O(n log n) chiamate a planStats */
+      const urgencyMap = new Map(state.clients.map(c => [c.id, getClientUrgency(c)]));
       const clients = state.clients.filter(client => {
-        const urgency = getClientUrgency(client);
+        const urgency = urgencyMap.get(client.id);
         const serviceType = getClientServiceType(client);
         const matchesQuery = !q || getClientFullName(client).toLowerCase().includes(q) || String(client.notes || '').toLowerCase().includes(q) || serviceTypeLabel(serviceType).toLowerCase().includes(q);
         if (!matchesQuery) return false;
@@ -7310,8 +7312,8 @@ function applyReportFilter() {
         return true;
       });
       const sortedClients = clients.slice().sort((a, b) => {
-        const ua = getClientUrgency(a);
-        const ub = getClientUrgency(b);
+        const ua = urgencyMap.get(a.id);
+        const ub = urgencyMap.get(b.id);
         const score = level => level === 'bad' ? 2 : level === 'warn' ? 1 : 0;
         return score(ub.level) - score(ua.level) || ua.remaining - ub.remaining || getClientFullName(a).localeCompare(getClientFullName(b));
       });
@@ -7337,7 +7339,7 @@ function applyReportFilter() {
         if (drawerList) drawerList.innerHTML = emptyMarkup;
         return;
       }
-      const markup = buildClientListMarkup(sortedClients);
+      const markup = buildClientListMarkup(sortedClients, urgencyMap);
       el.clientList.innerHTML = markup;
       const drawerList = document.getElementById('clientListDrawer');
       if (drawerList) drawerList.innerHTML = markup;

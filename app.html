@@ -168,25 +168,11 @@
       padding: 8px 2px;
     }
 
-    .brand { display: flex; flex-direction: column; line-height: 1; gap: 1px;
+    .brand {
       font-size: 1.3rem;
       font-weight: 900;
       letter-spacing: 0.12em;
       color: var(--accent);
-    }
-    .brand-main {
-      font-size: 1.3rem;
-      font-weight: 900;
-      letter-spacing: 0.12em;
-      color: var(--accent);
-    }
-    .brand-sub {
-      font-size: 0.55rem;
-      font-weight: 700;
-      letter-spacing: 0.22em;
-      color: var(--accent);
-      opacity: 0.7;
-      text-transform: uppercase;
     }
 
     .top-actions, .inline-actions, .pill-row, .chip-row, .quick-grid {
@@ -1658,7 +1644,7 @@
     .time-chip.active { border-color: rgba(229,9,20,0.55); background: rgba(229,9,20,0.18); }
 
     body.signed-out #mainApp {
-      opacity: 0.18;
+      opacity: 0.22;
       pointer-events: none;
       user-select: none;
     }
@@ -1693,20 +1679,6 @@
       font-weight: 900;
       letter-spacing: 0.16em;
       color: var(--accent);
-    }
-    .brand-main {
-      font-size: 1.3rem;
-      font-weight: 900;
-      letter-spacing: 0.12em;
-      color: var(--accent);
-    }
-    .brand-sub {
-      font-size: 0.55rem;
-      font-weight: 700;
-      letter-spacing: 0.22em;
-      color: var(--accent);
-      opacity: 0.7;
-      text-transform: uppercase;
       text-transform: uppercase;
     }
     .auth-grid {
@@ -1889,7 +1861,7 @@
       backdrop-filter: blur(16px);
       box-shadow: 0 16px 34px rgba(0,0,0,0.24);
     }
-    .brand { display: flex; flex-direction: column; line-height: 1; gap: 1px;
+    .brand {
       background: linear-gradient(180deg, #ff6a72 0%, #e50914 58%, #b70710 100%);
       -webkit-background-clip: text;
       background-clip: text;
@@ -3265,7 +3237,7 @@
   <!-- Mobile sidebar drawer -->
   <aside class="sidebar-drawer" id="sidebarDrawer">
     <div class="drawer-close-row">
-      <span class="brand"><span class="brand-main">DSWORLD</span><span class="brand-sub">FITNESS</span></span>
+      <span class="brand" style="font-size:1.1rem;">DSWORLD</span>
       <button class="drawer-close-btn" id="drawerCloseBtn">✕ Chiudi</button>
     </div>
     <section class="panel" style="flex:1;min-height:0;">
@@ -3295,7 +3267,7 @@
 
   <div class="app" id="mainApp">
     <header class="topbar">
-      <div class="brand"><span class="brand-main">DSWORLD</span><span class="brand-sub">FITNESS</span></div>
+      <div class="brand">DSWORLD</div>
       <div class="top-actions">
         <span class="user-badge" id="userBadge">Non connesso</span>
         <span id="syncBadge" style="display:none;">Cloud disattivato</span>
@@ -3592,7 +3564,7 @@
         </div>
         <div class="mini-card quick-plan-card" id="fixedScheduleBlock">
           <strong>Pianificazione veloce</strong>
-          <div class="quick-plan-hint" id="fixedScheduleHint">Scegli ora e giorni fissi. Al salvataggio creo tutte le lezioni del pacchetto con un solo tap.</div>
+          <div class=\"quick-plan-hint\" id=\"fixedScheduleHint\" style=\"display:none;\"></div>
           <div class="form-grid-2" id="sameScheduleFields">
             <label>Ora fissa
               <input id="clientFixedTime" type="time" />
@@ -4202,7 +4174,6 @@
       pendingAdd: null,
       pendingTimeValue: '',
       reportOpenedOnce: false,
-  reportFilter: 'all',
       dismissedAlerts: []
     };
 
@@ -4414,7 +4385,7 @@
 
     /* URL del portale cliente — adatta al tuo dominio */
     function clientPortalUrl(token) {
-      const base = window.location.origin + '/' + 'client.html';
+      const base = window.location.origin + window.location.pathname.replace('app.html','').replace('index.html','') + 'client.html';
       return `${base}?t=${token}`;
     }
 
@@ -4666,7 +4637,7 @@
       try {
         const result = await googleApi('google-availability', { method: 'POST', body: range });
         state.googleBlockingBusy = Array.isArray(result.busy) ? result.busy : [];
-        if (el.dayModalBackdrop?.classList.contains('open') && state.selectedDay) renderDayModal(state.selectedDay);
+        if (el.dayModalBackdrop?.classList.contains('show') && state.selectedDay) renderDayModal(state.selectedDay);
         if (state.calendarView === 'week') renderWeekAgenda(getCalendarAnchorDate());
         if (state.calendarView === 'day') renderDayAgenda(state.selectedDay || todayISO());
       } catch (error) {
@@ -5464,6 +5435,19 @@
       if (!client) return null;
       return getPlan(client.activePlanId) || state.plans.filter(plan => plan.clientId === clientId).sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt))).slice(-1)[0] || null;
     }
+    /* Restituisce il primo piano con slot disponibili (vecchio prima, poi nuovo) */
+    function getNextAvailablePlan(clientId) {
+      const client = getClient(clientId);
+      if (!client) return null;
+      const plans = state.plans
+        .filter(plan => plan.clientId === clientId)
+        .sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)));
+      for (const plan of plans) {
+        const capacity = getPlanCapacity(plan.id);
+        if (!capacity.isFull) return plan;
+      }
+      return plans[plans.length - 1] || null;
+    }
     function getLesson(id) { return state.lessons.find(item => item.id === id) || null; }
     function getLessonsForClient(clientId) {
       return state.lessons.filter(item => item.clientId === clientId).sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`));
@@ -5885,7 +5869,7 @@
         showToast('Seleziona un cliente.');
         return;
       }
-      const plan = getActivePlan(client.id);
+      const plan = getNextAvailablePlan(client.id);
       const pkg = getPackage(plan?.packageId);
       if (!plan || !pkg) {
         showToast('Pacchetto mancante.');
@@ -6603,7 +6587,8 @@ function applyReportFilter() {
     function renderClientModal(client = null, trigger = document.activeElement) {
       el.clientModalTitle.textContent = client ? 'Modifica cliente' : 'Nuovo cliente';
       el.clientId.value = client?.id || '';
-      const nameParts = splitFullName(client?.name || '');
+      const fullName = client ? (getClientFullName(client) !== 'Cliente' ? getClientFullName(client) : (client.name || '')) : '';
+      const nameParts = splitFullName(client?.name || fullName);
       el.clientName.value = client?.firstName || nameParts.firstName || '';
       el.clientSurname.value = client?.lastName || nameParts.lastName || '';
       if (el.clientEmail) el.clientEmail.value = client?.email || '';
@@ -7011,7 +6996,7 @@ function applyReportFilter() {
           </div>
         </div>
         <div class="selected-metrics">
-          <div class="metric-tile"><div class="k">Pacchetto</div><div class="v">${escapeHtml(compactPackageLabel(pkg))}</div><div class="subline">${pkg ? escapeHtml(sessionPerWeekLabel(pkg.perWeek)) : 'Nessun pacchetto attivo'}</div></div>
+          <div class="metric-tile" id="packageMetricTile" style="cursor:pointer;" title="Modifica pacchetti"><div class="k">Pacchetto ›</div><div class="v">${escapeHtml(compactPackageLabel(pkg))}</div><div class="subline">${pkg ? escapeHtml(sessionPerWeekLabel(pkg.perWeek)) : 'Nessun pacchetto attivo'}</div></div>
           <div class="metric-tile"><div class="k">Prossima sessione</div><div class="v is-small">${escapeHtml(nextLesson)}</div><div class="subline">${fixedTimeLabel}</div></div>
           <div class="metric-tile"><div class="k">Stato</div><div class="v is-accent">${escapeHtml(health)}</div><div class="subline">${escapeHtml(paymentLabel)}</div></div>
           <div class="metric-tile"><div class="k">Valore medio</div><div class="v">${escapeHtml(avgSessionValue)}</div><div class="subline">per sessione</div></div>
@@ -7044,6 +7029,7 @@ function applyReportFilter() {
           <button class="btn btn-soft btn-small" id="editClientBtn">Modifica</button>
           <button class="btn btn-primary btn-small" id="renewClientBtn">Rinnova</button>
           <button class="btn btn-soft btn-small" id="sharePortalBtn" title="Apri portale cliente">🔗 Portale</button>
+          <button class="btn btn-ghost btn-small" id="sharePortalLinkBtn" title="Condividi link portale">↗ Condividi</button>
         </div>
         <div id="clientMessagesPanel" style="display:none;margin-top:4px;"></div>
       `;
@@ -7088,6 +7074,7 @@ function applyReportFilter() {
             <button class="btn btn-soft btn-small" id="mobileEditClientBtn" type="button">Modifica cliente</button>
             <button class="btn btn-primary btn-small" id="mobileRenewClientBtn" type="button">Rinnova pacchetto</button>
             <button class="btn btn-soft btn-small" id="mobileSharePortalBtn" type="button">🔗 Portale</button>
+            <button class="btn btn-ghost btn-small" id="mobileSharePortalLinkBtn" type="button">↗ Condividi</button>
             <button class="btn btn-soft btn-small" id="mobileMsgClientBtn" type="button" style="position:relative;">
               💬 Messaggi
               <span class="msg-badge" id="msgBadgeClientCard" style="top:-6px;right:-6px;">0</span>
@@ -7124,6 +7111,7 @@ function applyReportFilter() {
       document.getElementById('paymentStatusTag')?.addEventListener('click', openPaymentQuickModal);
       document.getElementById('mobilePaymentStatusTag')?.addEventListener('click', openPaymentQuickModal);
       document.getElementById('editClientBtn').addEventListener('click', () => renderClientModal(client));
+      document.getElementById('packageMetricTile')?.addEventListener('click', () => { renderPackages(); openModal('packagesModalBackdrop'); });
       document.getElementById('renewClientBtn').addEventListener('click', openRenewModal);
 
       /* Portale cliente — apre il portale + condividi link */
@@ -7146,8 +7134,8 @@ function applyReportFilter() {
         }
         haptic(8);
       };
-      document.getElementById('sharePortalBtn')?.addEventListener('click', sharePortalLinkFn);
-      document.getElementById('mobileSharePortalBtn')?.addEventListener('click', sharePortalLinkFn);
+      document.getElementById('sharePortalBtn')?.addEventListener('click', sharePortalFn);
+      document.getElementById('mobileSharePortalBtn')?.addEventListener('click', sharePortalFn);
       /* Tasto destro / long press → condivide il link */
       document.getElementById('sharePortalBtn')?.addEventListener('contextmenu', e => { e.preventDefault(); sharePortalLinkFn(); });
       document.getElementById('mobileSharePortalBtn')?.addEventListener('contextmenu', e => { e.preventDefault(); sharePortalLinkFn(); });
@@ -7229,7 +7217,7 @@ function applyReportFilter() {
         const urgency = getClientUrgency(client);
         const revenue = activePlan ? formatCurrency(getPlanTotalPrice(activePlan, pkg, client)) : '—';
         return `
-          <div class="client-card ${client.id === state.selectedClientId ? 'active' : ''}" data-client-id="${client.id}" tabindex="0" role="button" aria-label="Apri cliente ${escapeHtml(getClientFullName(client))}" style="--i:${Math.min(idx, 12)}">
+          <div class="client-card ${client.id === state.selectedClientId ? 'active' : ''}" data-client-id="${client.id}" tabindex="0" role="button" aria-label="Apri cliente ${escapeHtml(getClientFullName(client))}" style="--i:${Math.min(idx, 12)}">>
             <div class="client-meta-row">
               <div style="display:flex;gap:10px;align-items:center;min-width:0;flex:1 1 auto;">
                 <div class="avatar">${escapeHtml(initials(getClientFullName(client)))}</div>
@@ -7801,7 +7789,7 @@ function applyReportFilter() {
         showToast('Seleziona un cliente.');
         return;
       }
-      const plan = getActivePlan(client.id);
+      const plan = getNextAvailablePlan(client.id);
       const pkg = getPackage(plan?.packageId);
       if (!plan || !pkg) {
         showToast('Pacchetto mancante.');
@@ -7809,8 +7797,13 @@ function applyReportFilter() {
       }
       const capacity = getPlanCapacity(plan.id);
       if (capacity.isFull) {
-        showToast('Pacchetto completato: non puoi inserire altre lezioni.');
+        showToast('Tutti i pacchetti sono completati.');
         return;
+      }
+      /* Informa se si sta usando il piano successivo */
+      const activePlan = getActivePlan(client.id);
+      if (activePlan && plan.id !== activePlan.id) {
+        showToast('Pacchetto attuale completato — lezione aggiunta al pacchetto successivo.', 'warn');
       }
       if (getExternalBusyOverlap({ date, time, duration: pkg.duration })) { showToast('Slot occupato da altro calendario.', 'warn'); return; }
       const ok = createLesson({ clientId: client.id, planId: plan.id, date, time, duration: pkg.duration, setFixedTime: client.scheduleMode === 'same' });

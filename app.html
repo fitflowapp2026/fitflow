@@ -4206,11 +4206,13 @@
     };
 
     const derived = {
-      lessonsByDate: null
+      lessonsByDate: null,
+      alerts: null
     };
 
     function invalidateDerivedData() {
       derived.lessonsByDate = null;
+      derived.alerts = null;
     }
 
     const el = {
@@ -5693,6 +5695,7 @@
     }
 
     function getAlerts() {
+      if (derived.alerts) return derived.alerts;
       const alerts = [];
       const today = todayISO();
       state.clients.forEach(client => {
@@ -5737,7 +5740,7 @@
         }
       });
       const dismissed = Array.isArray(state.dismissedAlerts) ? state.dismissedAlerts : [];
-      return alerts
+      derived.alerts = alerts
         .map(a => {
           const c = state.clients.find(cl => cl.id === a.clientId);
           const plan = c ? getActivePlan(c.id) : null;
@@ -5750,6 +5753,7 @@
         })
         .filter(a => !dismissed.includes(a.alertId))
         .sort((a, b) => String(a.when).localeCompare(String(b.when)));
+      return derived.alerts;
     }
 
 

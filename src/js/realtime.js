@@ -1,8 +1,7 @@
-let _unreadMsgCount = 0;
 
 function updateMsgBadges(count) {
   _unreadMsgCount = count;
-  const ids = ['msgBadgeBnavBottom', 'msgBadgeBnavDrawer', 'msgBadgeMobileTopbar', 'msgBadgeDesktop'];
+  const ids = ['msgBadgeBnav', 'msgBadgeMobileTopbar', 'msgBadgeDesktop'];
   ids.forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;

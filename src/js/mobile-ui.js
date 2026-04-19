@@ -1,5 +1,3 @@
-/* ═══════════════════════════════════════════════════════════
-   MOBILE DRAWER & BOTTOM NAV
 ═══════════════════════════════════════════════════════════ */
 (function initMobileUI() {
   const drawerOverlay = document.getElementById('drawerOverlay');
@@ -99,4 +97,17 @@
     });
   }
 
+  /* Patch renderClientList to also populate drawer */
+  const _origRenderAll = window._renderAllOrig || null;
 })();
+
+/* ── Navigazione automatica tra campi form con tasto Enter ── */
+/* ═══════════════════════════════════════════════════════════
+   PORTALE CLIENTE — messaggi in arrivo (vista trainer)
+═══════════════════════════════════════════════════════════ */
+
+/* Sostituisci con l'URL della tua Edge Function Supabase */
+/* ═══════════════════════════════════════════════════════════
+   BADGE MESSAGGI NON LETTI — aggiorna tutti i badge
+═══════════════════════════════════════════════════════════ */
+let _unreadMsgCount = 0;

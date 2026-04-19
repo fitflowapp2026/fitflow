@@ -4189,7 +4189,8 @@ async function loadRemoteConfig() {
       }
     } catch (_) { /* prova il prossimo endpoint */ }
   }
-  console.info('[DSWORLD] Usando config locale (Netlify Function non ancora attiva)');const cloud = { client: null, session: null, user: null, config: null, saveTimer: null, listenerBound: false, saving: false, allowLocalOnly: false, hydrated: false, google: { connected: false, calendarId: '', calendarName: '', googleEmail: '', lastError: '', lastSyncAt: '', syncing: false }, googleQueue: Promise.resolve() };
+  console.info('[DSWORLD] Usando config locale (Netlify Function non ancora attiva)');
+}const cloud = { client: null, session: null, user: null, config: null, saveTimer: null, listenerBound: false, saving: false, allowLocalOnly: false, hydrated: false, google: { connected: false, calendarId: '', calendarName: '', googleEmail: '', lastError: '', lastSyncAt: '', syncing: false }, googleQueue: Promise.resolve() };
 
 const state = {
   clients: [],

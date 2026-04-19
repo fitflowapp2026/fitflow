@@ -1647,7 +1647,6 @@
       opacity: 0.18;
       pointer-events: none;
       user-select: none;
-      filter: blur(8px);
     }
 
     .auth-shell {
@@ -4175,6 +4174,7 @@
       pendingAdd: null,
       pendingTimeValue: '',
       reportOpenedOnce: false,
+  reportFilter: 'all',
       dismissedAlerts: []
     };
 
@@ -4638,7 +4638,7 @@
       try {
         const result = await googleApi('google-availability', { method: 'POST', body: range });
         state.googleBlockingBusy = Array.isArray(result.busy) ? result.busy : [];
-        if (el.dayModalBackdrop?.classList.contains('show') && state.selectedDay) renderDayModal(state.selectedDay);
+        if (el.dayModalBackdrop?.classList.contains('open') && state.selectedDay) renderDayModal(state.selectedDay);
         if (state.calendarView === 'week') renderWeekAgenda(getCalendarAnchorDate());
         if (state.calendarView === 'day') renderDayAgenda(state.selectedDay || todayISO());
       } catch (error) {
@@ -7203,7 +7203,7 @@ function applyReportFilter() {
         const urgency = getClientUrgency(client);
         const revenue = activePlan ? formatCurrency(getPlanTotalPrice(activePlan, pkg, client)) : '—';
         return `
-          <div class="client-card ${client.id === state.selectedClientId ? 'active' : ''}" data-client-id="${client.id}" tabindex="0" role="button" aria-label="Apri cliente ${escapeHtml(getClientFullName(client))}" style="--i:${Math.min(idx, 12)}">>
+          <div class="client-card ${client.id === state.selectedClientId ? 'active' : ''}" data-client-id="${client.id}" tabindex="0" role="button" aria-label="Apri cliente ${escapeHtml(getClientFullName(client))}" style="--i:${Math.min(idx, 12)}">
             <div class="client-meta-row">
               <div style="display:flex;gap:10px;align-items:center;min-width:0;flex:1 1 auto;">
                 <div class="avatar">${escapeHtml(initials(getClientFullName(client)))}</div>

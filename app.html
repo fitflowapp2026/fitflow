@@ -7016,7 +7016,6 @@ function applyReportFilter() {
             <div class="selected-name">${escapeHtml(getClientFullName(client))}</div>
             <div class="selected-pill-row">
               <span class="tag ${client.scheduleMode === 'same' ? 'blue' : ''}">${scheduleLabel}</span>
-              <span class="tag gold">${escapeHtml(serviceLabel)}</span>
             </div>
           </div>
           <div class="selected-card-actions">
@@ -7061,7 +7060,6 @@ function applyReportFilter() {
         </div>
         <div id="clientMessagesPanel" style="display:none;margin-top:4px;"></div>
       `;
-      if (el.mobileSelectedClientCard) {
         el.mobileSelectedClientCard.innerHTML = `
           <div class="mobile-selected-top">
             <div style="min-width:0;">
@@ -7162,8 +7160,8 @@ function applyReportFilter() {
         }
         haptic(8);
       };
-      document.getElementById('sharePortalBtn')?.addEventListener('click', sharePortalFn);
-      document.getElementById('mobileSharePortalBtn')?.addEventListener('click', sharePortalFn);
+      document.getElementById('sharePortalBtn')?.addEventListener('click', sharePortalLinkFn);
+      document.getElementById('mobileSharePortalBtn')?.addEventListener('click', sharePortalLinkFn);
       /* Tasto destro / long press → condivide il link */
       document.getElementById('sharePortalBtn')?.addEventListener('contextmenu', e => { e.preventDefault(); sharePortalLinkFn(); });
       document.getElementById('mobileSharePortalBtn')?.addEventListener('contextmenu', e => { e.preventDefault(); sharePortalLinkFn(); });

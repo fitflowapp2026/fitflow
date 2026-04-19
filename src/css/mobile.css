@@ -228,6 +228,7 @@
     gap: 2px;
   }
   .bnav-btn {
+    touch-action: manipulation;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -600,7 +601,8 @@
   .filter-chip { min-height: 40px; padding: 8px 14px; }
   .weekday-chip { min-height: 48px; min-width: 44px; }
   .lesson-pill { min-height: 40px; }
-  .bnav-btn { min-height: 48px; }
+  .bnav-btn {
+    touch-action: manipulation; min-height: 48px; }
 
   /* Modal messaggi — fullscreen su mobile */
   #messagesModalBackdrop { align-items: stretch; padding: 0; }

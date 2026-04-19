@@ -3653,7 +3653,19 @@
     </div>
   </div>
 
-  <!-- ── MODAL: Avvisi operativi ───────────────────────────── -->
+  <!-- ── MODAL: Lezioni bonus ─────────────────────────────── -->
+  <div class="modal-backdrop" id="bonusLessonsModalBackdrop">
+    <div class="modal narrow" role="dialog" aria-modal="true" aria-labelledby="bonusLessonsTitle" style="max-width:340px;">
+      <div class="modal-top">
+        <div>
+          <h3 class="modal-title" id="bonusLessonsTitle">Lezioni bonus</h3>
+          <div class="muted small" id="bonusLessonsSub"></div>
+        </div>
+        <button class="btn btn-ghost btn-small" data-close="bonusLessonsModalBackdrop">Chiudi</button>
+      </div>
+      <div id="bonusLessonsContent" style="display:grid;gap:16px;"></div>
+    </div>
+  </div>
   <div class="modal-backdrop" id="operazioniModalBackdrop">
     <div class="modal narrow" role="dialog" aria-modal="true" aria-labelledby="operazioniModalTitle">
       <div class="modal-top">
@@ -5491,7 +5503,7 @@
     function getPlanCapacity(planId) {
       const plan = getPlan(planId);
       const pkg = getPackage(plan?.packageId);
-      const total = Number(pkg?.lessonsTotal || 0);
+      const total = Number(pkg?.lessonsTotal || 0) + Number(plan?.carryOverLessons || 0) + Number(plan?.bonusLessons || 0);
       const used = getLessonsForPlan(planId).filter(item => item.status !== 'cancelled').length;
       const remaining = Math.max(total - used, 0);
       return { total, used, remaining, isFull: total > 0 && used >= total };
@@ -5500,7 +5512,7 @@
     function canUsePlanSlot(planId, lessonId = null) {
       const plan = getPlan(planId);
       const pkg = getPackage(plan?.packageId);
-      const total = Number(pkg?.lessonsTotal || 0);
+      const total = Number(pkg?.lessonsTotal || 0) + Number(plan?.carryOverLessons || 0) + Number(plan?.bonusLessons || 0);
       if (!total) return true;
       const used = getLessonsForPlan(planId).filter(item => item.status !== 'cancelled' && item.id !== lessonId).length;
       return used < total;
@@ -5517,10 +5529,11 @@
       const nextLesson = lessons.filter(item => item.status !== 'cancelled' && item.date >= todayISO()).sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`))[0] || null;
       const base = Number(pkg?.lessonsTotal || 0);
       const carryOver = Number(plan?.carryOverLessons || 0);
-      const total = base + carryOver;
+      const bonus = Number(plan?.bonusLessons || 0);
+      const total = base + carryOver + bonus;
       const remaining = Math.max(total - done, 0);
       const progress = total ? Math.min(100, Math.round((done / total) * 100)) : 0;
-      return { total, done, remaining, firstLesson, nextLesson, progress, cancelled, carryOver };
+      return { total, done, remaining, firstLesson, nextLesson, progress, cancelled, carryOver, bonus };
     }
 
     function clientHistoryStats(clientId) {
@@ -6766,8 +6779,62 @@ function applyReportFilter() {
     }
 
 
-    /* ── Modal pagamento rapido ──────────────────────── */
-    function openPaymentQuickModal() {
+    /* ── Modal lezioni bonus ────────────────────────────────── */
+    function openBonusLessonsModal() {
+      const client = getClient(state.selectedClientId);
+      const plan = client ? getActivePlan(client.id) : null;
+      if (!client || !plan) { showToast('Seleziona un cliente con piano attivo.', 'warn'); return; }
+      const pkg = getPackage(plan.packageId);
+      const current = Number(plan.bonusLessons || 0);
+      let pending = current;
+
+      document.getElementById('bonusLessonsTitle').textContent = 'Lezioni bonus';
+      document.getElementById('bonusLessonsSub').textContent = getClientFullName(client);
+
+      function renderBonusContent() {
+        const base = Number(pkg?.lessonsTotal || 0);
+        const carry = Number(plan.carryOverLessons || 0);
+        const newTotal = base + carry + pending;
+        document.getElementById('bonusLessonsContent').innerHTML = `
+          <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:16px;display:grid;gap:6px;">
+            <div style="font-size:0.8rem;color:var(--muted);">Pacchetto base</div>
+            <div style="font-size:1.1rem;font-weight:700;">${base}${carry ? ` + ${carry} riportate` : ''} lezioni</div>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+            <span style="font-size:0.88rem;color:var(--muted);">Lezioni bonus da aggiungere</span>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <button id="bonusMinus" class="btn btn-soft btn-small" style="width:40px;height:40px;padding:0;font-size:1.2rem;border-radius:50%;" ${pending <= 0 ? 'disabled' : ''}>−</button>
+              <span id="bonusCount" style="font-size:1.6rem;font-weight:800;min-width:36px;text-align:center;">${pending}</span>
+              <button id="bonusPlus" class="btn btn-soft btn-small" style="width:40px;height:40px;padding:0;font-size:1.2rem;border-radius:50%;">＋</button>
+            </div>
+          </div>
+          <div style="font-size:0.82rem;color:var(--muted);text-align:center;">
+            Totale pacchetto: <strong style="color:var(--text);">${newTotal} lezioni</strong>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px;">
+            <button class="btn btn-ghost btn-small" data-close="bonusLessonsModalBackdrop">Annulla</button>
+            <button id="bonusConfirmBtn" class="btn btn-primary btn-small" ${pending === current ? 'disabled style="opacity:.45;"' : ''}>
+              ${pending === 0 && current > 0 ? 'Rimuovi bonus' : `Conferma ${pending > 0 ? '(+' + pending + ')' : ''}`}
+            </button>
+          </div>
+        `;
+        document.getElementById('bonusMinus').addEventListener('click', () => { pending = Math.max(0, pending - 1); renderBonusContent(); });
+        document.getElementById('bonusPlus').addEventListener('click', () => { pending += 1; renderBonusContent(); });
+        document.getElementById('bonusConfirmBtn')?.addEventListener('click', () => {
+          plan.bonusLessons = pending;
+          saveState(true);
+          renderAfterClientFocus();
+          closeModal('bonusLessonsModalBackdrop');
+          const msg = pending === 0
+            ? 'Lezioni bonus rimosse.'
+            : `${pending} lezione${pending > 1 ? 'i' : ''} bonus aggiunta${pending > 1 ? 'e' : ''}.`;
+          showToast(msg, 'ok');
+        });
+      }
+
+      renderBonusContent();
+      openModal('bonusLessonsModalBackdrop');
+    }
       const client = getClient(state.selectedClientId);
       if (!client || client.paymentStatus === 'paid') return;
       renderPaymentQuickModal(client);
@@ -6996,7 +7063,7 @@ function applyReportFilter() {
       const fixedTimeLabel = client.fixedTime ? `Orario base ${escapeHtml(client.fixedTime)}` : 'Programmazione flessibile';
       const progressTags = `
         <span class="tag">${stats.done}/${stats.total} svolte</span>
-        <span class="tag ${stats.remaining <= 3 ? 'gold' : ''}">${stats.remaining} rimaste</span>
+        <span class="tag ${stats.remaining <= 3 ? 'gold' : ''}">${stats.remaining} rimaste${stats.bonus > 0 ? ` <span style="color:var(--good);font-size:0.75em;">+${stats.bonus} bonus</span>` : ''}</span>
         <span class="tag ${client.paymentStatus === 'paid' ? 'green' : client.paymentStatus === 'partial' ? 'gold' : 'red'}${client.paymentStatus !== 'paid' ? ' stat-box-clickable' : ''}" style="${client.paymentStatus !== 'paid' ? 'cursor:pointer;' : ''}" id="paymentStatusTag" data-open-payment="1">${escapeHtml(paymentLabel)}${client.paymentStatus !== 'paid' ? ' ›' : ''}</span>
         <span class="tag">${history.cancelled} annullate</span>
       `;
@@ -7046,6 +7113,7 @@ function applyReportFilter() {
         <div class="inline-actions">
           <button class="btn btn-soft btn-small" id="editClientBtn">Modifica</button>
           <button class="btn btn-primary btn-small" id="renewClientBtn">Rinnova</button>
+          <button class="btn btn-soft btn-small" id="bonusLessonsBtn" title="Aggiungi lezioni bonus al pacchetto">＋ Bonus</button>
           <button class="btn btn-soft btn-small" id="sharePortalBtn" title="Invia link portale al cliente">🔗 Portale</button>
         </div>
         <div id="clientMessagesPanel" style="display:none;margin-top:4px;"></div>
@@ -7129,6 +7197,7 @@ function applyReportFilter() {
       document.getElementById('editClientBtn').addEventListener('click', () => renderClientModal(client));
       document.getElementById('packageMetricTile')?.addEventListener('click', () => { renderPackages(); openModal('packagesModalBackdrop'); });
       document.getElementById('renewClientBtn').addEventListener('click', openRenewModal);
+      document.getElementById('bonusLessonsBtn')?.addEventListener('click', openBonusLessonsModal);
 
       /* Portale cliente — apre il portale + condividi link */
       const sharePortalFn = () => {

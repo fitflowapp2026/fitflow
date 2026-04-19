@@ -1,3 +1,5 @@
+/* ═══════════════════════════════════════════════════════════
+   MOBILE DRAWER & BOTTOM NAV
 ═══════════════════════════════════════════════════════════ */
 (function initMobileUI() {
   const drawerOverlay = document.getElementById('drawerOverlay');

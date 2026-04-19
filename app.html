@@ -5867,13 +5867,13 @@
       if (clientId) focusClient(clientId);
       if (action === 'renew' && clientId) {
         saveState();
-        renderAll();
+        renderAfterClientFocus();
         openRenewModal();
         return;
       }
       if (action === 'open-client' && clientId) {
         saveState();
-        renderAll();
+        renderAfterClientFocus();
         return;
       }
       if (action === 'open-day' && date) {
@@ -5881,7 +5881,7 @@
         state.viewDate = startOfMonth(fromISO(date));
         state.calendarView = 'day';
         saveState();
-        renderAll();
+        renderCalendarOnly();
         return;
       }
       if (action === 'new-client') {
@@ -5915,7 +5915,7 @@
           state.selectedDay = targetDate;
           state.viewDate = startOfMonth(fromISO(targetDate));
           state.calendarView = 'day';
-          renderAll();
+          renderCalendarOnly();
           showToast(`Lezione fissata ${offsetDays === 0 ? 'oggi' : 'domani'} alle ${preferredTime}.`, 'ok');
           return;
         }
@@ -6754,7 +6754,7 @@ function applyReportFilter() {
           state.selectedDay = upcomingHeroLesson.date;
           state.viewDate = startOfMonth(fromISO(upcomingHeroLesson.date));
           state.calendarView = 'day';
-          saveState(); renderAll();
+          saveState(); renderCalendarOnly();
         };
         prossimaInsight.addEventListener('click', goToDay);
         prossimaInsight.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); goToDay(); } });
@@ -6812,7 +6812,7 @@ function applyReportFilter() {
         document.getElementById('pqMarkPaidBtn')?.addEventListener('click', () => {
           client.paymentStatus = 'paid';
           pushClientPaymentSnapshot(client, 'update');
-          saveState(true); renderAll();
+          saveState(true); renderAfterPaymentChange();
           closeModal('paymentQuickModalBackdrop');
           showToast('Pagamento saldato.', 'ok');
         });
@@ -6837,7 +6837,7 @@ function applyReportFilter() {
             client.installmentsPaid = n;
             client.paymentStatus = n >= total ? 'paid' : 'partial';
             pushClientPaymentSnapshot(client, 'update');
-            saveState(true); renderAll();
+            saveState(true); renderAfterPaymentChange();
             closeModal('paymentQuickModalBackdrop');
             const msg = n >= total ? 'Tutto saldato.' : `${n} ${n === 1 ? 'rata' : 'rate'} registrate.`;
             showToast(msg, 'ok');
@@ -6908,7 +6908,7 @@ function applyReportFilter() {
       el_content.querySelectorAll('[data-ops-client]').forEach(btn => {
         btn.addEventListener('click', () => {
           focusClient(btn.getAttribute('data-ops-client'));
-          saveState(); renderAll();
+          saveState(); renderAfterClientFocus();
           closeModal('operazioniModalBackdrop');
         });
       });
@@ -6918,7 +6918,7 @@ function applyReportFilter() {
           if (!Array.isArray(state.dismissedAlerts)) state.dismissedAlerts = [];
           if (!state.dismissedAlerts.includes(id)) state.dismissedAlerts.push(id);
           saveState(true);
-          renderHero();
+          renderAfterPaymentChange();
           renderOperazioniModal();
         });
       });
@@ -6956,7 +6956,7 @@ function applyReportFilter() {
       el_content.querySelectorAll('[data-risk-client]').forEach(btn => {
         btn.addEventListener('click', () => {
           focusClient(btn.getAttribute('data-risk-client'));
-          saveState(); renderAll();
+          saveState(); renderAfterClientFocus();
           closeModal('atRiskModalBackdrop');
         });
       });
@@ -7175,7 +7175,7 @@ function applyReportFilter() {
         state.viewDate = startOfMonth(fromISO(nextAgendaDate));
         state.calendarView = 'day';
         saveState();
-        renderAll();
+        renderCalendarOnly();
       };
       if (document.getElementById('mobileCopyAppointmentsBtn')) document.getElementById('mobileCopyAppointmentsBtn').addEventListener('click', copyAppointments);
       if (document.getElementById('mobileEditClientBtn')) document.getElementById('mobileEditClientBtn').addEventListener('click', () => renderClientModal(client));
@@ -7354,7 +7354,7 @@ function applyReportFilter() {
       state.calendarView = ['month', 'week', 'day'].includes(view) ? view : 'month';
       if (!state.selectedDay) state.selectedDay = todayISO();
       saveState();
-      renderAll();
+      renderCalendarOnly();
     }
 
     function moveCalendar(step) {
@@ -7370,7 +7370,7 @@ function applyReportFilter() {
         state.viewDate = startOfMonth(next);
       }
       saveState();
-      renderAll();
+      renderCalendarOnly();
     }
 
     function resetCalendarToToday() {
@@ -7378,7 +7378,7 @@ function applyReportFilter() {
       state.viewDate = startOfMonth(today);
       state.selectedDay = toISO(today);
       saveState();
-      renderAll();
+      renderCalendarOnly();
     }
 
     function getCalendarSearchMatches(query) {
@@ -7567,7 +7567,7 @@ function applyReportFilter() {
         state.selectedDay = node.getAttribute('data-open-day');
         state.calendarView = 'day';
         saveState();
-        renderAll();
+        renderCalendarOnly();
       }));
       el.agendaWrap.querySelectorAll('[data-add-slot]').forEach(button => button.addEventListener('click', () => {
         const [iso, time] = button.getAttribute('data-add-slot').split('|');
@@ -7967,7 +7967,7 @@ function applyReportFilter() {
     function selectClient(clientId) {
       state.selectedClientId = clientId;
       saveState(true);
-      renderAll();
+      renderAfterClientFocus();
       /* Se è un cliente free session con lezione già svolta → proponi conversione */
       const client = getClient(clientId);
       if (client && getClientServiceType(client) === 'free_session' && client.conversionStatus !== 'path_started') {
@@ -8032,7 +8032,7 @@ function applyReportFilter() {
       state.lessons.push(lesson);
       if (setFixedTime && client.scheduleMode === 'same' && !client.fixedTime) client.fixedTime = time;
       saveState(true);
-      renderAll();
+      renderAfterLessonChange();
       requestGoogleLessonSync('upsert', lesson, { allowCreateWithoutEventId: true });
       showToast(`Lezione inserita: ${formatDateFancy(date)} • ${time}`);
       return lesson;
@@ -8104,7 +8104,7 @@ function applyReportFilter() {
         requestGoogleLessonSync('upsert', duoPartnerStatus);
       }
       saveState(true);
-      renderAll();
+      renderAfterLessonChange();
       requestGoogleLessonSync('upsert', lesson);
       openLessonModal(lesson.id);
       showToast('Stato aggiornato.', 'ok');
@@ -8129,7 +8129,7 @@ function applyReportFilter() {
       const client = getClient(lesson.clientId);
       if (client?.scheduleMode === 'same') client.fixedTime = time;
       saveState(true);
-      renderAll();
+      renderAfterLessonChange();
       requestGoogleLessonSync('upsert', lesson);
       openLessonModal(lesson.id);
       showToast('Orario aggiornato.', 'ok');
@@ -8159,7 +8159,7 @@ function applyReportFilter() {
         requestGoogleLessonSync('upsert', duoPartnerSave);
       }
       saveState();
-      renderAll();
+      renderAfterLessonChange();
       requestGoogleLessonSync('upsert', lesson);
       openLessonModal(lesson.id);
       showToast('Lezione salvata.', 'ok');
@@ -8192,7 +8192,7 @@ function applyReportFilter() {
       });
       if (ok) {
         saveState(true);
-        renderAll();
+        renderAfterLessonChange();
         openLessonModal(existingLessonId);
         showToast('Lezione DUO collegata.', 'ok');
       } else {
@@ -8209,7 +8209,7 @@ function applyReportFilter() {
         if (partner) partner.duoGroupId = null;
         lesson.duoGroupId = null;
         saveState(true);
-        renderAll();
+        renderAfterLessonChange();
         openLessonModal(lesson.id);
         showToast('Lezioni scollegate.', 'ok');
       });
@@ -8253,7 +8253,7 @@ function applyReportFilter() {
           requestGoogleLessonSync('delete', partnerPayload);
         }
         saveState(true);
-        renderAll();
+        renderAfterLessonChange();
         requestGoogleLessonSync('delete', deletedPayload);
         closeModal('lessonModalBackdrop');
         showToast(partner ? 'Lezione DUO eliminata.' : 'Lezione eliminata.', 'ok');
@@ -8738,6 +8738,38 @@ function renderClientFormStickySummary() {
       }
     }
 
+    /* ── Render mirati — eseguono solo le sezioni che cambiano ────
+       Usare questi invece di renderAll() quando il cambiamento è circoscritto.
+       renderAll() resta per init, import, CRUD cliente/pacchetto, logout. */
+
+    function renderCalendarOnly() {
+      renderCalendarHead();
+      renderCalendar();
+    }
+
+    function renderAfterLessonChange() {
+      renderHero();
+      renderHeroGreeting();
+      renderSelectedClient();
+      renderAlerts();
+      renderClientList();
+      renderCalendarHead();
+      renderCalendar();
+    }
+
+    function renderAfterClientFocus() {
+      renderSelectedClient();
+      renderClientList();
+    }
+
+    function renderAfterPaymentChange() {
+      renderHero();
+      renderHeroGreeting();
+      renderSelectedClient();
+      renderAlerts();
+      renderClientList();
+    }
+
     let _rendering = false;
     function renderAll() {
       if (_rendering) return;
@@ -9158,7 +9190,7 @@ function renderClientFormStickySummary() {
       if (!lesson) return;
       lesson.status = 'cancelled';
       saveState();
-      renderAll();
+      renderAfterLessonChange();
       requestGoogleLessonSync('upsert', lesson);
       openLessonModal(lesson.id);
       showToast('Lezione segnata come annullata.');
@@ -9439,7 +9471,7 @@ function renderClientFormStickySummary() {
             if (window.innerWidth <= 580) {
               state.calendarView = 'day';
               saveState();
-              renderAll();
+              renderCalendarOnly();
             } else {
               openDayModal(iso);
             }
@@ -9452,7 +9484,7 @@ function renderClientFormStickySummary() {
           if (window.innerWidth <= 580) {
             state.calendarView = 'day';
             saveState();
-            renderAll();
+            renderCalendarOnly();
           } else {
             openDayModal(iso);
           }

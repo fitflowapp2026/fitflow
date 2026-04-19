@@ -7016,7 +7016,6 @@ function applyReportFilter() {
           <button class="btn btn-soft btn-small" id="editClientBtn">Modifica</button>
           <button class="btn btn-primary btn-small" id="renewClientBtn">Rinnova</button>
           <button class="btn btn-soft btn-small" id="sharePortalBtn" title="Apri portale cliente">🔗 Portale</button>
-          <button class="btn btn-ghost btn-small" id="sharePortalLinkBtn" title="Condividi link portale">↗ Condividi</button>
         </div>
         <div id="clientMessagesPanel" style="display:none;margin-top:4px;"></div>
       `;
@@ -7061,7 +7060,6 @@ function applyReportFilter() {
             <button class="btn btn-soft btn-small" id="mobileEditClientBtn" type="button">Modifica cliente</button>
             <button class="btn btn-primary btn-small" id="mobileRenewClientBtn" type="button">Rinnova pacchetto</button>
             <button class="btn btn-soft btn-small" id="mobileSharePortalBtn" type="button">🔗 Portale</button>
-            <button class="btn btn-ghost btn-small" id="mobileSharePortalLinkBtn" type="button">↗ Condividi</button>
             <button class="btn btn-soft btn-small" id="mobileMsgClientBtn" type="button" style="position:relative;">
               💬 Messaggi
               <span class="msg-badge" id="msgBadgeClientCard" style="top:-6px;right:-6px;">0</span>
@@ -7120,8 +7118,8 @@ function applyReportFilter() {
         }
         haptic(8);
       };
-      document.getElementById('sharePortalBtn')?.addEventListener('click', sharePortalFn);
-      document.getElementById('mobileSharePortalBtn')?.addEventListener('click', sharePortalFn);
+      document.getElementById('sharePortalBtn')?.addEventListener('click', sharePortalLinkFn);
+      document.getElementById('mobileSharePortalBtn')?.addEventListener('click', sharePortalLinkFn);
       /* Tasto destro / long press → condivide il link */
       document.getElementById('sharePortalBtn')?.addEventListener('contextmenu', e => { e.preventDefault(); sharePortalLinkFn(); });
       document.getElementById('mobileSharePortalBtn')?.addEventListener('contextmenu', e => { e.preventDefault(); sharePortalLinkFn(); });

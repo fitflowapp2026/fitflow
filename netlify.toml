@@ -1,7 +1,2 @@
-# DSWORLD — Netlify esegue "node build.js" prima di ogni deploy
 [build]
-  command   = "node build.js"
-  publish   = "."
-
-[build.environment]
-  NODE_VERSION = "18"
+  publish = "."

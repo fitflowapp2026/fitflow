@@ -4413,7 +4413,7 @@
 
     /* URL del portale cliente — adatta al tuo dominio */
     function clientPortalUrl(token) {
-      const base = window.location.origin + window.location.pathname.replace('app.html','').replace('index.html','') + 'client.html';
+      const base = window.location.origin + '/' + 'client.html';
       return `${base}?t=${token}`;
     }
 

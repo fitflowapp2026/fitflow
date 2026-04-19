@@ -4207,12 +4207,14 @@
 
     const derived = {
       lessonsByDate: null,
-      alerts: null
+      alerts: null,
+      monthSnapshots: null
     };
 
     function invalidateDerivedData() {
       derived.lessonsByDate = null;
       derived.alerts = null;
+      derived.monthSnapshots = null;
     }
 
     const el = {
@@ -5531,6 +5533,9 @@
     }
 
     function getMonthSnapshot(monthDate) {
+      if (!derived.monthSnapshots) derived.monthSnapshots = new Map();
+      const key = `${monthDate.getFullYear()}-${monthDate.getMonth()}`;
+      if (derived.monthSnapshots.has(key)) return derived.monthSnapshots.get(key);
       const lessons = state.lessons.filter(item => sameMonth(fromISO(item.date), monthDate));
       const done = lessons.filter(item => item.status === 'done').length;
       const cancelled = lessons.filter(item => item.status === 'cancelled').length;
@@ -5544,7 +5549,9 @@
           const pkg = getPackage(plan?.packageId);
           return sum + getPlanUnitValue(plan, pkg, getClient(lesson.clientId), lesson);
         }, 0);
-      return { lessons, done, cancelled, scheduled, total, newClients, revenue };
+      const snapshot = { lessons, done, cancelled, scheduled, total, newClients, revenue };
+      derived.monthSnapshots.set(key, snapshot);
+      return snapshot;
     }
 
     function countFreeSlots(days = 7) {
@@ -6701,7 +6708,7 @@ function applyReportFilter() {
       const alerts = getAlerts();
       const urgentAlerts = alerts.filter(item => item.type === 'renewal' || item.type === 'payment').length;
       const completionRate = snapshot.done + snapshot.cancelled ? Math.round((snapshot.done / (snapshot.done + snapshot.cancelled)) * 100) : 0;
-      const todayLessons = state.lessons.filter(item => item.date === todayISO() && item.status !== 'cancelled').length;
+      const todayLessons = getLessonsByDate(todayISO()).filter(item => item.status !== 'cancelled').length;
       // Fix 4: atRisk solo mese corrente con piano iniziato
       const viewMonth = state.viewDate;
       const atRisk = state.clients.filter(c => {
@@ -7319,10 +7326,18 @@ function applyReportFilter() {
       return fromISO(state.selectedDay || todayISO());
     }
 
+    /* saveState debouncato per la navigazione calendario — evita write a localStorage
+       ad ogni tap freccia. Il salvataggio avviene 1.2s dopo l'ultimo movimento. */
+    let _calSaveTimer = null;
+    function debouncedCalendarSave() {
+      clearTimeout(_calSaveTimer);
+      _calSaveTimer = setTimeout(() => saveState(), 1200);
+    }
+
     function setCalendarView(view) {
       state.calendarView = ['month', 'week', 'day'].includes(view) ? view : 'month';
       if (!state.selectedDay) state.selectedDay = todayISO();
-      saveState();
+      debouncedCalendarSave();
       renderCalendarOnly();
     }
 
@@ -7338,7 +7353,7 @@ function applyReportFilter() {
         state.selectedDay = toISO(next);
         state.viewDate = startOfMonth(next);
       }
-      saveState();
+      debouncedCalendarSave();
       renderCalendarOnly();
     }
 
@@ -7346,7 +7361,7 @@ function applyReportFilter() {
       const today = new Date();
       state.viewDate = startOfMonth(today);
       state.selectedDay = toISO(today);
-      saveState();
+      debouncedCalendarSave();
       renderCalendarOnly();
     }
 
@@ -9770,7 +9785,6 @@ function renderClientFormStickySummary() {
       renderAll();
       initInteractionDelegation();
       updateGoogleUi();
-      renderHeroGreeting();
       initDebouncedSearch();
       initFormKeyboardNav();
       initMessagesModal();

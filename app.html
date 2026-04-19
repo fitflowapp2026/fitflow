@@ -7132,7 +7132,7 @@ function applyReportFilter() {
           </div>
           <div class="selected-pill-row">
             <span class="tag ${client.paymentStatus === 'paid' ? 'green' : client.paymentStatus === 'partial' ? 'gold' : 'red'}${client.paymentStatus !== 'paid' ? ' stat-box-clickable' : ''}" style="${client.paymentStatus !== 'paid' ? 'cursor:pointer;' : ''}" id="mobilePaymentStatusTag" data-open-payment="1">${escapeHtml(paymentLabel)}${client.paymentStatus !== 'paid' ? ' ›' : ''}</span>
-            <span class="tag ${stats.remaining <= 3 ? 'gold' : ''}">${stats.remaining} rimaste</span>
+            <span class="tag ${stats.remaining <= 3 ? 'gold' : ''}">${stats.remaining} rimaste${stats.bonus > 0 ? ` <span style="color:var(--good);font-size:0.75em;">+${stats.bonus} bonus</span>` : ''}</span>
           </div>
           <div class="mobile-kpi-row">
             <div class="mobile-kpi"><div class="k">Prossima sessione</div><div class="v">${escapeHtml(nextLesson)}</div></div>
@@ -7161,6 +7161,7 @@ function applyReportFilter() {
           <div class="mobile-selected-actions">
             <button class="btn btn-soft btn-small" id="mobileEditClientBtn" type="button">Modifica cliente</button>
             <button class="btn btn-primary btn-small" id="mobileRenewClientBtn" type="button">Rinnova pacchetto</button>
+            <button class="btn btn-soft btn-small" id="mobileBonusLessonsBtn" type="button">＋ Bonus</button>
             <button class="btn btn-soft btn-small" id="mobileSharePortalBtn" type="button">🔗 Portale</button>
             <button class="btn btn-soft btn-small" id="mobileMsgClientBtn" type="button" style="position:relative;">
               💬 Messaggi
@@ -7201,6 +7202,7 @@ function applyReportFilter() {
       document.getElementById('packageMetricTile')?.addEventListener('click', () => { renderPackages(); openModal('packagesModalBackdrop'); });
       document.getElementById('renewClientBtn').addEventListener('click', openRenewModal);
       document.getElementById('bonusLessonsBtn')?.addEventListener('click', openBonusLessonsModal);
+      document.getElementById('mobileBonusLessonsBtn')?.addEventListener('click', openBonusLessonsModal);
 
       /* Portale cliente — apre il portale + condividi link */
       const sharePortalFn = () => {

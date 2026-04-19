@@ -6835,6 +6835,9 @@ function applyReportFilter() {
       renderBonusContent();
       openModal('bonusLessonsModalBackdrop');
     }
+
+    /* ── Modal pagamento rapido ──────────────────────── */
+    function openPaymentQuickModal() {
       const client = getClient(state.selectedClientId);
       if (!client || client.paymentStatus === 'paid') return;
       renderPaymentQuickModal(client);

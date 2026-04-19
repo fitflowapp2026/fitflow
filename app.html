@@ -6733,50 +6733,29 @@ function applyReportFilter() {
       el.heroInsights.innerHTML = [
         { key: 'Incasso mese', value: formatCurrency(snapshot.revenue), sub: `Mese prec. ${formatCurrency(previous.revenue || 0)}`, extra: `<span class="trend ${revTrend}">${revTrendIcon} ${revTrendLabel}</span>`, cls: 'revenue-card' },
         { key: 'Sessioni oggi', value: todayLessons, sub: todayLessons ? 'Operatività in agenda' : 'Giornata libera', cls: '' },
-        { key: 'Clienti a rischio', value: atRisk, sub: atRisk ? 'Pagamenti o rinnovi aperti' : 'Nessun rischio critico', cls: `risk-card${atRisk ? ' has-risk' : ''} stat-box-clickable`, clickId: 'heroRischioInsight' },
-        { key: 'Prossima lezione', value: prossimaVal, sub: prossimaSub, cls: upcomingHeroLesson ? 'stat-box-clickable' : '', clickId: upcomingHeroLesson ? 'heroProssimaInsight' : null }
+        { key: 'Clienti a rischio', value: atRisk, sub: atRisk ? 'Pagamenti o rinnovi aperti' : 'Nessun rischio critico', cls: `risk-card${atRisk ? ' has-risk' : ''} stat-box-clickable`, action: 'at-risk' },
+        { key: 'Prossima lezione', value: prossimaVal, sub: prossimaSub, cls: upcomingHeroLesson ? 'stat-box-clickable' : '', action: upcomingHeroLesson ? 'prossima' : null, lessonDate: upcomingHeroLesson?.date || '' }
       ].map(item => `
-        <div class="hero-insight${item.cls ? ' ' + item.cls : ''}"${item.clickId ? ` id="${item.clickId}" role="button" tabindex="0"` : ''}>
+        <div class="hero-insight${item.cls ? ' ' + item.cls : ''}"${item.action ? ` data-hero-action="${item.action}"${item.lessonDate ? ` data-lesson-date="${item.lessonDate}"` : ''} role="button" tabindex="0"` : ''}>
           <div class="k">${item.key}</div>
           <div class="v">${item.value}</div>
           <div class="s">${item.sub}</div>
           ${item.extra || ''}
         </div>
       `).join('');
-      const rischioInsight = document.getElementById('heroRischioInsight');
-      if (rischioInsight) {
-        rischioInsight.addEventListener('click', () => openModal('atRiskModalBackdrop'));
-        rischioInsight.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openModal('atRiskModalBackdrop'); } });
-      }
-      const prossimaInsight = document.getElementById('heroProssimaInsight');
-      if (prossimaInsight && upcomingHeroLesson) {
-        const goToDay = () => {
-          state.selectedDay = upcomingHeroLesson.date;
-          state.viewDate = startOfMonth(fromISO(upcomingHeroLesson.date));
-          state.calendarView = 'day';
-          saveState(); renderCalendarOnly();
-        };
-        prossimaInsight.addEventListener('click', goToDay);
-        prossimaInsight.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); goToDay(); } });
-      }
 
       // Fix 2: Completamento NON cliccabile — heroStats 3 voci
       el.heroStats.innerHTML = [
         { label: 'Base clienti', value: getManagedClients().length, sub: `${snapshot.newClients} nuovi nel mese` },
         { label: 'Completamento', value: `${completionRate}%`, sub: `${snapshot.done} svolte • ${snapshot.cancelled} annullate` },
-        { label: 'Operazioni', value: alerts.length, sub: urgentAlerts ? `${urgentAlerts} urgenti` : 'Nessun avviso urgente', id: 'heroAlertToggle' }
+        { label: 'Operazioni', value: alerts.length, sub: urgentAlerts ? `${urgentAlerts} urgenti` : 'Nessun avviso urgente', action: 'operazioni' }
       ].map(item => `
-        <div class="stat-box${item.id ? ' stat-box-clickable' : ''}" ${item.id ? `id="${item.id}" role="button" tabindex="0"` : ''}>
+        <div class="stat-box${item.action ? ' stat-box-clickable' : ''}" ${item.action ? `data-hero-action="${item.action}" role="button" tabindex="0"` : ''}>
           <div class="label">${item.label}</div>
           <div class="value">${item.value}</div>
           <div class="sub">${item.sub}</div>
         </div>
       `).join('');
-      const toggleBtn = document.getElementById('heroAlertToggle');
-      if (toggleBtn) {
-        toggleBtn.addEventListener('click', () => openModal('operazioniModalBackdrop'));
-        toggleBtn.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openModal('operazioniModalBackdrop'); } });
-      }
     }
 
 
@@ -7194,7 +7173,7 @@ function applyReportFilter() {
       el.alertStrip.innerHTML = `
         <div class="alert-strip-head">
           <span>Avvisi operativi</span>
-          ${alerts.length > 3 ? `<button class="text-link-btn" id="toggleAlertsBtn" type="button">${state.heroAlertsExpanded ? 'Mostra meno' : `Mostra tutti (${alerts.length})`}</button>` : ''}
+          ${alerts.length > 3 ? `<button class="text-link-btn" data-toggle-alerts="1" type="button">${state.heroAlertsExpanded ? 'Mostra meno' : `Mostra tutti (${alerts.length})`}</button>` : ''}
         </div>
         <div class="alert-stack">
           ${visibleAlerts.map(alert => {
@@ -7206,16 +7185,6 @@ function applyReportFilter() {
           ${hiddenCount && !state.heroAlertsExpanded ? `<div class="calendar-more">+${hiddenCount} altri avvisi disponibili</div>` : ''}
         </div>
       `;
-      const toggle = document.getElementById('toggleAlertsBtn');
-      if (toggle) toggle.addEventListener('click', () => {
-        state.heroAlertsExpanded = !state.heroAlertsExpanded;
-        renderAlerts();
-      });
-      el.alertStrip.querySelectorAll('[data-alert-client]').forEach(button => {
-        button.addEventListener('click', () => {
-          selectClient(button.getAttribute('data-alert-client'));
-        });
-      });
     }
 
     function getClientUrgency(client) {
@@ -9439,6 +9408,40 @@ function renderClientFormStickySummary() {
     function initInteractionDelegation() {
       bindClientListDelegation(el.clientList);
       bindClientListDelegation(document.getElementById('clientListDrawer'), { closeDrawerOnSelect: true });
+
+      /* ── Hero insights delegation — una volta sola, nessun listener leak ── */
+      function handleHeroKey(e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.target.closest('[data-hero-action]')?.click(); } }
+      el.heroInsights.addEventListener('click', e => {
+        const el_btn = e.target.closest('[data-hero-action]');
+        if (!el_btn) return;
+        const action = el_btn.getAttribute('data-hero-action');
+        if (action === 'at-risk') openModal('atRiskModalBackdrop');
+        if (action === 'prossima') {
+          const date = el_btn.getAttribute('data-lesson-date');
+          if (date) {
+            state.selectedDay = date;
+            state.viewDate = startOfMonth(fromISO(date));
+            state.calendarView = 'day';
+            saveState(); renderCalendarOnly();
+          }
+        }
+      });
+      el.heroInsights.addEventListener('keydown', handleHeroKey);
+
+      el.heroStats.addEventListener('click', e => {
+        const el_btn = e.target.closest('[data-hero-action]');
+        if (!el_btn) return;
+        if (el_btn.getAttribute('data-hero-action') === 'operazioni') openModal('operazioniModalBackdrop');
+      });
+      el.heroStats.addEventListener('keydown', handleHeroKey);
+
+      /* ── Alert strip delegation ── */
+      el.alertStrip.addEventListener('click', e => {
+        const toggle = e.target.closest('[data-toggle-alerts]');
+        if (toggle) { state.heroAlertsExpanded = !state.heroAlertsExpanded; renderAlerts(); return; }
+        const chip = e.target.closest('[data-alert-client]');
+        if (chip) selectClient(chip.getAttribute('data-alert-client'));
+      });
 
       if (el.calendarQuickSearchResults && el.calendarQuickSearchResults.dataset.bound !== 'true') {
         el.calendarQuickSearchResults.dataset.bound = 'true';

@@ -6571,29 +6571,6 @@ function pushClientPaymentSnapshot(client, reason = 'update') {
       }
     }
 
-function renderClientAppointments(client = null) {
-  const show = !!client;
-  if (el.clientAppointmentsWrap) el.clientAppointmentsWrap.hidden = !show;
-  if (!show || !el.clientAppointmentsList) return;
-
-  const lessons = getLessonsForClient(client.id).filter(item => item.status !== 'cancelled');
-  if (!lessons.length) {
-    el.clientAppointmentsList.innerHTML = '<div class="muted">Nessun appuntamento fissato</div>';
-    return;
-  }
-
-  el.clientAppointmentsList.innerHTML = lessons.map((lesson, index) => {
-    const dateFormatted = fromISO(lesson.date).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
-    const statusTag = lesson.status === 'done'
-      ? '<span class="tag green" style="flex-shrink:0;">Svolta</span>'
-      : '<span class="tag blue" style="flex-shrink:0;">Programmata</span>';
-    return `<div class="summary-row">
-      <span>Lezione ${index + 1}: ${escapeHtml(dateFormatted)} ore ${escapeHtml(lesson.time)}</span>
-      ${statusTag}
-    </div>`;
-  }).join('');
-}
-
 function buildAppointmentsText(clientId) {
   const client = getClient(clientId);
   if (!client) return '';
@@ -6692,10 +6669,6 @@ function applyReportFilter() {
       updateInstallmentsUI();
       updateFixedScheduleUI();
       renderClientHistory(client);
-      renderClientAppointments(client);
-      if (el.copyAppointmentsBtn) {
-        el.copyAppointmentsBtn.onclick = copyAppointmentsToClipboard;
-      }
       el.deleteClientBtn.style.display = client ? 'inline-flex' : 'none';
       openModal('clientModalBackdrop', trigger);
     }

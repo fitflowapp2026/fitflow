@@ -6597,11 +6597,14 @@ function renderClientAppointments(client = null) {
 function buildAppointmentsText(clientId) {
   const client = getClient(clientId);
   if (!client) return '';
-  const lessons = getLessonsForClient(clientId).filter(item => item.status !== 'cancelled');
+  const today = todayISO();
+  const lessons = getLessonsForClient(clientId)
+    .filter(item => item.status === 'scheduled' && item.date >= today)
+    .sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`));
   if (!lessons.length) return '';
-  const lines = lessons.map((lesson, index) => {
-    const dateFormatted = fromISO(lesson.date).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
-    return `Lezione ${index + 1}: ${dateFormatted} ore ${lesson.time}`;
+  const lines = lessons.map(lesson => {
+    const dateFormatted = fromISO(lesson.date).toLocaleDateString('it-IT', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' });
+    return `${dateFormatted} ore ${lesson.time}`;
   });
   return lines.join('\n');
 }

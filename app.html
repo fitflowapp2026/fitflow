@@ -3666,6 +3666,21 @@
       <div id="bonusLessonsContent" style="display:grid;gap:16px;"></div>
     </div>
   </div>
+
+  <!-- ── MODAL: Pianifica lezioni rimanenti ───────────────── -->
+  <div class="modal-backdrop" id="pianificaModalBackdrop">
+    <div class="modal narrow" role="dialog" aria-modal="true" aria-labelledby="pianificaTitle" style="max-width:400px;">
+      <div class="modal-top">
+        <div>
+          <h3 class="modal-title" id="pianificaTitle">Pianifica rimanenti</h3>
+          <div class="muted small" id="pianificaSub"></div>
+        </div>
+        <button class="btn btn-ghost btn-small" data-close="pianificaModalBackdrop">Chiudi</button>
+      </div>
+      <div id="pianificaContent" style="display:grid;gap:16px;"></div>
+    </div>
+  </div>
+
   <div class="modal-backdrop" id="operazioniModalBackdrop">
     <div class="modal narrow" role="dialog" aria-modal="true" aria-labelledby="operazioniModalTitle">
       <div class="modal-top">
@@ -6779,6 +6794,191 @@ function applyReportFilter() {
     }
 
 
+    /* ── Pianifica lezioni rimanenti ────────────────────────── */
+    function openPianificaModal() {
+      const client = getClient(state.selectedClientId);
+      const plan = client ? getActivePlan(client.id) : null;
+      if (!client || !plan) { showToast('Seleziona un cliente con piano attivo.', 'warn'); return; }
+      const pkg = getPackage(plan.packageId);
+      const stats = planStats(plan);
+      if (!stats.remaining) { showToast('Nessuna lezione da pianificare.', 'warn'); return; }
+
+      /* Pre-compila: giorni da fixedDays → storia lezioni → default lunedì */
+      const suggestedDays = client.fixedDays?.length
+        ? client.fixedDays
+        : getUsualWeekdays(client.id).slice(0, Math.max(1, Number(pkg?.perWeek || 1)));
+      const suggestedTime = client.fixedTime || getPreferredTime(client.id) || '09:00';
+
+      /* Data inizio: giorno dopo l'ultima lezione futura, o domani */
+      const lastFuture = getLessonsForClient(client.id)
+        .filter(l => l.status !== 'cancelled' && l.date >= todayISO())
+        .sort((a, b) => b.date.localeCompare(a.date))[0];
+      const defaultStart = lastFuture
+        ? toISO(addDays(fromISO(lastFuture.date), 1))
+        : toISO(addDays(new Date(), 1));
+
+      document.getElementById('pianificaTitle').textContent = 'Pianifica rimanenti';
+      document.getElementById('pianificaSub').textContent = `${getClientFullName(client)} · ${stats.remaining} lezioni da pianificare`;
+
+      /* Stato locale del form */
+      let selDays = [...suggestedDays];
+      let selTime = suggestedTime;
+      let selStart = defaultStart;
+      let saveAsFixed = !!(client.fixedDays?.length);
+
+      const DAYS = [
+        { n: 1, label: 'Lun' }, { n: 2, label: 'Mar' }, { n: 3, label: 'Mer' },
+        { n: 4, label: 'Gio' }, { n: 5, label: 'Ven' }, { n: 6, label: 'Sab' }, { n: 7, label: 'Dom' }
+      ];
+
+      function previewDates() {
+        if (!selDays.length || !selTime || !selStart) return [];
+        const sorted = sortWeekdays(selDays);
+        const cursor = fromISO(selStart);
+        cursor.setHours(0,0,0,0);
+        const results = [];
+        let attempts = 0;
+        while (results.length < stats.remaining && attempts < 730) {
+          const iso = toISO(cursor);
+          const wd = normalizeWeekday(cursor.getDay());
+          if (sorted.includes(wd) && !hasTimeConflict({ date: iso, time: selTime, duration: pkg?.duration || 60 })) {
+            results.push(iso);
+          }
+          cursor.setDate(cursor.getDate() + 1);
+          attempts++;
+        }
+        return results;
+      }
+
+      function renderForm() {
+        const preview = previewDates();
+        const canConfirm = selDays.length > 0 && selTime && selStart && preview.length > 0;
+        document.getElementById('pianificaContent').innerHTML = `
+          <!-- Giorni -->
+          <div>
+            <div class="small muted" style="margin-bottom:8px;">Giorni della settimana</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+              ${DAYS.map(d => `
+                <button type="button" class="weekday-chip${selDays.includes(d.n) ? ' active' : ''}"
+                  data-pday="${d.n}" style="min-width:44px;min-height:40px;padding:6px 10px;font-size:0.82rem;
+                  border-radius:10px;border:1px solid ${selDays.includes(d.n) ? 'var(--accent)' : 'rgba(255,255,255,0.12)'};
+                  background:${selDays.includes(d.n) ? 'rgba(229,9,20,0.15)' : 'rgba(255,255,255,0.04)'};
+                  color:${selDays.includes(d.n) ? 'var(--accent)' : 'var(--muted)'};font-weight:${selDays.includes(d.n) ? '700' : '500'};">
+                  ${d.label}
+                </button>`).join('')}
+            </div>
+          </div>
+          <!-- Orario e data inizio -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <label style="display:grid;gap:5px;">
+              <span class="small muted">Orario</span>
+              <input type="time" id="pianificaTime" value="${selTime}"
+                style="height:44px;border-radius:12px;padding:0 12px;background:rgba(255,255,255,0.06);
+                border:1px solid rgba(255,255,255,0.12);color:var(--text);font-size:0.95rem;" />
+            </label>
+            <label style="display:grid;gap:5px;">
+              <span class="small muted">Prima data</span>
+              <input type="date" id="pianificaStart" value="${selStart}"
+                style="height:44px;border-radius:12px;padding:0 12px;background:rgba(255,255,255,0.06);
+                border:1px solid rgba(255,255,255,0.12);color:var(--text);font-size:0.9rem;" />
+            </label>
+          </div>
+          <!-- Preview -->
+          <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:14px;display:grid;gap:8px;">
+            ${preview.length ? `
+              <div style="display:flex;align-items:center;justify-content:space-between;">
+                <span class="small muted">Prima lezione</span>
+                <span style="font-size:0.88rem;font-weight:600;">${formatDateFancy(preview[0])}</span>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;">
+                <span class="small muted">Ultima lezione</span>
+                <span style="font-size:0.88rem;font-weight:600;">${formatDateFancy(preview[preview.length - 1])}</span>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;padding-top:6px;border-top:1px solid rgba(255,255,255,0.07);">
+                <span class="small muted">Lezioni pianificate</span>
+                <span style="font-size:1rem;font-weight:800;color:var(--good);">${preview.length} / ${stats.remaining}</span>
+              </div>
+            ` : `<div class="muted small" style="text-align:center;">Seleziona almeno un giorno e un orario</div>`}
+          </div>
+          <!-- Salva come fisso -->
+          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 12px;
+            background:rgba(255,255,255,0.04);border-radius:12px;border:1px solid rgba(255,255,255,0.08);">
+            <input type="checkbox" id="pianificaSaveFixed" ${saveAsFixed ? 'checked' : ''}
+              style="width:18px;height:18px;accent-color:var(--accent);flex-shrink:0;" />
+            <div>
+              <div style="font-size:0.88rem;font-weight:600;">Salva come orario fisso</div>
+              <div class="small muted">Aggiorna giorni e orario del cliente per le prossime pianificazioni</div>
+            </div>
+          </label>
+          <!-- Azioni -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+            <button class="btn btn-ghost btn-small" data-close="pianificaModalBackdrop">Annulla</button>
+            <button id="pianificaConfirmBtn" class="btn btn-primary btn-small"
+              ${!canConfirm ? 'disabled style="opacity:.45;"' : ''}>
+              Pianifica ${preview.length > 0 ? preview.length + ' lezioni' : ''}
+            </button>
+          </div>
+        `;
+
+        /* Listeners interni del form */
+        document.querySelectorAll('[data-pday]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const d = Number(btn.getAttribute('data-pday'));
+            selDays = selDays.includes(d) ? selDays.filter(x => x !== d) : [...selDays, d];
+            renderForm();
+          });
+        });
+        document.getElementById('pianificaTime').addEventListener('change', e => { selTime = e.target.value; renderForm(); });
+        document.getElementById('pianificaStart').addEventListener('change', e => { selStart = e.target.value; renderForm(); });
+        document.getElementById('pianificaSaveFixed').addEventListener('change', e => { saveAsFixed = e.target.checked; });
+
+        document.getElementById('pianificaConfirmBtn')?.addEventListener('click', () => {
+          const dates = previewDates();
+          if (!dates.length) return;
+          saveAsFixed = document.getElementById('pianificaSaveFixed').checked;
+          /* Aggiorna orario fisso se richiesto */
+          if (saveAsFixed) {
+            client.fixedDays = sortWeekdays(selDays);
+            client.fixedTime = selTime;
+            client.scheduleMode = 'same';
+          }
+          /* Crea le lezioni */
+          const lessonType = lessonTypeForNewLesson(client);
+          const created = [];
+          dates.forEach(iso => {
+            if (hasTimeConflict({ date: iso, time: selTime, duration: pkg?.duration || 60 })) return;
+            if (!canUsePlanSlot(plan.id)) return;
+            const lesson = {
+              id: uid('lesson'),
+              clientId: client.id,
+              planId: plan.id,
+              date: iso,
+              time: selTime,
+              duration: Number(pkg?.duration || 60),
+              lessonType,
+              status: 'scheduled',
+              note: '',
+              linkedTo: null,
+              googleEventId: '',
+              createdAt: new Date().toISOString()
+            };
+            state.lessons.push(lesson);
+            created.push(lesson);
+          });
+          if (created.length) {
+            saveState(true);
+            renderAfterLessonChange();
+            created.forEach(l => requestGoogleLessonSync('upsert', l, { allowCreateWithoutEventId: true }));
+          }
+          closeModal('pianificaModalBackdrop');
+          showToast(`${created.length} lezioni pianificate.`, 'ok');
+        });
+      }
+
+      renderForm();
+      openModal('pianificaModalBackdrop');
+    }
+
     /* ── Modal lezioni bonus ────────────────────────────────── */
     function openBonusLessonsModal() {
       const client = getClient(state.selectedClientId);
@@ -7116,6 +7316,7 @@ function applyReportFilter() {
         <div class="inline-actions">
           <button class="btn btn-soft btn-small" id="editClientBtn">Modifica</button>
           <button class="btn btn-primary btn-small" id="renewClientBtn">Rinnova</button>
+          <button class="btn btn-soft btn-small" id="pianificaBtn" title="Pianifica tutte le lezioni rimanenti">📅 Pianifica</button>
           <button class="btn btn-soft btn-small" id="bonusLessonsBtn" title="Aggiungi lezioni bonus al pacchetto">＋ Bonus</button>
           <button class="btn btn-soft btn-small" id="sharePortalBtn" title="Invia link portale al cliente">🔗 Portale</button>
         </div>
@@ -7161,6 +7362,7 @@ function applyReportFilter() {
           <div class="mobile-selected-actions">
             <button class="btn btn-soft btn-small" id="mobileEditClientBtn" type="button">Modifica cliente</button>
             <button class="btn btn-primary btn-small" id="mobileRenewClientBtn" type="button">Rinnova pacchetto</button>
+            <button class="btn btn-soft btn-small" id="mobilePianificaBtn" type="button">📅 Pianifica</button>
             <button class="btn btn-soft btn-small" id="mobileBonusLessonsBtn" type="button">＋ Bonus</button>
             <button class="btn btn-soft btn-small" id="mobileSharePortalBtn" type="button">🔗 Portale</button>
             <button class="btn btn-soft btn-small" id="mobileMsgClientBtn" type="button" style="position:relative;">
@@ -7201,8 +7403,10 @@ function applyReportFilter() {
       document.getElementById('editClientBtn').addEventListener('click', () => renderClientModal(client));
       document.getElementById('packageMetricTile')?.addEventListener('click', () => { renderPackages(); openModal('packagesModalBackdrop'); });
       document.getElementById('renewClientBtn').addEventListener('click', openRenewModal);
+      document.getElementById('pianificaBtn')?.addEventListener('click', openPianificaModal);
       document.getElementById('bonusLessonsBtn')?.addEventListener('click', openBonusLessonsModal);
       document.getElementById('mobileBonusLessonsBtn')?.addEventListener('click', openBonusLessonsModal);
+      document.getElementById('mobilePianificaBtn')?.addEventListener('click', openPianificaModal);
 
       /* Portale cliente — apre il portale + condividi link */
       const sharePortalFn = () => {

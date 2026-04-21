@@ -6196,11 +6196,26 @@
       if (event.key === 'Escape') {
         const confirmOpen = document.getElementById('confirmModalBackdrop')?.classList.contains('open');
         if (confirmOpen) { document.getElementById('confirmModalBackdrop').classList.remove('open'); unlockBodyScroll(); return; }
+        const fscOpen = document.getElementById('fscBackdrop')?.classList.contains('open');
+        if (fscOpen) { document.getElementById('fscBackdrop').classList.remove('open'); unlockBodyScroll(); return; }
+        const mpOpen = document.getElementById('mpBackdrop')?.classList.contains('open');
+        if (mpOpen) { document.getElementById('mpBackdrop').classList.remove('open'); unlockBodyScroll(); return; }
         const openBackdrop = document.querySelector('.modal-backdrop.open');
         if (openBackdrop) closeModal(openBackdrop.id);
       }
       trapModalFocus(event);
     });
+
+    /* Safety valve: se nessun modal è aperto ma lo scroll è ancora bloccato, sblocca.
+       Cattura i casi in cui un modal viene chiuso senza passare per closeModal. */
+    document.addEventListener('click', () => {
+      const anyOpen = document.querySelector(
+        '.modal-backdrop.open, .confirm-modal-backdrop.open, .fsc-backdrop.open, .mp-backdrop.open'
+      );
+      if (!anyOpen && bodyScrollLockDepth > 0) {
+        unlockBodyScroll(true);
+      }
+    }, { capture: true, passive: true });
 
     function buildPackageSummary(pkg, priceOverride = null) {
       if (!pkg) return '<div class="muted">Nessun pacchetto</div>';
@@ -6888,7 +6903,7 @@ function applyReportFilter() {
           </label>
           <!-- Azioni -->
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-            <button class="btn btn-ghost btn-small" data-close="pianificaModalBackdrop">Annulla</button>
+            <button id="pianificaAnnullaBtn" class="btn btn-ghost btn-small">Annulla</button>
             <button id="pianificaConfirmBtn" class="btn btn-primary btn-small"
               ${!canConfirm ? 'disabled style="opacity:.45;"' : ''}>
               Pianifica ${preview.length > 0 ? preview.length + ' lezioni' : ''}
@@ -6907,10 +6922,10 @@ function applyReportFilter() {
         document.getElementById('pianificaTime').addEventListener('change', e => { selTime = e.target.value; renderForm(); });
         document.getElementById('pianificaStart').addEventListener('change', e => { selStart = e.target.value; renderForm(); });
         document.getElementById('pianificaSaveFixed').addEventListener('change', e => { saveAsFixed = e.target.checked; });
+        document.getElementById('pianificaAnnullaBtn')?.addEventListener('click', () => closeModal('pianificaModalBackdrop'));
 
         document.getElementById('pianificaConfirmBtn')?.addEventListener('click', () => {
           const dates = previewDates();
-          if (!dates.length) return;
           saveAsFixed = document.getElementById('pianificaSaveFixed').checked;
           /* Aggiorna orario fisso se richiesto */
           if (saveAsFixed) {
@@ -6988,7 +7003,7 @@ function applyReportFilter() {
             Totale pacchetto: <strong style="color:var(--text);">${newTotal} lezioni</strong>
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px;">
-            <button class="btn btn-ghost btn-small" data-close="bonusLessonsModalBackdrop">Annulla</button>
+            <button id="bonusAnnullaBtn" class="btn btn-ghost btn-small">Annulla</button>
             <button id="bonusConfirmBtn" class="btn btn-primary btn-small" ${pending === current ? 'disabled style="opacity:.45;"' : ''}>
               ${pending === 0 && current > 0 ? 'Rimuovi bonus' : `Conferma ${pending > 0 ? '(+' + pending + ')' : ''}`}
             </button>
@@ -6996,6 +7011,7 @@ function applyReportFilter() {
         `;
         document.getElementById('bonusMinus').addEventListener('click', () => { pending = Math.max(0, pending - 1); renderBonusContent(); });
         document.getElementById('bonusPlus').addEventListener('click', () => { pending += 1; renderBonusContent(); });
+        document.getElementById('bonusAnnullaBtn')?.addEventListener('click', () => closeModal('bonusLessonsModalBackdrop'));
         document.getElementById('bonusConfirmBtn')?.addEventListener('click', () => {
           plan.bonusLessons = pending;
           saveState(true);
@@ -9883,6 +9899,9 @@ function renderClientFormStickySummary() {
       });
 
       function closeFsc() { backdrop.classList.remove('open'); unlockBodyScroll(); }
+
+      /* Click fuori dal modal chiude e sblocca lo scroll */
+      backdrop.addEventListener('click', e => { if (e.target === backdrop) closeFsc(); }, { once: true });
 
       /* NO → da ricontattare */
       document.getElementById('fscNoBtn').addEventListener('click', () => {

@@ -3592,7 +3592,7 @@
         </div>
         <div class="mini-card quick-plan-card" id="fixedScheduleBlock">
           <strong>Pianificazione veloce</strong>
-          <div class=\"quick-plan-hint\" id=\"fixedScheduleHint\" style=\"display:none;\"></div>
+          <div class="quick-plan-hint" id="fixedScheduleHint" style="display:none;"></div>
           <div class="form-grid-2" id="sameScheduleFields">
             <label>Ora fissa
               <input id="clientFixedTime" type="time" />
@@ -6283,13 +6283,13 @@
       if (sameFields) sameFields.hidden = mode !== 'same';
       if (mode !== 'same') {
         const selectedText = variableSelections.length ? variableSelections.map(item => `${weekdayLabel(item.weekday)} ${item.time}`).join(', ') : 'nessuno';
-        el.fixedScheduleHint.textContent = `Seleziona ${requiredDays} giorni con orari diversi. Giorni scelti: ${selectedText}.`;
+        if (el.fixedScheduleHint) el.fixedScheduleHint.textContent = `Seleziona ${requiredDays} giorni con orari diversi. Giorni scelti: ${selectedText}.`;
         renderFixedSchedulePreview();
         return;
       }
       const dayWord = requiredDays === 1 ? 'giorno' : 'giorni';
       const selectedText = selectedDays.length ? selectedDays.map(weekdayLabel).join(', ') : 'nessuno';
-      el.fixedScheduleHint.textContent = `Seleziona ${requiredDays} ${dayWord} e un'ora fissa. Al salvataggio creo tutte le lezioni del pacchetto. Giorni scelti: ${selectedText}.`;
+      if (el.fixedScheduleHint) el.fixedScheduleHint.textContent = `Seleziona ${requiredDays} ${dayWord} e un'ora fissa. Al salvataggio creo tutte le lezioni del pacchetto. Giorni scelti: ${selectedText}.`;
     }
 
     function renderClientWeekdayPicker(selectedDays = [], requiredDays = null) {

@@ -5304,11 +5304,25 @@
 
     async function requestGoogleLessonSync(action, lessonLike, { silent = true, allowCreateWithoutEventId = false } = {}) {
       if (!cloud.user || !cloud.google?.connected) return { skipped: true };
-      const payload = buildGoogleSyncPayload(lessonLike);
-      if (!payload) return { skipped: true };
       const isDelete = action === 'delete';
-      if (shouldSkipGoogleCreateForLesson(action, payload, { allowCreateWithoutEventId })) return { skipped: true, reason: 'missing_google_event_id' };
+
+      // FIX: per le azioni di DELETE il payload va costruito SUBITO (la lezione viene rimossa
+      // dallo stato prima di questa chiamata, quindi non sarebbe più disponibile dopo).
+      // Per tutte le altre azioni (upsert ecc.) il payload viene costruito DENTRO il task in coda,
+      // così legge sempre il googleEventId aggiornato dal task precedente ed evita duplicati su Google Calendar.
+      const eagerPayload = isDelete ? buildGoogleSyncPayload(lessonLike) : null;
+      if (isDelete) {
+        if (!eagerPayload) return { skipped: true };
+        if (shouldSkipGoogleCreateForLesson(action, eagerPayload, { allowCreateWithoutEventId })) return { skipped: true, reason: 'missing_google_event_id' };
+      }
+
       return queueGoogleTask(async () => {
+        // Costruzione payload lazy per upsert: in questo momento il task precedente in coda
+        // ha già salvato il googleEventId reale, quindi il payload sarà sempre aggiornato.
+        const payload = isDelete ? eagerPayload : buildGoogleSyncPayload(lessonLike);
+        if (!payload) return { skipped: true };
+        if (!isDelete && shouldSkipGoogleCreateForLesson(action, payload, { allowCreateWithoutEventId })) return { skipped: true, reason: 'missing_google_event_id' };
+
         cloud.google.syncing = true;
         cloud.google.lastError = '';
         updateGoogleUi();

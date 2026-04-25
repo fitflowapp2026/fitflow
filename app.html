@@ -4506,7 +4506,23 @@
       const icons = { ok: '✓', warn: '⚠', error: '✕', info: '' };
       const durations = { ok: 2200, warn: 4000, error: 4500, info: 2200 };
       const icon = icons[type] || '';
-      el.toast.innerHTML = icon ? `<span class="toast-icon">${icon}</span><span>${message}</span>` : message;
+
+      // Evita innerHTML con testo dinamico: riduce il rischio XSS se un messaggio
+      // dovesse arrivare da input utente, errori esterni o dati sincronizzati.
+      el.toast.textContent = '';
+      if (icon) {
+        const iconSpan = document.createElement('span');
+        iconSpan.className = 'toast-icon';
+        iconSpan.textContent = icon;
+
+        const messageSpan = document.createElement('span');
+        messageSpan.textContent = String(message ?? '');
+
+        el.toast.append(iconSpan, messageSpan);
+      } else {
+        el.toast.textContent = String(message ?? '');
+      }
+
       el.toast.className = 'toast';
       if (type !== 'info') el.toast.classList.add(`toast-${type}`);
       el.toast.classList.add('show');
@@ -7501,7 +7517,7 @@ function applyReportFilter() {
         const urgency = urgencyMap ? urgencyMap.get(client.id) : getClientUrgency(client);
         const revenue = activePlan ? formatCurrency(getPlanTotalPrice(activePlan, pkg, client)) : '—';
         return `
-          <div class="client-card ${client.id === state.selectedClientId ? 'active' : ''}" data-client-id="${client.id}" tabindex="0" role="button" aria-label="Apri cliente ${escapeHtml(getClientFullName(client))}" style="--i:${Math.min(idx, 12)}">>
+          <div class="client-card ${client.id === state.selectedClientId ? 'active' : ''}" data-client-id="${client.id}" tabindex="0" role="button" aria-label="Apri cliente ${escapeHtml(getClientFullName(client))}" style="--i:${Math.min(idx, 12)}">
             <div class="client-meta-row">
               <div style="display:flex;gap:10px;align-items:center;min-width:0;flex:1 1 auto;">
                 <div class="avatar">${escapeHtml(initials(getClientFullName(client)))}</div>

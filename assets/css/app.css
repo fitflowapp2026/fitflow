@@ -3141,30 +3141,30 @@
       .hero-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
   
-/* App version badge — useful for deploy/PWA cache checks */
+/* App version badge — hidden on desktop so it never overlaps dashboard cards.
+   Kept visible only on small screens for quick PWA/cache checks. */
 .app-version-badge {
-  position: fixed;
-  right: 14px;
-  bottom: calc(env(safe-area-inset-bottom) + 82px);
-  z-index: 40;
-  padding: 6px 10px;
-  border-radius: 999px;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.08);
-  color: rgba(255,255,255,0.55);
-  font-size: 0.72rem;
-  font-weight: 700;
-  line-height: 1;
-  pointer-events: none;
-  user-select: none;
-  -webkit-user-select: none;
+  display: none;
 }
 
 @media (max-width: 720px) {
   .app-version-badge {
-    right: 12px;
+    display: block;
+    position: fixed;
+    left: 12px;
     bottom: calc(env(safe-area-inset-bottom) + 72px);
+    z-index: 40;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.08);
+    color: rgba(255,255,255,0.55);
     font-size: 0.68rem;
+    font-weight: 700;
+    line-height: 1;
     opacity: 0.78;
+    pointer-events: none;
+    user-select: none;
+    -webkit-user-select: none;
   }
 }

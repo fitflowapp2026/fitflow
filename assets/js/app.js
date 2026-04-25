@@ -1,4 +1,5 @@
 
+    const APP_VERSION = '1.1.0';
     const STORAGE_KEY = 'dsworld_clienti_v2';
     const LEGACY_KEY = 'fitplanner_clienti_v1';
     const BACKUP_LATEST_KEY = 'dsworld_clienti_backup_latest_v1';
@@ -6664,3 +6665,10 @@ function renderClientFormStickySummary() {
       }
     })(40); // 40 × 150ms = 6 secondi max di attesa
   
+/* App version badge */
+(function renderAppVersionBadge() {
+  const versionBadge = document.getElementById('appVersionBadge');
+  if (versionBadge) {
+    versionBadge.textContent = `DSWORLD v${APP_VERSION}`;
+  }
+})();

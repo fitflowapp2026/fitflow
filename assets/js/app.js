@@ -1583,6 +1583,7 @@
       });
       if (changed) {
         saveState();
+        if (!_rendering) renderAfterLessonChange();
         changedLessons.forEach(id => requestGoogleLessonSync('upsert', id));
         /* Free session auto-completata → proponi conversione se nessun modal è aperto */
         const noModal = !document.querySelector('.modal-backdrop.open, .confirm-modal-backdrop.open, .fsc-backdrop.open');
@@ -1787,7 +1788,7 @@
         state.viewDate = startOfMonth(fromISO(date));
         state.calendarView = 'day';
         saveState();
-        renderCalendarOnly();
+        renderAfterCalendarNavigation();
         return;
       }
       if (action === 'new-client') {
@@ -1821,7 +1822,7 @@
           state.selectedDay = targetDate;
           state.viewDate = startOfMonth(fromISO(targetDate));
           state.calendarView = 'day';
-          renderCalendarOnly();
+          renderAfterLessonChange();
           showToast(`Lezione fissata ${offsetDays === 0 ? 'oggi' : 'domani'} alle ${preferredTime}.`, 'ok');
           return;
         }
@@ -3302,7 +3303,7 @@ function applyReportFilter() {
         state.viewDate = startOfMonth(fromISO(nextAgendaDate));
         state.calendarView = 'day';
         saveState();
-        renderCalendarOnly();
+        renderAfterCalendarNavigation();
       };
       if (document.getElementById('mobileCopyAppointmentsBtn')) document.getElementById('mobileCopyAppointmentsBtn').addEventListener('click', copyAppointments);
       if (document.getElementById('mobileEditClientBtn')) document.getElementById('mobileEditClientBtn').addEventListener('click', () => renderClientModal(client));
@@ -3479,7 +3480,7 @@ function applyReportFilter() {
       state.calendarView = ['month', 'week', 'day'].includes(view) ? view : 'month';
       if (!state.selectedDay) state.selectedDay = todayISO();
       debouncedCalendarSave();
-      renderCalendarOnly();
+      renderAfterCalendarNavigation();
     }
 
     function moveCalendar(step) {
@@ -3495,7 +3496,7 @@ function applyReportFilter() {
         state.viewDate = startOfMonth(next);
       }
       debouncedCalendarSave();
-      renderCalendarOnly();
+      renderAfterCalendarNavigation();
     }
 
     function resetCalendarToToday() {
@@ -3503,7 +3504,7 @@ function applyReportFilter() {
       state.viewDate = startOfMonth(today);
       state.selectedDay = toISO(today);
       debouncedCalendarSave();
-      renderCalendarOnly();
+      renderAfterCalendarNavigation();
     }
 
     function getCalendarSearchMatches(query) {
@@ -3692,7 +3693,7 @@ function applyReportFilter() {
         state.selectedDay = node.getAttribute('data-open-day');
         state.calendarView = 'day';
         saveState();
-        renderCalendarOnly();
+        renderAfterCalendarNavigation();
       }));
       el.agendaWrap.querySelectorAll('[data-add-slot]').forEach(button => button.addEventListener('click', () => {
         const [iso, time] = button.getAttribute('data-add-slot').split('|');
@@ -3958,7 +3959,10 @@ function applyReportFilter() {
       }
       if (getExternalBusyOverlap({ date, time, duration: pkg.duration })) { showToast('Slot occupato da altro calendario.', 'warn'); return; }
       const ok = createLesson({ clientId: client.id, planId: plan.id, date, time, duration: pkg.duration, setFixedTime: client.scheduleMode === 'same' });
-      if (ok) renderDayModal(date);
+      if (ok) {
+        renderAfterLessonChange();
+        renderDayModal(date);
+      }
     }
 
     function renderDayModal(date = state.selectedDay) {
@@ -4880,6 +4884,14 @@ function renderClientFormStickySummary() {
       renderCalendar();
     }
 
+    function renderAfterCalendarNavigation() {
+      renderHero();
+      renderHeroGreeting();
+      renderAlerts();
+      renderCalendarHead();
+      renderCalendar();
+    }
+
     function renderAfterLessonChange() {
       renderHero();
       renderHeroGreeting();
@@ -4907,25 +4919,28 @@ function renderClientFormStickySummary() {
     function renderAll() {
       if (_rendering) return;
       _rendering = true;
-      applyResponsiveDefaults();
-      try { autoCompleteElapsedLessons(); } catch(e) { console.error(e); }
-      renderHero();
-      renderHeroGreeting();
-      // opsBoard rimosso
-      renderSelectedClient();
-      renderAlerts();
-      renderClientList();
-      renderCalendarHead();
-      renderCalendar();
-      renderPackages();
-      renderPackageOptions(el.clientPackage, el.clientPackage.value || state.packages[0]?.id || '');
-      renderPackageOptions(el.renewPackage, el.renewPackage.value || state.packages[0]?.id || '');
-      el.packagePreview.innerHTML = buildPackageSummary(getPackage(el.clientPackage.value));
-      renderClientFormStickySummary();
-      el.renewPreview.innerHTML = buildPackageSummary(getPackage(el.renewPackage.value));
-      renderFixedSchedulePreview();
-      if (el.reportModalBackdrop.classList.contains('open')) renderReport();
-      _rendering = false;
+      try {
+        applyResponsiveDefaults();
+        try { autoCompleteElapsedLessons(); } catch(e) { console.error(e); }
+        renderHero();
+        renderHeroGreeting();
+        // opsBoard rimosso
+        renderSelectedClient();
+        renderAlerts();
+        renderClientList();
+        renderCalendarHead();
+        renderCalendar();
+        renderPackages();
+        renderPackageOptions(el.clientPackage, el.clientPackage.value || state.packages[0]?.id || '');
+        renderPackageOptions(el.renewPackage, el.renewPackage.value || state.packages[0]?.id || '');
+        el.packagePreview.innerHTML = buildPackageSummary(getPackage(el.clientPackage.value));
+        renderClientFormStickySummary();
+        el.renewPreview.innerHTML = buildPackageSummary(getPackage(el.renewPackage.value));
+        renderFixedSchedulePreview();
+        if (el.reportModalBackdrop.classList.contains('open')) renderReport();
+      } finally {
+        _rendering = false;
+      }
     }
 
     function openNewClientModal(trigger = document.activeElement) {
@@ -5586,7 +5601,7 @@ function renderClientFormStickySummary() {
             state.selectedDay = date;
             state.viewDate = startOfMonth(fromISO(date));
             state.calendarView = 'day';
-            saveState(); renderCalendarOnly();
+            saveState(); renderAfterCalendarNavigation();
           }
         }
       });
@@ -5638,7 +5653,7 @@ function renderClientFormStickySummary() {
             if (window.innerWidth <= 580) {
               state.calendarView = 'day';
               saveState();
-              renderCalendarOnly();
+              renderAfterCalendarNavigation();
             } else {
               openDayModal(iso);
             }
@@ -5651,7 +5666,7 @@ function renderClientFormStickySummary() {
           if (window.innerWidth <= 580) {
             state.calendarView = 'day';
             saveState();
-            renderCalendarOnly();
+            renderAfterCalendarNavigation();
           } else {
             openDayModal(iso);
           }

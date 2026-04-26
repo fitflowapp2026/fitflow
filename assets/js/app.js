@@ -4625,6 +4625,15 @@ function applyReportFilter() {
       return digits;
     }
 
+    function nameComparableKey(firstName, lastName) {
+      return `${String(firstName || '').trim()} ${String(lastName || '').trim()}`
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, ' ')
+        .trim();
+    }
+
     function normalizeItalianPhone(phone) {
       let digits = normalizePhoneDigits(phone);
       if (digits.startsWith('00')) digits = digits.slice(2);
@@ -4635,7 +4644,9 @@ function applyReportFilter() {
     function parseFreeSessionContactsInput(raw) {
       const lines = String(raw || '').split(/\r?\n/).map(line => line.trim()).filter(Boolean);
       const existingPhones = new Set(state.clients.map(client => phoneComparableKey(client.phone)).filter(Boolean));
+      const existingNames = new Set(state.clients.map(client => nameComparableKey(client.firstName || client.name, client.lastName)).filter(Boolean));
       const seenPhones = new Set();
+      const seenNames = new Set();
       return lines.map((line, index) => {
         const phoneMatch = line.match(/(?:\+?39[\s.\-\/]*)?3\d[\d\s.\-\/]{6,}\d/);
         if (!phoneMatch) return { index, line, valid: false, duplicate: false, error: 'Telefono non trovato' };
@@ -4669,8 +4680,12 @@ function applyReportFilter() {
 
         firstName = toTitleCaseName(firstName);
         lastName = toTitleCaseName(lastName);
-        const duplicate = existingPhones.has(phoneKey) || seenPhones.has(phoneKey);
+        const nameKey = nameComparableKey(firstName, lastName);
+        const duplicatePhone = existingPhones.has(phoneKey) || seenPhones.has(phoneKey);
+        const duplicateName = nameKey && (existingNames.has(nameKey) || seenNames.has(nameKey));
+        const duplicate = duplicatePhone || duplicateName;
         seenPhones.add(phoneKey);
+        if (nameKey) seenNames.add(nameKey);
         return {
           index,
           line,
@@ -4680,7 +4695,7 @@ function applyReportFilter() {
           lastName,
           name: `${firstName} ${lastName}`.trim(),
           phone: phoneKey,
-          error: duplicate ? 'Già presente' : ''
+          error: duplicatePhone ? 'Telefono già presente' : (duplicateName ? 'Nome già presente' : '')
         };
       });
     }

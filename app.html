@@ -4864,11 +4864,14 @@
       toggleField(document.getElementById('clientPaymentModeLabel'), !isFreeSession);
       if (el.clientInstallmentsRow) el.clientInstallmentsRow.hidden = isFreeSession || el.clientPaymentMode?.value !== 'installments';
       if (isFreeSession) {
-        if (el.clientPackagePurchased) el.clientPackagePurchased.value = 'no';
-        if (el.clientPaymentStatus) el.clientPaymentStatus.value = 'unpaid';
-        if (el.clientPaymentMode) el.clientPaymentMode.value = 'single';
-        if (el.clientInstallmentsTotal) el.clientInstallmentsTotal.value = '2';
-        if (el.clientInstallmentsPaid) el.clientInstallmentsPaid.value = '0';
+        const freePkg = ensureSpecialPackage('free_session');
+        if (el.clientPackage) el.clientPackage.value = freePkg.id;
+        if (el.clientPackagePrice) el.clientPackagePrice.value = '0';
+        if (el.clientPackagePurchased) el.clientPackagePurchased.value = 'yes';
+        if (el.clientPaymentStatus) el.clientPaymentStatus.value = 'paid';
+        if (el.clientPaymentMode) el.clientPaymentMode.value = 'included';
+        if (el.clientInstallmentsTotal) el.clientInstallmentsTotal.value = '1';
+        if (el.clientInstallmentsPaid) el.clientInstallmentsPaid.value = '1';
       }
       updateFreeSessionDoneUi();
       const preview = document.getElementById('packagePreview');
@@ -6668,6 +6671,7 @@ function getPaymentStatusLabel(status = 'unpaid') {
 }
 
 function getPaymentModeLabel(mode = 'single') {
+  if (mode === 'included') return 'INCLUSO';
   return mode === 'installments' ? 'RATEIZZATO' : 'UNICA SOLUZIONE';
 }
 
@@ -8410,6 +8414,11 @@ function applyReportFilter() {
         showToast('Inserisci un orario.');
         return false;
       }
+      const lessonType = lessonTypeForNewLesson(client);
+      if (lessonType === 'free_session' && clientHasAnyFreeSession(clientId)) {
+        showToast('Questo cliente ha già una FREE SESSION fissata o svolta.', 'warn');
+        return false;
+      }
       if (!canUsePlanSlot(planId)) {
         showToast('Hai raggiunto il numero massimo di lezioni del pacchetto.', 'warn');
         return false;
@@ -8429,6 +8438,7 @@ function applyReportFilter() {
         date,
         time,
         duration: Number(duration || 60),
+        lessonType,
         status: 'scheduled',
         note,
         linkedTo,
@@ -9034,12 +9044,13 @@ function applyReportFilter() {
         shareToken: generateShareToken(),
         serviceType: 'free_session',
         freeSessionDone: false,
-        packagePurchased: false,
+        packagePurchased: true,
         conversionStatus: 'path_started',
-        paymentStatus: 'unpaid',
-        paymentMode: 'single',
+        commercialStatus: 'included_free_session',
+        paymentStatus: 'paid',
+        paymentMode: 'included',
         installmentsTotal: 1,
-        installmentsPaid: 0,
+        installmentsPaid: 1,
         packagePrice: 0,
         scheduleMode: 'same',
         fixedTime: '',
@@ -9062,14 +9073,34 @@ function applyReportFilter() {
         return;
       }
       saveAutomaticImportBackup();
+      const freePackage = ensureSpecialPackage('free_session');
       const newClients = importable.map(createFreeSessionClient);
+      const newPlans = newClients.map(client => {
+        const plan = {
+          id: uid('plan'),
+          clientId: client.id,
+          packageId: freePackage.id,
+          startDate: todayISO(),
+          checkMode: 'none',
+          saleType: 'included',
+          status: 'active',
+          planType: 'free_session',
+          paymentStatus: 'paid',
+          paymentMode: 'included',
+          totalPrice: 0,
+          createdAt: new Date().toISOString()
+        };
+        client.activePlanId = plan.id;
+        return plan;
+      });
       state.clients.push(...newClients);
+      state.plans.push(...newPlans);
       state.selectedClientId = newClients[0]?.id || state.selectedClientId;
       state.clientFilter = 'free_session';
       saveState(true);
       renderAll();
       closeModal('freeSessionImportModalBackdrop');
-      showToast(`${newClients.length} contatti free session importati.`, 'ok');
+      showToast(`${newClients.length} free session importate con pacchetto incluso e saldato.`, 'ok');
     }
 
     function openFreeSessionImportModal() {
@@ -9638,18 +9669,18 @@ function renderClientFormStickySummary() {
       const freeSessionDone = el.clientFreeSessionDone.value === 'yes';
       const packagePurchased = el.clientPackagePurchased.value === 'yes';
       const conversionStatus = el.clientConversionStatus.value || 'path_started';
-      const paymentMode = el.clientPaymentMode.value || 'single';
-      const installmentsTotal = paymentMode === 'installments' ? Math.min(3, Math.max(2, Number(el.clientInstallmentsTotal.value || 2))) : 2;
-      const installmentsPaid = paymentMode === 'installments' ? Math.max(0, Math.min(installmentsTotal, Number(el.clientInstallmentsPaid.value || 0))) : 0;
+      const paymentMode = serviceType === 'free_session' ? 'included' : (el.clientPaymentMode.value || 'single');
+      const installmentsTotal = paymentMode === 'installments' ? Math.min(3, Math.max(2, Number(el.clientInstallmentsTotal.value || 2))) : 1;
+      const installmentsPaid = paymentMode === 'installments' ? Math.max(0, Math.min(installmentsTotal, Number(el.clientInstallmentsPaid.value || 0))) : 1;
       // Se modalità rate: lo stato si deriva dalle rate (non dal select) — evita incoerenze
-      const paymentStatusRaw = el.clientPaymentStatus.value || 'unpaid';
+      const paymentStatusRaw = serviceType === 'free_session' ? 'paid' : (el.clientPaymentStatus.value || 'unpaid');
       const paymentStatus = paymentMode === 'installments'
         ? (installmentsPaid >= installmentsTotal ? 'paid' : installmentsPaid > 0 ? 'partial' : 'unpaid')
         : paymentStatusRaw;
-      const normalizedPaymentStatus = serviceType === 'free_session' ? null : paymentStatus;
-      const normalizedPaymentMode = serviceType === 'free_session' ? null : paymentMode;
-      const normalizedInstallmentsTotal = serviceType === 'free_session' ? 0 : installmentsTotal;
-      const normalizedInstallmentsPaid = serviceType === 'free_session' ? 0 : installmentsPaid;
+      const normalizedPaymentStatus = serviceType === 'free_session' ? 'paid' : paymentStatus;
+      const normalizedPaymentMode = serviceType === 'free_session' ? 'included' : paymentMode;
+      const normalizedInstallmentsTotal = serviceType === 'free_session' ? 1 : installmentsTotal;
+      const normalizedInstallmentsPaid = serviceType === 'free_session' ? 1 : installmentsPaid;
       let packageId = el.clientPackage.value;
       let pkg = getPackage(packageId);
       if (serviceType === 'free_session') {
@@ -9684,13 +9715,14 @@ function renderClientFormStickySummary() {
         client.notes = el.clientNotes.value.trim();
         client.serviceType = serviceType;
         client.freeSessionDone = freeSessionDone;
-        client.packagePurchased = serviceType === 'free_session' ? false : packagePurchased;
+        client.packagePurchased = serviceType === 'free_session' ? true : packagePurchased;
         client.conversionStatus = conversionStatus;
+        client.commercialStatus = serviceType === 'free_session' ? 'included_free_session' : (client.commercialStatus === 'included_free_session' ? '' : client.commercialStatus);
         client.paymentStatus = normalizedPaymentStatus;
         client.paymentMode = normalizedPaymentMode;
         client.installmentsTotal = normalizedInstallmentsTotal;
         client.installmentsPaid = normalizedInstallmentsPaid;
-        client.packagePrice = Number(el.clientPackagePrice?.value || pkg?.totalPrice || 0);
+        client.packagePrice = serviceType === 'free_session' ? 0 : Number(el.clientPackagePrice?.value || pkg?.totalPrice || 0);
         client.scheduleMode = scheduleMode;
         client.fixedTime = scheduleMode === 'same' ? fixedTime : '';
         client.fixedDays = scheduleMode === 'same' ? fixedDays : [];
@@ -9700,7 +9732,10 @@ function renderClientFormStickySummary() {
         plan.packageId = packageId;
         plan.startDate = el.clientStartDate.value;
         plan.checkMode = el.clientCheckMode.value;
-        plan.totalPrice = Number(el.clientPackagePrice?.value || pkg?.totalPrice || 0);
+        plan.totalPrice = serviceType === 'free_session' ? 0 : Number(el.clientPackagePrice?.value || pkg?.totalPrice || 0);
+        plan.planType = serviceType;
+        plan.paymentStatus = normalizedPaymentStatus;
+        plan.paymentMode = normalizedPaymentMode;
         state.lessons = state.lessons.map(lesson => lesson.planId === plan.id ? { ...lesson, duration: pkg.duration, lessonType: lesson.lessonType || serviceType } : lesson);
         saveState(true);
         renderAll();
@@ -9721,13 +9756,14 @@ function renderClientFormStickySummary() {
         shareToken: generateShareToken(),
         serviceType,
         freeSessionDone,
-        packagePurchased: serviceType === 'free_session' ? false : packagePurchased,
+        packagePurchased: serviceType === 'free_session' ? true : packagePurchased,
         conversionStatus,
+        commercialStatus: serviceType === 'free_session' ? 'included_free_session' : '',
         paymentStatus: normalizedPaymentStatus,
         paymentMode: normalizedPaymentMode,
         installmentsTotal: normalizedInstallmentsTotal,
         installmentsPaid: normalizedInstallmentsPaid,
-        packagePrice: Number(el.clientPackagePrice?.value || pkg?.totalPrice || 0),
+        packagePrice: serviceType === 'free_session' ? 0 : Number(el.clientPackagePrice?.value || pkg?.totalPrice || 0),
         scheduleMode,
         fixedTime: scheduleMode === 'same' ? fixedTime : '',
         fixedDays: scheduleMode === 'same' ? fixedDays : [],
@@ -9742,8 +9778,11 @@ function renderClientFormStickySummary() {
         startDate: el.clientStartDate.value,
         checkMode: el.clientCheckMode.value,
         saleType: 'new',
-        totalPrice: Number(el.clientPackagePrice?.value || pkg?.totalPrice || 0),
+        totalPrice: serviceType === 'free_session' ? 0 : Number(el.clientPackagePrice?.value || pkg?.totalPrice || 0),
         planType: serviceType,
+        status: 'active',
+        paymentStatus: normalizedPaymentStatus,
+        paymentMode: normalizedPaymentMode,
         createdAt: new Date().toISOString()
       };
       state.clients.unshift(clientPayload);

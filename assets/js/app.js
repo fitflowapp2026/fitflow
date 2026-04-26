@@ -3421,7 +3421,7 @@ function applyReportFilter() {
       const clients = state.clients.filter(client => {
         const urgency = urgencyMap.get(client.id);
         const serviceType = getClientServiceType(client);
-        const matchesQuery = !q || getClientFullName(client).toLowerCase().includes(q) || String(client.notes || '').toLowerCase().includes(q) || serviceTypeLabel(serviceType).toLowerCase().includes(q);
+        const matchesQuery = !q || getClientFullName(client).toLowerCase().includes(q) || String(client.phone || '').toLowerCase().includes(q) || String(client.notes || '').toLowerCase().includes(q) || serviceTypeLabel(serviceType).toLowerCase().includes(q);
         if (!matchesQuery) return false;
         if (state.clientFilter === 'urgent') return isManagedClient(client) && (urgency.level === 'bad' || urgency.level === 'warn');
         if (state.clientFilter === 'expiring') return isManagedClient(client) && urgency.remaining > 0 && urgency.remaining <= 3;
@@ -3459,8 +3459,12 @@ function applyReportFilter() {
       }
       const markup = buildClientListMarkup(sortedClients, urgencyMap);
       el.clientList.innerHTML = markup;
+      hydrateClientQuickActions(el.clientList);
       const drawerList = document.getElementById('clientListDrawer');
-      if (drawerList) drawerList.innerHTML = markup;
+      if (drawerList) {
+        drawerList.innerHTML = markup;
+        hydrateClientQuickActions(drawerList);
+      }
     }
 
     function getCalendarAnchorDate() {
@@ -4603,6 +4607,260 @@ function applyReportFilter() {
       });
     }
 
+    function toTitleCaseName(value) {
+      return String(value || '')
+        .trim()
+        .toLowerCase()
+        .replace(/(^|[\s'\-])([a-zà-ÿ])/g, (m, sep, ch) => sep + ch.toUpperCase());
+    }
+
+    function normalizePhoneDigits(phone) {
+      return String(phone || '').replace(/\D/g, '');
+    }
+
+    function phoneComparableKey(phone) {
+      let digits = normalizePhoneDigits(phone);
+      if (digits.startsWith('0039')) digits = digits.slice(4);
+      if (digits.startsWith('39') && digits.length > 10) digits = digits.slice(2);
+      return digits;
+    }
+
+    function normalizeItalianPhone(phone) {
+      let digits = normalizePhoneDigits(phone);
+      if (digits.startsWith('00')) digits = digits.slice(2);
+      if (!digits.startsWith('39')) digits = '39' + digits;
+      return digits;
+    }
+
+    function parseFreeSessionContactsInput(raw) {
+      const lines = String(raw || '').split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+      const existingPhones = new Set(state.clients.map(client => phoneComparableKey(client.phone)).filter(Boolean));
+      const seenPhones = new Set();
+      return lines.map((line, index) => {
+        const phoneMatch = line.match(/(?:\+?39[\s.\-\/]*)?3\d[\d\s.\-\/]{6,}\d/);
+        if (!phoneMatch) return { index, line, valid: false, duplicate: false, error: 'Telefono non trovato' };
+        const rawPhone = phoneMatch[0];
+        const phoneKey = phoneComparableKey(rawPhone);
+        if (!phoneKey || phoneKey.length < 9) return { index, line, valid: false, duplicate: false, error: 'Telefono non valido' };
+
+        const beforePhone = line.slice(0, phoneMatch.index).trim();
+        let firstName = '';
+        let lastName = '';
+        const tabParts = line.split(/\t+/).map(part => part.trim()).filter(Boolean);
+
+        if (tabParts.length >= 3 && normalizePhoneDigits(tabParts[2]).length >= 7) {
+          lastName = tabParts[0];
+          firstName = tabParts[1];
+        } else if (tabParts.length >= 4 && normalizePhoneDigits(tabParts[3]).length >= 7) {
+          lastName = tabParts[0];
+          firstName = tabParts[1];
+        } else {
+          const nameTokens = beforePhone.split(/\s+/).filter(Boolean);
+          if (nameTokens.length < 2) return { index, line, valid: false, duplicate: false, error: 'Nome/cognome incompleti' };
+          const firstTwoUpper = nameTokens.slice(0, 2).every(token => token === token.toUpperCase());
+          if (firstTwoUpper) {
+            lastName = nameTokens[0];
+            firstName = nameTokens[1];
+          } else {
+            firstName = nameTokens[0];
+            lastName = nameTokens.slice(1).join(' ');
+          }
+        }
+
+        firstName = toTitleCaseName(firstName);
+        lastName = toTitleCaseName(lastName);
+        const duplicate = existingPhones.has(phoneKey) || seenPhones.has(phoneKey);
+        seenPhones.add(phoneKey);
+        return {
+          index,
+          line,
+          valid: Boolean(firstName && lastName && phoneKey.length >= 9),
+          duplicate,
+          firstName,
+          lastName,
+          name: `${firstName} ${lastName}`.trim(),
+          phone: phoneKey,
+          error: duplicate ? 'Già presente' : ''
+        };
+      });
+    }
+
+    function saveAutomaticImportBackup() {
+      try {
+        const payload = {
+          exportedAt: new Date().toISOString(),
+          reason: 'before_free_session_import',
+          clients: state.clients,
+          packages: state.packages,
+          plans: state.plans,
+          lessons: state.lessons
+        };
+        localStorage.setItem(SESSION_BACKUP_KEY, JSON.stringify(payload));
+        localStorage.setItem(BACKUP_LATEST_KEY, JSON.stringify(payload));
+      } catch (error) {
+        console.warn('Backup automatico import non salvato:', error);
+      }
+    }
+
+    function renderFreeSessionImportPreview() {
+      const input = document.getElementById('freeSessionImportInput');
+      const preview = document.getElementById('freeSessionImportPreview');
+      const confirmBtn = document.getElementById('confirmFreeSessionImportBtn');
+      if (!input || !preview || !confirmBtn) return;
+      const parsed = parseFreeSessionContactsInput(input.value);
+      const importable = parsed.filter(item => item.valid && !item.duplicate);
+      confirmBtn.disabled = importable.length === 0;
+      confirmBtn.textContent = importable.length ? `Importa ${importable.length} contatti` : 'Importa contatti';
+      if (!parsed.length) {
+        preview.innerHTML = '<div class="empty">Incolla i contatti per vedere l\'anteprima.</div>';
+        return;
+      }
+      preview.innerHTML = parsed.map(item => {
+        const statusClass = item.valid && !item.duplicate ? 'ok' : 'warn';
+        const status = item.valid && !item.duplicate ? 'Importabile' : (item.error || 'Da controllare');
+        const rowClass = item.valid && !item.duplicate ? '' : (item.duplicate ? 'duplicate' : 'invalid');
+        const title = item.valid ? `${escapeHtml(item.firstName)} ${escapeHtml(item.lastName)}` : escapeHtml(item.line);
+        const phone = item.phone ? escapeHtml(item.phone) : '—';
+        return `
+          <div class="free-session-preview-row ${rowClass}">
+            <div class="free-session-preview-main">
+              <strong>${title}</strong>
+              <span>${phone}</span>
+            </div>
+            <span class="free-session-preview-status ${statusClass}">${escapeHtml(status)}</span>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function createFreeSessionClient(item) {
+      return {
+        id: uid('client'),
+        firstName: item.firstName,
+        lastName: item.lastName,
+        name: `${item.firstName} ${item.lastName}`.trim(),
+        email: '',
+        phone: item.phone,
+        notes: 'Importato da Free Session',
+        shareToken: generateShareToken(),
+        serviceType: 'free_session',
+        freeSessionDone: false,
+        packagePurchased: false,
+        conversionStatus: 'path_started',
+        paymentStatus: 'unpaid',
+        paymentMode: 'single',
+        installmentsTotal: 1,
+        installmentsPaid: 0,
+        packagePrice: 0,
+        scheduleMode: 'same',
+        fixedTime: '',
+        fixedDays: [],
+        variableSchedule: [],
+        sendCalendarInvite: false,
+        source: 'free_session_import',
+        createdAt: new Date().toISOString()
+      };
+    }
+
+    function importFreeSessionContacts() {
+      const input = document.getElementById('freeSessionImportInput');
+      if (!input) return;
+      const parsed = parseFreeSessionContactsInput(input.value);
+      const importable = parsed.filter(item => item.valid && !item.duplicate);
+      if (!importable.length) {
+        showToast('Nessun contatto importabile.', 'warn');
+        renderFreeSessionImportPreview();
+        return;
+      }
+      saveAutomaticImportBackup();
+      const newClients = importable.map(createFreeSessionClient);
+      state.clients.push(...newClients);
+      state.selectedClientId = newClients[0]?.id || state.selectedClientId;
+      state.clientFilter = 'free_session';
+      saveState(true);
+      renderAll();
+      closeModal('freeSessionImportModalBackdrop');
+      showToast(`${newClients.length} contatti free session importati.`, 'ok');
+    }
+
+    function openFreeSessionImportModal() {
+      const input = document.getElementById('freeSessionImportInput');
+      if (input) input.value = '';
+      renderFreeSessionImportPreview();
+      openModal('freeSessionImportModalBackdrop');
+      setTimeout(() => input?.focus(), 80);
+    }
+
+    function openWhatsAppForClient(client) {
+      if (!client?.phone) {
+        showToast('Numero di telefono mancante.', 'warn');
+        return;
+      }
+      const phone = normalizeItalianPhone(client.phone);
+      const message = `Ciao ${client.firstName || getClientFullName(client)}, sono Dejan di DSWORLD. Ti scrivo per organizzare la tua free session.`;
+      const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
+
+    function downloadClientVCard(client) {
+      if (!client?.phone) {
+        showToast('Numero di telefono mancante.', 'warn');
+        return;
+      }
+      const firstName = client.firstName || '';
+      const lastName = client.lastName || '';
+      const fullName = getClientFullName(client) || `${firstName} ${lastName}`.trim() || 'Contatto DSWORLD';
+      const phone = normalizeItalianPhone(client.phone);
+      const vcard = [
+        'BEGIN:VCARD',
+        'VERSION:3.0',
+        `N:${lastName};${firstName};;;`,
+        `FN:${fullName}`,
+        `TEL;TYPE=CELL:+${phone}`,
+        'ORG:DSWORLD',
+        'NOTE:Free session DSWORLD',
+        'END:VCARD'
+      ].join('\n');
+      const safeName = `${firstName || 'contatto'}_${lastName || 'dsworld'}`.replace(/[^a-z0-9_-]+/gi, '_');
+      const blob = new Blob([vcard], { type: 'text/vcard;charset=utf-8' });
+      fallbackDownload(blob, `${safeName}.vcf`);
+    }
+
+    function hydrateClientQuickActions(root) {
+      if (!root) return;
+      root.querySelectorAll('[data-client-id]').forEach(card => {
+        if (card.querySelector('.client-quick-actions')) return;
+        const client = getClient(card.getAttribute('data-client-id'));
+        if (!client?.phone) return;
+        const wrap = document.createElement('div');
+        wrap.className = 'client-quick-actions';
+        wrap.setAttribute('aria-label', 'Azioni rapide contatto');
+
+        const wa = document.createElement('button');
+        wa.className = 'client-quick-action whatsapp';
+        wa.type = 'button';
+        wa.textContent = 'WhatsApp';
+        wa.addEventListener('click', event => {
+          event.preventDefault();
+          event.stopPropagation();
+          openWhatsAppForClient(client);
+        });
+
+        const vcf = document.createElement('button');
+        vcf.className = 'client-quick-action';
+        vcf.type = 'button';
+        vcf.textContent = 'Salva contatto';
+        vcf.addEventListener('click', event => {
+          event.preventDefault();
+          event.stopPropagation();
+          downloadClientVCard(client);
+        });
+
+        wrap.append(wa, vcf);
+        card.appendChild(wrap);
+      });
+    }
+
     function exportBackup() {
       const payload = {
         exportedAt: new Date().toISOString(),
@@ -4958,6 +5216,20 @@ function renderClientFormStickySummary() {
     window.addEventListener('resize', handleResize);
     document.getElementById('exportBtn').addEventListener('click', exportBackup);
     document.getElementById('importInput').addEventListener('change', event => importBackup(event.target.files?.[0]));
+    document.getElementById('openFreeSessionImportBtn')?.addEventListener('click', openFreeSessionImportModal);
+    document.getElementById('openFreeSessionImportDrawerBtn')?.addEventListener('click', () => {
+      document.getElementById('sidebarDrawer')?.classList.remove('open');
+      document.getElementById('drawerOverlay')?.classList.remove('open');
+      unlockBodyScroll();
+      openFreeSessionImportModal();
+    });
+    document.getElementById('freeSessionImportInput')?.addEventListener('input', renderFreeSessionImportPreview);
+    document.getElementById('clearFreeSessionImportBtn')?.addEventListener('click', () => {
+      const input = document.getElementById('freeSessionImportInput');
+      if (input) input.value = '';
+      renderFreeSessionImportPreview();
+    });
+    document.getElementById('confirmFreeSessionImportBtn')?.addEventListener('click', importFreeSessionContacts);
     document.querySelectorAll('[data-close]').forEach(button => button.addEventListener('click', () => {
       const id = button.getAttribute('data-close');
       if (id === 'messagesModalBackdrop') {

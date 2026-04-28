@@ -4711,6 +4711,23 @@
       return lessonsTotal > 0 ? totalPrice / lessonsTotal : 0;
     }
 
+    function getPlanCashCollected(plan, pkg = null, client = null) {
+      if (!plan) return 0;
+      const clientObj = client || getClient(plan.clientId);
+      const packageObj = pkg || getPackage(plan.packageId);
+      if (getClientServiceType(clientObj) === 'free_session' || (plan.planType || plan.type) === 'free_session') return 0;
+      const totalPrice = getPlanTotalPrice(plan, packageObj, clientObj);
+      const paymentMode = clientObj?.paymentMode || plan.paymentMode || 'single';
+      const paymentStatus = clientObj?.paymentStatus || plan.paymentStatus || 'unpaid';
+      if (paymentStatus === 'paid') return totalPrice;
+      if (paymentMode === 'installments') {
+        const total = Math.max(1, Number(clientObj?.installmentsTotal || plan.installmentsTotal || 1));
+        const paid = Math.max(0, Math.min(total, Number(clientObj?.installmentsPaid || plan.installmentsPaid || 0)));
+        return totalPrice * (paid / total);
+      }
+      return 0;
+    }
+
     function ensureSpecialPackage(type, freeDone = false) {
       const matchName = type === 'free_session'
         ? 'FREE SESSION'
@@ -5722,13 +5739,12 @@
       const scheduled = lessons.filter(item => item.status === 'scheduled').length;
       const total = lessons.filter(item => item.status !== 'cancelled').length;
       const newClients = state.clients.filter(client => sameMonth(new Date(client.createdAt || client.startDate || new Date()), monthDate)).length;
-      const revenue = lessons
-        .filter(item => item.status === 'done')
-        .reduce((sum, lesson) => {
-          const plan = getPlan(lesson.planId);
-          const pkg = getPackage(plan?.packageId);
-          return sum + getPlanUnitValue(plan, pkg, getClient(lesson.clientId), lesson);
-        }, 0);
+      const soldPlans = state.plans.filter(plan => sameMonth(new Date(plan.createdAt || plan.startDate || new Date()), monthDate));
+      const revenue = soldPlans.reduce((sum, plan) => {
+        const client = getClient(plan.clientId);
+        const pkg = getPackage(plan.packageId);
+        return sum + getPlanCashCollected(plan, pkg, client);
+      }, 0);
       const snapshot = { lessons, done, cancelled, scheduled, total, newClients, revenue };
       derived.monthSnapshots.set(key, snapshot);
       return snapshot;
@@ -8770,13 +8786,11 @@ function applyReportFilter() {
       const outstandingClients = monthPaymentClients.filter(client => client.paymentStatus !== 'paid').length;
       const activeInstallments = monthPaymentClients.filter(client => client.paymentMode === 'installments' && Number(client.installmentsPaid || 0) < Number(client.installmentsTotal || 1)).length;
       const totalMonthlyLessons = lessons.filter(item => item.status !== 'cancelled').length;
-      const monthlyBalance = lessons
-        .filter(item => item.status === 'done')
-        .reduce((sum, lesson) => {
-          const plan = getPlan(lesson.planId);
-          const pkg = getPackage(plan?.packageId);
-          return sum + getPlanUnitValue(plan, pkg, getClient(lesson.clientId), lesson);
-        }, 0);
+      const monthlyBalance = soldPlans.reduce((sum, plan) => {
+        const client = getClient(plan.clientId);
+        const pkg = getPackage(plan.packageId);
+        return sum + getPlanCashCollected(plan, pkg, client);
+      }, 0);
 
       const freeCompleted = monthLessonsByType.free_session.filter(item => item.status === 'done').length;
       const freeScheduled = monthLessonsByType.free_session.filter(item => item.status === 'scheduled').length;
@@ -9454,6 +9468,13 @@ function renderClientFormStickySummary() {
       renderCalendar();
     }
 
+    function renderOpenSecondaryViews() {
+      if (el.reportModalBackdrop?.classList.contains('open')) renderReport();
+      if (document.getElementById('operazioniModalBackdrop')?.classList.contains('open')) renderOperazioniModal();
+      if (document.getElementById('atRiskModalBackdrop')?.classList.contains('open')) renderAtRiskModal();
+      if (document.getElementById('completamentoModalBackdrop')?.classList.contains('open')) renderCompletamentoModal();
+    }
+
     function renderAfterLessonChange() {
       renderHero();
       renderHeroGreeting();
@@ -9462,11 +9483,13 @@ function renderClientFormStickySummary() {
       renderClientList();
       renderCalendarHead();
       renderCalendar();
+      renderOpenSecondaryViews();
     }
 
     function renderAfterClientFocus() {
       renderSelectedClient();
       renderClientList();
+      renderOpenSecondaryViews();
     }
 
     function renderAfterPaymentChange() {
@@ -9475,6 +9498,7 @@ function renderClientFormStickySummary() {
       renderSelectedClient();
       renderAlerts();
       renderClientList();
+      renderOpenSecondaryViews();
     }
 
     let _rendering = false;
@@ -9707,9 +9731,11 @@ function renderClientFormStickySummary() {
         const client = getClient(currentId);
         const plan = getActivePlan(currentId);
         if (!client || !plan) return;
+        const oldClientName = getClientFullName(client);
         client.firstName = firstName;
         client.lastName = lastName;
         client.name = name;
+        const newClientName = getClientFullName(client);
         client.email = clientEmail;
         client.sendCalendarInvite = sendCalendarInvite;
         client.notes = el.clientNotes.value.trim();
@@ -9736,10 +9762,24 @@ function renderClientFormStickySummary() {
         plan.planType = serviceType;
         plan.paymentStatus = normalizedPaymentStatus;
         plan.paymentMode = normalizedPaymentMode;
-        state.lessons = state.lessons.map(lesson => lesson.planId === plan.id ? { ...lesson, duration: pkg.duration, lessonType: lesson.lessonType || serviceType } : lesson);
+        const lessonsToResyncForName = [];
+        state.lessons = state.lessons.map(lesson => {
+          if (lesson.clientId !== client.id) return lesson;
+          const updatedLesson = lesson.planId === plan.id
+            ? { ...lesson, duration: pkg.duration, lessonType: lesson.lessonType || serviceType }
+            : { ...lesson };
+          if (oldClientName !== newClientName) {
+            updatedLesson.clientName = newClientName;
+            lessonsToResyncForName.push(updatedLesson.id);
+          }
+          return updatedLesson;
+        });
         saveState(true);
         renderAll();
         closeModal('clientModalBackdrop');
+        if (oldClientName !== newClientName) {
+          lessonsToResyncForName.forEach(id => requestGoogleLessonSync('upsert', id));
+        }
         showToast('Cliente aggiornato.');
         return;
       }

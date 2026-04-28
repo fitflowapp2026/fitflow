@@ -4711,22 +4711,6 @@
       return lessonsTotal > 0 ? totalPrice / lessonsTotal : 0;
     }
 
-    function getPlanCashCollected(plan, pkg = null, client = null) {
-      if (!plan) return 0;
-      const clientObj = client || getClient(plan.clientId);
-      const packageObj = pkg || getPackage(plan.packageId);
-      if (getClientServiceType(clientObj) === 'free_session' || (plan.planType || plan.type) === 'free_session') return 0;
-      const totalPrice = getPlanTotalPrice(plan, packageObj, clientObj);
-      const paymentMode = clientObj?.paymentMode || plan.paymentMode || 'single';
-      const paymentStatus = clientObj?.paymentStatus || plan.paymentStatus || 'unpaid';
-      if (paymentStatus === 'paid') return totalPrice;
-      if (paymentMode === 'installments') {
-        const total = Math.max(1, Number(clientObj?.installmentsTotal || plan.installmentsTotal || 1));
-        const paid = Math.max(0, Math.min(total, Number(clientObj?.installmentsPaid || plan.installmentsPaid || 0)));
-        return totalPrice * (paid / total);
-      }
-      return 0;
-    }
 
     function ensureSpecialPackage(type, freeDone = false) {
       const matchName = type === 'free_session'
@@ -5739,12 +5723,13 @@
       const scheduled = lessons.filter(item => item.status === 'scheduled').length;
       const total = lessons.filter(item => item.status !== 'cancelled').length;
       const newClients = state.clients.filter(client => sameMonth(new Date(client.createdAt || client.startDate || new Date()), monthDate)).length;
-      const soldPlans = state.plans.filter(plan => sameMonth(new Date(plan.createdAt || plan.startDate || new Date()), monthDate));
-      const revenue = soldPlans.reduce((sum, plan) => {
-        const client = getClient(plan.clientId);
-        const pkg = getPackage(plan.packageId);
-        return sum + getPlanCashCollected(plan, pkg, client);
-      }, 0);
+      const revenue = lessons
+        .filter(item => item.status === 'done')
+        .reduce((sum, lesson) => {
+          const plan = getPlan(lesson.planId);
+          const pkg = getPackage(plan?.packageId);
+          return sum + getPlanUnitValue(plan, pkg, getClient(lesson.clientId), lesson);
+        }, 0);
       const snapshot = { lessons, done, cancelled, scheduled, total, newClients, revenue };
       derived.monthSnapshots.set(key, snapshot);
       return snapshot;
@@ -8786,11 +8771,13 @@ function applyReportFilter() {
       const outstandingClients = monthPaymentClients.filter(client => client.paymentStatus !== 'paid').length;
       const activeInstallments = monthPaymentClients.filter(client => client.paymentMode === 'installments' && Number(client.installmentsPaid || 0) < Number(client.installmentsTotal || 1)).length;
       const totalMonthlyLessons = lessons.filter(item => item.status !== 'cancelled').length;
-      const monthlyBalance = soldPlans.reduce((sum, plan) => {
-        const client = getClient(plan.clientId);
-        const pkg = getPackage(plan.packageId);
-        return sum + getPlanCashCollected(plan, pkg, client);
-      }, 0);
+      const monthlyBalance = lessons
+        .filter(item => item.status === 'done')
+        .reduce((sum, lesson) => {
+          const plan = getPlan(lesson.planId);
+          const pkg = getPackage(plan?.packageId);
+          return sum + getPlanUnitValue(plan, pkg, getClient(lesson.clientId), lesson);
+        }, 0);
 
       const freeCompleted = monthLessonsByType.free_session.filter(item => item.status === 'done').length;
       const freeScheduled = monthLessonsByType.free_session.filter(item => item.status === 'scheduled').length;

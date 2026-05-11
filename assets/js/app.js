@@ -1,6 +1,8 @@
 
-    const APP_VERSION = '1.1.0';
+    const APP_VERSION = '1.2.0';
     const STORAGE_KEY = 'dsworld_clienti_v2';
+    const ONBOARDING_KEY = 'dsworld_onboarding_done_v1';
+    const PUSH_VAPID_KEY = ''; /* Inserisci qui la tua VAPID public key dopo aver configurato il server push */
     const LEGACY_KEY = 'fitplanner_clienti_v1';
     const BACKUP_LATEST_KEY = 'dsworld_clienti_backup_latest_v1';
     const BACKUP_HISTORY_KEY = 'dsworld_clienti_backup_history_v1';
@@ -541,15 +543,31 @@
       }) || null;
     }
 
-    async function refreshGoogleBlockingAvailability(force = false) {
+    async function refreshGoogleBlockingAvailability(force = false, explicitRange = null) {
       if (!cloud.user || !cloud.google?.connected) {
         state.googleBlockingBusy = [];
         state.googleBlockingBusyKey = '';
         return;
       }
-      const range = getVisibleAvailabilityRange();
+      const range = explicitRange || getVisibleAvailabilityRange();
       const key = `${range.start}|${range.end}`;
-      if (!force && state.googleBlockingBusyKey === key) return;
+      if (!force && !explicitRange && state.googleBlockingBusyKey === key) return;
+      /* Se il range esplicito è OLTRE il range già cachato, lo unisce invece di sostituirlo.
+         Questo evita di perdere i busy visibili mentre si pianifica su mesi futuri. */
+      if (explicitRange) {
+        try {
+          const result = await googleApi('google-availability', { method: 'POST', body: range });
+          const extra = Array.isArray(result.busy) ? result.busy : [];
+          /* Deduplicazione per start+end */
+          const existing = state.googleBlockingBusy || [];
+          const existingKeys = new Set(existing.map(b => `${b.start}|${b.end}`));
+          const merged = [...existing, ...extra.filter(b => !existingKeys.has(`${b.start}|${b.end}`))];
+          state.googleBlockingBusy = merged;
+        } catch (error) {
+          console.error('[DSWORLD] refreshGoogleBlockingAvailability (explicit range):', error);
+        }
+        return;
+      }
       state.googleBlockingBusyKey = key;
       try {
         const result = await googleApi('google-availability', { method: 'POST', body: range });
@@ -982,6 +1000,8 @@
       /* Riavvia Realtime per il nuovo utente */
       refreshUnreadMessages();
       initRealtimeMessages();
+      /* Push banner dopo login */
+      maybeShowPushBanner();
       renderAll();
     }
 
@@ -2671,6 +2691,15 @@ function applyReportFilter() {
       const stats = planStats(plan);
       if (!stats.remaining) { showToast('Nessuna lezione da pianificare.', 'warn'); return; }
 
+      /* Pre-carica i busy Google per i prossimi 6 mesi in background —
+         necessario quando si pianifica su un range non ancora visibile nel calendario */
+      if (cloud.user && cloud.google?.connected) {
+        const futureStart = todayISO();
+        const futureEnd = toISO(addMonths(new Date(), 6));
+        refreshGoogleBlockingAvailability(false, { start: `${futureStart}T00:00:00`, end: `${futureEnd}T23:59:59` })
+          .catch(err => console.warn('[DSWORLD] Pre-fetch Google busy failed:', err));
+      }
+
       /* Pre-compila: giorni da fixedDays → storia lezioni → default lunedì */
       const suggestedDays = client.fixedDays?.length
         ? client.fixedDays
@@ -4240,6 +4269,7 @@ function applyReportFilter() {
         showToast('Pacchetto pieno: non puoi riattivare questa lezione.', 'warn');
         return;
       }
+      const previousStatus = lesson.status;
       lesson.status = status;
       // Sincronizza stato al partner DUO
       const duoPartnerStatus = getDuoPartner(lesson);
@@ -4249,7 +4279,25 @@ function applyReportFilter() {
       }
       saveState(true);
       renderAfterLessonChange();
-      requestGoogleLessonSync('upsert', lesson);
+
+      /* Fix Bug 3: se la lezione viene annullata e ha un googleEventId,
+         cancelliamo l'evento su Google (non solo aggiornaimo lo status).
+         Questo previene che un evento annullato rimanga visibile su Google Calendar. */
+      if (status === 'cancelled' && lesson.googleEventId) {
+        /* Costruiamo il payload prima di modificare, con l'eventId preservato */
+        const cancelPayload = buildGoogleSyncPayload(lesson);
+        if (cancelPayload) {
+          requestGoogleLessonSync('delete', cancelPayload);
+        }
+      } else {
+        requestGoogleLessonSync('upsert', lesson);
+      }
+
+      /* Invalida busy cache quando lo stato cambia tra scheduled/cancelled */
+      if ((status === 'cancelled' || previousStatus === 'cancelled') && cloud.google?.connected) {
+        state.googleBlockingBusyKey = '';
+      }
+
       openLessonModal(lesson.id);
       showToast('Stato aggiornato.', 'ok');
 
@@ -4269,12 +4317,20 @@ function applyReportFilter() {
         showToast('Conflitto di orario.', 'warn');
         return;
       }
+      const oldTime = lesson.time;
       lesson.time = time;
       const client = getClient(lesson.clientId);
       if (client?.scheduleMode === 'same') client.fixedTime = time;
       saveState(true);
       renderAfterLessonChange();
+      /* Upsert Google: il payload lazy leggerà il nuovo time dal lesson aggiornato.
+         L'evento vecchio viene aggiornato (non duplicato) perché il googleEventId è preservato. */
       requestGoogleLessonSync('upsert', lesson);
+      /* Se l'orario è cambiato, invalida il busy cache per il giorno interessato
+         così il calendario non mostra più lo slot come occupato dal vecchio evento */
+      if (oldTime !== time && cloud.google?.connected) {
+        state.googleBlockingBusyKey = '';
+      }
       openLessonModal(lesson.id);
       showToast('Orario aggiornato.', 'ok');
     }
@@ -4366,7 +4422,15 @@ function applyReportFilter() {
       if (!wasCancelled) {
         lesson.status = 'cancelled';
         saveState();
-        requestGoogleLessonSync('upsert', lesson);
+        /* Se aveva un googleEventId, cancella l'evento prima di crearne uno nuovo */
+        if (lesson.googleEventId) {
+          const cancelPayload = buildGoogleSyncPayload(lesson);
+          if (cancelPayload) requestGoogleLessonSync('delete', cancelPayload);
+        } else {
+          requestGoogleLessonSync('upsert', lesson);
+        }
+        /* Invalida busy cache: lo slot vecchio torna libero */
+        if (cloud.google?.connected) state.googleBlockingBusyKey = '';
       }
       const ok = createLesson({
         clientId: lesson.clientId,
@@ -6252,7 +6316,170 @@ function renderClientFormStickySummary() {
       requestAnimationFrame(() => document.getElementById('mpConfirmBtn')?.focus());
     }
 
-        async function initApp() {
+    /* ═══════════════════════════════════════════════════════════
+       ONBOARDING — wizard 3 step per nuovi utenti
+       Mostrato una sola volta, controllato via localStorage.
+    ═══════════════════════════════════════════════════════════ */
+    function shouldShowOnboarding() {
+      try {
+        if (localStorage.getItem(ONBOARDING_KEY)) return false;
+      } catch(_) {}
+      /* Mostra solo se non ci sono né clienti né piani (account vergine) */
+      return state.clients.length === 0 && state.plans.length === 0;
+    }
+
+    function markOnboardingDone() {
+      try { localStorage.setItem(ONBOARDING_KEY, '1'); } catch(_) {}
+    }
+
+    function openOnboardingModal() {
+      const backdrop = document.getElementById('onboardingModalBackdrop');
+      if (!backdrop) return;
+      let step = 1;
+      const totalSteps = 3;
+
+      const steps = [
+        {
+          icon: '📦',
+          title: 'Crea i tuoi pacchetti',
+          text: 'Definisci i pacchetti che offri ai clienti: numero di lezioni, durata e prezzo. Puoi crearli subito o usare quelli di default.',
+          cta: 'Avanti',
+          action: null
+        },
+        {
+          icon: '👤',
+          title: 'Aggiungi il primo cliente',
+          text: 'Inserisci nome, pacchetto acquistato e giorni preferiti. DSWORLD pianifica automaticamente tutte le lezioni del percorso.',
+          cta: 'Avanti',
+          action: null
+        },
+        {
+          icon: '📅',
+          title: 'Gestisci tutto dal calendario',
+          text: 'Agenda, incassi, messaggi e portale cliente. Tocca un giorno per vedere gli slot liberi e fissare una lezione in un tap.',
+          cta: 'Inizia',
+          action: null
+        }
+      ];
+
+      function renderStep() {
+        const s = steps[step - 1];
+        const dots = Array.from({ length: totalSteps }, (_, i) =>
+          `<span style="width:8px;height:8px;border-radius:50%;background:${i + 1 === step ? 'var(--accent)' : 'rgba(255,255,255,0.2)'};display:inline-block;transition:background 0.25s;"></span>`
+        ).join('');
+        document.getElementById('onboardingContent').innerHTML = `
+          <div style="text-align:center;padding:8px 0 4px;">
+            <div style="font-size:3rem;margin-bottom:16px;">${s.icon}</div>
+            <h3 style="font-size:1.2rem;font-weight:800;margin:0 0 12px;">${escapeHtml(s.title)}</h3>
+            <p style="font-size:0.92rem;color:var(--muted);line-height:1.65;margin:0 0 24px;">${escapeHtml(s.text)}</p>
+            <div style="display:flex;justify-content:center;gap:6px;margin-bottom:24px;">${dots}</div>
+            <div style="display:grid;gap:10px;">
+              <button id="onboardingCtaBtn" class="btn btn-primary" style="width:100%;padding:14px;">${escapeHtml(s.cta)}</button>
+              ${step === 1 ? `<button id="onboardingSkipBtn" class="btn btn-ghost btn-small" style="opacity:0.6;">Salta introduzione</button>` : ''}
+            </div>
+          </div>
+        `;
+        document.getElementById('onboardingCtaBtn')?.addEventListener('click', () => {
+          if (step < totalSteps) {
+            step++;
+            renderStep();
+          } else {
+            closeOnboarding(true);
+          }
+        });
+        document.getElementById('onboardingSkipBtn')?.addEventListener('click', () => closeOnboarding(false));
+      }
+
+      function closeOnboarding(openPackages = false) {
+        markOnboardingDone();
+        backdrop.classList.remove('open');
+        unlockBodyScroll();
+        if (openPackages) {
+          /* Dopo il wizard apre il modal pacchetti per guidare la creazione */
+          setTimeout(() => {
+            renderPackages();
+            openModal('packagesModalBackdrop');
+          }, 250);
+        }
+      }
+
+      renderStep();
+      backdrop.classList.add('open');
+      lockBodyScroll();
+      requestAnimationFrame(() => document.getElementById('onboardingCtaBtn')?.focus());
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       PUSH NOTIFICATIONS — Web Push API
+       Richiede: VAPID key configurata + Netlify Function push-subscribe
+                 + service worker con push handler
+    ═══════════════════════════════════════════════════════════ */
+    const PUSH_SUB_KEY = 'dsworld_push_subscribed_v1';
+
+    function isPushSupported() {
+      return 'Notification' in window && 'PushManager' in window && 'serviceWorker' in navigator;
+    }
+
+    function isPushSubscribed() {
+      try { return localStorage.getItem(PUSH_SUB_KEY) === '1'; } catch(_) { return false; }
+    }
+
+    async function requestPushPermission() {
+      if (!isPushSupported()) {
+        showToast('Notifiche push non supportate su questo dispositivo.', 'warn');
+        return false;
+      }
+      if (!PUSH_VAPID_KEY) {
+        console.warn('[DSWORLD] PUSH_VAPID_KEY non configurata — push disabilitate.');
+        return false;
+      }
+      try {
+        const permission = await Notification.requestPermission();
+        if (permission !== 'granted') {
+          showToast('Permesso notifiche negato.', 'warn');
+          return false;
+        }
+        const reg = await navigator.serviceWorker.ready;
+        const sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(PUSH_VAPID_KEY)
+        });
+        /* Salva la subscription sul server via Netlify Function */
+        const token = getAuthToken();
+        if (token) {
+          await fetch(`${GOOGLE_FN_BASE}/push-subscribe`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ subscription: sub.toJSON() })
+          });
+        }
+        try { localStorage.setItem(PUSH_SUB_KEY, '1'); } catch(_) {}
+        showToast('Notifiche push attivate!', 'ok');
+        return true;
+      } catch (err) {
+        console.error('[DSWORLD] Push subscribe error:', err);
+        showToast('Attivazione notifiche non riuscita.', 'error');
+        return false;
+      }
+    }
+
+    function urlBase64ToUint8Array(base64String) {
+      const padding = '='.repeat((4 - base64String.length % 4) % 4);
+      const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+      const rawData = window.atob(base64);
+      return Uint8Array.from([...rawData].map(char => char.charCodeAt(0)));
+    }
+
+    /* Banner push — mostrato una volta sola dopo il login se non già iscritto */
+    function maybeShowPushBanner() {
+      if (!isPushSupported()) return;
+      if (isPushSubscribed()) return;
+      if (!cloud.user) return;
+      if (!PUSH_VAPID_KEY) return;
+      /* Mostra il banner push nella UI se presente */
+      const banner = document.getElementById('pushPermissionBanner');
+      if (banner) banner.classList.add('show');
+    }
       loadStateLocal();
       resetPackageForm();
       el.clientStartDate.value = todayISO();
@@ -6311,6 +6538,34 @@ function renderClientFormStickySummary() {
       /* Prima carica il conteggio, poi avvia Realtime */
       refreshUnreadMessages();
       initRealtimeMessages();
+
+      /* ── Onboarding wizard — prima apertura ───────────────── */
+      if (shouldShowOnboarding()) {
+        setTimeout(() => openOnboardingModal(), 600);
+      }
+
+      /* ── Push notifications banner ────────────────────────── */
+      maybeShowPushBanner();
+
+      /* ── Inizializza bottone push nel modal account ────────── */
+      document.getElementById('enablePushBtn')?.addEventListener('click', async () => {
+        const ok = await requestPushPermission();
+        if (ok) {
+          const banner = document.getElementById('pushPermissionBanner');
+          if (banner) banner.classList.remove('show');
+          document.getElementById('enablePushBtn')?.closest('.push-row')?.remove();
+        }
+      });
+      document.getElementById('pushBannerEnableBtn')?.addEventListener('click', async () => {
+        const ok = await requestPushPermission();
+        if (ok) {
+          document.getElementById('pushPermissionBanner')?.classList.remove('show');
+        }
+      });
+      document.getElementById('pushBannerDismissBtn')?.addEventListener('click', () => {
+        document.getElementById('pushPermissionBanner')?.classList.remove('show');
+        try { localStorage.setItem('dsworld_push_banner_dismissed', '1'); } catch(_) {}
+      });
 
       /* ── PWA: register Service Worker ────────────────────── */
       if ('serviceWorker' in navigator) {

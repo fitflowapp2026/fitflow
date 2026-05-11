@@ -70,6 +70,7 @@
       calendarQuickSearch: '',
       googleBlockingBusy: [],
       googleBlockingBusyKey: '',
+      pendingGoogleDeletes: [],
       pendingAdd: null,
       pendingTimeValue: '',
       reportOpenedOnce: false,
@@ -536,7 +537,26 @@
     }
 
     function getExternalBusyOverlap({ date, time, duration }) {
-      const start = new Date(`${date}T${String(time).slice(0,5)}:00`);
+      /* Costruisce la data in ora di Roma per confrontarla correttamente con i blocchi
+         Google (UTC ISO). Senza timezone new Date("2025-06-01T09:00:00") è interpretata
+         come locale ma in estate (UTC+2) sfasa rispetto ai blocchi Google in UTC. */
+      let start;
+      try {
+        const ref = new Date(`${date}T${String(time).slice(0,5)}:00`);
+        const romeStr = ref.toLocaleString('en-US', { timeZone: 'Europe/Rome', hour12: false,
+          year: 'numeric', month: '2-digit', day: '2-digit',
+          hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        const [datePart, timePart] = romeStr.split(', ');
+        const [mo, dy, yr] = datePart.split('/');
+        const romeDate = new Date(`${yr}-${mo}-${dy}T${timePart}Z`);
+        const offsetMin = Math.round((romeDate - ref) / 60000);
+        const sign = offsetMin >= 0 ? '+' : '-';
+        const absH = String(Math.floor(Math.abs(offsetMin) / 60)).padStart(2, '0');
+        const absM = String(Math.abs(offsetMin) % 60).padStart(2, '0');
+        start = new Date(`${date}T${String(time).slice(0,5)}:00${sign}${absH}:${absM}`);
+      } catch (_) {
+        start = new Date(`${date}T${String(time).slice(0,5)}:00`);
+      }
       const end = new Date(start.getTime() + Number(duration || 60) * 60000);
       return (state.googleBlockingBusy || []).find(block => {
         const bStart = new Date(block.start);
@@ -636,7 +656,8 @@
         lessons: state.lessons,
         selectedClientId: state.selectedClientId,
         viewDate: toISO(state.viewDate),
-        dismissedAlerts: state.dismissedAlerts || []
+        dismissedAlerts: state.dismissedAlerts || [],
+        pendingGoogleDeletes: state.pendingGoogleDeletes || []
       };
     }
 
@@ -866,6 +887,7 @@
       state.selectedClientId = parsed.selectedClientId || null;
       state.viewDate = parsed.viewDate ? startOfMonth(fromISO(parsed.viewDate)) : startOfMonth(new Date());
       state.dismissedAlerts = Array.isArray(parsed.dismissedAlerts) ? parsed.dismissedAlerts : [];
+      state.pendingGoogleDeletes = Array.isArray(parsed.pendingGoogleDeletes) ? parsed.pendingGoogleDeletes : [];
 
       let normalizedPlans = false;
       state.plans.forEach(plan => {
@@ -999,6 +1021,8 @@
       refreshUnreadMessages();
       initRealtimeMessages();
       maybeShowPushBanner();
+      /* Flush eventi in coda da sessioni precedenti offline */
+      flushPendingGoogleDeletes().catch(err => console.warn('[DSWORLD] flush on login:', err));
       renderAll();
     }
 
@@ -1158,6 +1182,34 @@
       };
     }
 
+    function queueGoogleDelete(googleEventId) {
+      if (!googleEventId) return;
+      if (!Array.isArray(state.pendingGoogleDeletes)) state.pendingGoogleDeletes = [];
+      if (!state.pendingGoogleDeletes.includes(googleEventId)) {
+        state.pendingGoogleDeletes.push(googleEventId);
+        saveState();
+      }
+    }
+
+    async function flushPendingGoogleDeletes() {
+      if (!cloud.user || !cloud.google?.connected) return;
+      if (!Array.isArray(state.pendingGoogleDeletes) || !state.pendingGoogleDeletes.length) return;
+      const toDelete = [...state.pendingGoogleDeletes];
+      const succeeded = [];
+      for (const eventId of toDelete) {
+        try {
+          await googleApi('google-sync', { method: 'POST', body: { action: 'delete', lesson: { googleEventId: eventId } } });
+          succeeded.push(eventId);
+        } catch (err) {
+          console.warn('[DSWORLD] flushPendingGoogleDeletes failed for', eventId, err);
+        }
+      }
+      if (succeeded.length) {
+        state.pendingGoogleDeletes = state.pendingGoogleDeletes.filter(id => !succeeded.includes(id));
+        saveState();
+      }
+    }
+
     function queueGoogleTask(task, { silent = true } = {}) {
       if (!cloud.googleQueue) cloud.googleQueue = Promise.resolve();
       cloud.googleQueue = cloud.googleQueue.then(task).catch(error => {
@@ -1195,59 +1247,103 @@
       }
 
       return queueGoogleTask(async () => {
-        // Costruzione payload lazy per upsert: in questo momento il task precedente in coda
-        // ha già salvato il googleEventId reale, quindi il payload sarà sempre aggiornato.
+        /* Payload lazy per upsert: legge googleEventId aggiornato dal task precedente */
         const payload = isDelete ? eagerPayload : buildGoogleSyncPayload(lessonLike);
         if (!payload) return { skipped: true };
-        if (!isDelete && shouldSkipGoogleCreateForLesson(action, payload, { allowCreateWithoutEventId })) return { skipped: true, reason: 'missing_google_event_id' };
-
+        /* FIX: upsert su lezione cancelled con googleEventId → auto-converte in delete
+           Evita che lezioni annullate rimangano visibili su Google Calendar */
+        let effectiveAction = action;
+        if (!isDelete && payload.status === 'cancelled' && payload.googleEventId) {
+          effectiveAction = 'delete';
+          const liveLesson = getLesson(payload.id);
+          if (liveLesson) { liveLesson.googleEventId = ''; saveState(); }
+        } else if (!isDelete && shouldSkipGoogleCreateForLesson(action, payload, { allowCreateWithoutEventId })) {
+          return { skipped: true, reason: 'missing_google_event_id' };
+        }
         cloud.google.syncing = true;
         cloud.google.lastError = '';
         updateGoogleUi();
-        const result = await googleApi('google-sync', { method: 'POST', body: { action, lesson: payload } });
-        cloud.google.syncing = false;
-        cloud.google.lastSyncAt = new Date().toISOString();
-        cloud.google.lastError = '';
-        if (action !== 'delete' && result?.googleEventId) {
-          const liveLesson = getLesson(payload.id);
-          if (liveLesson && liveLesson.googleEventId !== result.googleEventId) {
-            liveLesson.googleEventId = result.googleEventId;
-            saveState();
+        try {
+          const result = await googleApi('google-sync', { method: 'POST', body: { action: effectiveAction, lesson: payload } });
+          cloud.google.syncing = false;
+          cloud.google.lastSyncAt = new Date().toISOString();
+          cloud.google.lastError = '';
+          if (effectiveAction !== 'delete' && result?.googleEventId) {
+            const liveLesson = getLesson(payload.id);
+            if (liveLesson && liveLesson.googleEventId !== result.googleEventId) {
+              liveLesson.googleEventId = result.googleEventId;
+              saveState();
+            }
           }
+          if (result?.calendarName) cloud.google.calendarName = result.calendarName;
+          updateGoogleUi();
+          return result;
+        } catch (err) {
+          cloud.google.syncing = false;
+          /* Delete fallito → accoda per retry automatico al prossimo sync */
+          if (effectiveAction === 'delete' && payload.googleEventId) {
+            queueGoogleDelete(payload.googleEventId);
+          }
+          throw err;
         }
-        if (result?.calendarName) cloud.google.calendarName = result.calendarName;
-        updateGoogleUi();
-        return result;
       }, { silent: isDelete ? false : silent });
     }
 
     async function syncAllLessonsToGoogle(showToastOnSuccess = true) {
-      if (!cloud.user) {
-        showToast('Accedi prima.');
-        return false;
-      }
-      if (!cloud.google?.connected) {
-        showToast('Collega Google Calendar.');
-        return false;
-      }
-      const lessons = state.lessons.map(item => buildGoogleSyncPayload(item)).filter(Boolean);
+      if (!cloud.user) { showToast('Accedi prima.'); return false; }
+      if (!cloud.google?.connected) { showToast('Collega Google Calendar.'); return false; }
       cloud.google.syncing = true;
       cloud.google.lastError = '';
       updateGoogleUi();
       try {
-        const result = await googleApi('google-replay-sync', { method: 'POST', body: { lessons } });
-        let changed = false;
-        (result.mappings || []).forEach(mapping => {
-          const lesson = getLesson(mapping.id);
-          if (lesson && mapping.googleEventId && lesson.googleEventId !== mapping.googleEventId) {
-            lesson.googleEventId = mapping.googleEventId;
-            changed = true;
+        /* 1. Flush pending deletes — eventi orfani da sync precedenti falliti */
+        await flushPendingGoogleDeletes();
+        /* 2. Separa: active (scheduled/done) → upsert batch; cancelled con eventId → delete */
+        const activePayloads = [];
+        const toDeleteEventIds = [];
+        state.lessons.forEach(lesson => {
+          const payload = buildGoogleSyncPayload(lesson);
+          if (!payload) return;
+          if (lesson.status === 'cancelled') {
+            if (lesson.googleEventId) {
+              toDeleteEventIds.push(lesson.googleEventId);
+              lesson.googleEventId = '';
+            }
+          } else {
+            activePayloads.push(payload);
           }
         });
-        if (changed) saveState();
+        /* 3. Batch upsert per le lezioni attive */
+        let synced = 0;
+        if (activePayloads.length) {
+          const result = await googleApi('google-replay-sync', { method: 'POST', body: { lessons: activePayloads } });
+          let changed = false;
+          (result.mappings || []).forEach(mapping => {
+            const lesson = getLesson(mapping.id);
+            if (lesson && mapping.googleEventId && lesson.googleEventId !== mapping.googleEventId) {
+              lesson.googleEventId = mapping.googleEventId;
+              changed = true;
+            }
+          });
+          synced = result.synced || 0;
+          if (changed) saveState();
+        }
+        /* 4. Delete espliciti per le cancelled — se fallisce, accoda per retry */
+        for (const eventId of toDeleteEventIds) {
+          try {
+            await googleApi('google-sync', { method: 'POST', body: { action: 'delete', lesson: { googleEventId: eventId } } });
+          } catch (err) {
+            console.warn('[DSWORLD] syncAll delete failed for', eventId, '— queued for retry');
+            queueGoogleDelete(eventId);
+          }
+        }
+        if (toDeleteEventIds.length || activePayloads.length) saveState();
         cloud.google.lastSyncAt = new Date().toISOString();
         updateGoogleUi();
-        if (showToastOnSuccess) showToast(`Google aggiornato: ${result.synced || 0} lezioni.`);
+        if (showToastOnSuccess) {
+          const delMsg = toDeleteEventIds.length ? `, ${toDeleteEventIds.length} rimossi` : '';
+          showToast(`Google aggiornato: ${synced} lezioni${delMsg}.`);
+        }
         return true;
       } catch (error) {
         console.error(error);
@@ -1606,7 +1702,10 @@
       if (changed) {
         saveState();
         if (!_rendering) renderAfterLessonChange();
-        changedLessons.forEach(id => requestGoogleLessonSync('upsert', id));
+        /* Non inviamo upsert a Google per le lezioni auto-completate:
+           l'evento è già presente e corretto su Google Calendar.
+           Inviare un upsert per ogni 'done' causava re-creazioni su rete lenta
+           e loop problematici con il polling periodico dell'autoComplete. */
         /* Free session auto-completata → proponi conversione se nessun modal è aperto */
         const noModal = !document.querySelector('.modal-backdrop.open, .confirm-modal-backdrop.open, .fsc-backdrop.open');
         if (noModal) {
@@ -5594,7 +5693,12 @@ function renderClientFormStickySummary() {
         renderAll();
         closeModal('clientModalBackdrop');
         if (oldClientName !== newClientName) {
-          lessonsToResyncForName.forEach(id => requestGoogleLessonSync('upsert', id));
+          /* Resync solo lezioni scheduled con googleEventId — le cancelled vengono
+             auto-cancellate da requestGoogleLessonSync, le done non vanno toccate */
+          lessonsToResyncForName.forEach(id => {
+            const l = getLesson(id);
+            if (l && l.status === 'scheduled' && l.googleEventId) requestGoogleLessonSync('upsert', l);
+          });
         }
         showToast('Cliente aggiornato.');
         return;
@@ -6501,7 +6605,10 @@ function renderClientFormStickySummary() {
       }
       if (googleFlag === 'connected') {
         await refreshGoogleStatus();
-        if (cloud.google.connected) await syncAllLessonsToGoogle(false);
+        if (cloud.google.connected) {
+          await flushPendingGoogleDeletes();
+          await syncAllLessonsToGoogle(false);
+        }
         showToast('Google Calendar collegato.', 'ok');
         clearUrlParams(['google']);
       } else if (googleFlag === 'disconnected') {

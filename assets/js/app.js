@@ -1,9 +1,8 @@
 
-    const APP_VERSION = '1.2.0';
+    const APP_VERSION = '1.2.1';
     const STORAGE_KEY = 'dsworld_clienti_v2';
     const ONBOARDING_KEY = 'dsworld_onboarding_done_v1';
-    const PUSH_SUB_KEY = 'dsworld_push_subscribed_v1';
-    const PUSH_VAPID_KEY = ''; /* Inserisci la tua VAPID public key per abilitare le push */
+    const PUSH_VAPID_KEY = ''; /* Inserisci qui la tua VAPID public key dopo aver configurato il server push */
     const LEGACY_KEY = 'fitplanner_clienti_v1';
     const BACKUP_LATEST_KEY = 'dsworld_clienti_backup_latest_v1';
     const BACKUP_HISTORY_KEY = 'dsworld_clienti_backup_history_v1';
@@ -70,7 +69,6 @@
       calendarQuickSearch: '',
       googleBlockingBusy: [],
       googleBlockingBusyKey: '',
-      pendingGoogleDeletes: [],
       pendingAdd: null,
       pendingTimeValue: '',
       reportOpenedOnce: false,
@@ -418,8 +416,7 @@
     function isPack99Package(pkgOrName) {
       const raw = typeof pkgOrName === 'string' ? pkgOrName : (pkgOrName?.name || '');
       const normalized = String(raw || '').toUpperCase().replace(/\s+/g, '');
-      /* Copre sia "PACK 99" che "PACK 99 + FREE SESSION" */
-      return normalized.startsWith('PACK99');
+      return normalized === 'PACK99';
     }
 
     function getPlanTotalPrice(plan, pkg = null, client = null) {
@@ -537,26 +534,7 @@
     }
 
     function getExternalBusyOverlap({ date, time, duration }) {
-      /* Costruisce la data in ora di Roma per confrontarla correttamente con i blocchi
-         Google (UTC ISO). Senza timezone new Date("2025-06-01T09:00:00") è interpretata
-         come locale ma in estate (UTC+2) sfasa rispetto ai blocchi Google in UTC. */
-      let start;
-      try {
-        const ref = new Date(`${date}T${String(time).slice(0,5)}:00`);
-        const romeStr = ref.toLocaleString('en-US', { timeZone: 'Europe/Rome', hour12: false,
-          year: 'numeric', month: '2-digit', day: '2-digit',
-          hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        const [datePart, timePart] = romeStr.split(', ');
-        const [mo, dy, yr] = datePart.split('/');
-        const romeDate = new Date(`${yr}-${mo}-${dy}T${timePart}Z`);
-        const offsetMin = Math.round((romeDate - ref) / 60000);
-        const sign = offsetMin >= 0 ? '+' : '-';
-        const absH = String(Math.floor(Math.abs(offsetMin) / 60)).padStart(2, '0');
-        const absM = String(Math.abs(offsetMin) % 60).padStart(2, '0');
-        start = new Date(`${date}T${String(time).slice(0,5)}:00${sign}${absH}:${absM}`);
-      } catch (_) {
-        start = new Date(`${date}T${String(time).slice(0,5)}:00`);
-      }
+      const start = new Date(`${date}T${String(time).slice(0,5)}:00`);
       const end = new Date(start.getTime() + Number(duration || 60) * 60000);
       return (state.googleBlockingBusy || []).find(block => {
         const bStart = new Date(block.start);
@@ -574,13 +552,17 @@
       const range = explicitRange || getVisibleAvailabilityRange();
       const key = `${range.start}|${range.end}`;
       if (!force && !explicitRange && state.googleBlockingBusyKey === key) return;
+      /* Se il range esplicito è OLTRE il range già cachato, lo unisce invece di sostituirlo.
+         Questo evita di perdere i busy visibili mentre si pianifica su mesi futuri. */
       if (explicitRange) {
         try {
           const result = await googleApi('google-availability', { method: 'POST', body: range });
           const extra = Array.isArray(result.busy) ? result.busy : [];
+          /* Deduplicazione per start+end */
           const existing = state.googleBlockingBusy || [];
           const existingKeys = new Set(existing.map(b => `${b.start}|${b.end}`));
-          state.googleBlockingBusy = [...existing, ...extra.filter(b => !existingKeys.has(`${b.start}|${b.end}`))];
+          const merged = [...existing, ...extra.filter(b => !existingKeys.has(`${b.start}|${b.end}`))];
+          state.googleBlockingBusy = merged;
         } catch (error) {
           console.error('[DSWORLD] refreshGoogleBlockingAvailability (explicit range):', error);
         }
@@ -656,8 +638,7 @@
         lessons: state.lessons,
         selectedClientId: state.selectedClientId,
         viewDate: toISO(state.viewDate),
-        dismissedAlerts: state.dismissedAlerts || [],
-        pendingGoogleDeletes: state.pendingGoogleDeletes || []
+        dismissedAlerts: state.dismissedAlerts || []
       };
     }
 
@@ -887,7 +868,6 @@
       state.selectedClientId = parsed.selectedClientId || null;
       state.viewDate = parsed.viewDate ? startOfMonth(fromISO(parsed.viewDate)) : startOfMonth(new Date());
       state.dismissedAlerts = Array.isArray(parsed.dismissedAlerts) ? parsed.dismissedAlerts : [];
-      state.pendingGoogleDeletes = Array.isArray(parsed.pendingGoogleDeletes) ? parsed.pendingGoogleDeletes : [];
 
       let normalizedPlans = false;
       state.plans.forEach(plan => {
@@ -1020,9 +1000,8 @@
       /* Riavvia Realtime per il nuovo utente */
       refreshUnreadMessages();
       initRealtimeMessages();
+      /* Push banner dopo login */
       maybeShowPushBanner();
-      /* Flush eventi in coda da sessioni precedenti offline */
-      flushPendingGoogleDeletes().catch(err => console.warn('[DSWORLD] flush on login:', err));
       renderAll();
     }
 
@@ -1182,34 +1161,6 @@
       };
     }
 
-    function queueGoogleDelete(googleEventId) {
-      if (!googleEventId) return;
-      if (!Array.isArray(state.pendingGoogleDeletes)) state.pendingGoogleDeletes = [];
-      if (!state.pendingGoogleDeletes.includes(googleEventId)) {
-        state.pendingGoogleDeletes.push(googleEventId);
-        saveState();
-      }
-    }
-
-    async function flushPendingGoogleDeletes() {
-      if (!cloud.user || !cloud.google?.connected) return;
-      if (!Array.isArray(state.pendingGoogleDeletes) || !state.pendingGoogleDeletes.length) return;
-      const toDelete = [...state.pendingGoogleDeletes];
-      const succeeded = [];
-      for (const eventId of toDelete) {
-        try {
-          await googleApi('google-sync', { method: 'POST', body: { action: 'delete', lesson: { googleEventId: eventId } } });
-          succeeded.push(eventId);
-        } catch (err) {
-          console.warn('[DSWORLD] flushPendingGoogleDeletes failed for', eventId, err);
-        }
-      }
-      if (succeeded.length) {
-        state.pendingGoogleDeletes = state.pendingGoogleDeletes.filter(id => !succeeded.includes(id));
-        saveState();
-      }
-    }
-
     function queueGoogleTask(task, { silent = true } = {}) {
       if (!cloud.googleQueue) cloud.googleQueue = Promise.resolve();
       cloud.googleQueue = cloud.googleQueue.then(task).catch(error => {
@@ -1247,103 +1198,59 @@
       }
 
       return queueGoogleTask(async () => {
-        /* Payload lazy per upsert: legge googleEventId aggiornato dal task precedente */
+        // Costruzione payload lazy per upsert: in questo momento il task precedente in coda
+        // ha già salvato il googleEventId reale, quindi il payload sarà sempre aggiornato.
         const payload = isDelete ? eagerPayload : buildGoogleSyncPayload(lessonLike);
         if (!payload) return { skipped: true };
-        /* FIX: upsert su lezione cancelled con googleEventId → auto-converte in delete
-           Evita che lezioni annullate rimangano visibili su Google Calendar */
-        let effectiveAction = action;
-        if (!isDelete && payload.status === 'cancelled' && payload.googleEventId) {
-          effectiveAction = 'delete';
-          const liveLesson = getLesson(payload.id);
-          if (liveLesson) { liveLesson.googleEventId = ''; saveState(); }
-        } else if (!isDelete && shouldSkipGoogleCreateForLesson(action, payload, { allowCreateWithoutEventId })) {
-          return { skipped: true, reason: 'missing_google_event_id' };
-        }
+        if (!isDelete && shouldSkipGoogleCreateForLesson(action, payload, { allowCreateWithoutEventId })) return { skipped: true, reason: 'missing_google_event_id' };
+
         cloud.google.syncing = true;
         cloud.google.lastError = '';
         updateGoogleUi();
-        try {
-          const result = await googleApi('google-sync', { method: 'POST', body: { action: effectiveAction, lesson: payload } });
-          cloud.google.syncing = false;
-          cloud.google.lastSyncAt = new Date().toISOString();
-          cloud.google.lastError = '';
-          if (effectiveAction !== 'delete' && result?.googleEventId) {
-            const liveLesson = getLesson(payload.id);
-            if (liveLesson && liveLesson.googleEventId !== result.googleEventId) {
-              liveLesson.googleEventId = result.googleEventId;
-              saveState();
-            }
+        const result = await googleApi('google-sync', { method: 'POST', body: { action, lesson: payload } });
+        cloud.google.syncing = false;
+        cloud.google.lastSyncAt = new Date().toISOString();
+        cloud.google.lastError = '';
+        if (action !== 'delete' && result?.googleEventId) {
+          const liveLesson = getLesson(payload.id);
+          if (liveLesson && liveLesson.googleEventId !== result.googleEventId) {
+            liveLesson.googleEventId = result.googleEventId;
+            saveState();
           }
-          if (result?.calendarName) cloud.google.calendarName = result.calendarName;
-          updateGoogleUi();
-          return result;
-        } catch (err) {
-          cloud.google.syncing = false;
-          /* Delete fallito → accoda per retry automatico al prossimo sync */
-          if (effectiveAction === 'delete' && payload.googleEventId) {
-            queueGoogleDelete(payload.googleEventId);
-          }
-          throw err;
         }
+        if (result?.calendarName) cloud.google.calendarName = result.calendarName;
+        updateGoogleUi();
+        return result;
       }, { silent: isDelete ? false : silent });
     }
 
     async function syncAllLessonsToGoogle(showToastOnSuccess = true) {
-      if (!cloud.user) { showToast('Accedi prima.'); return false; }
-      if (!cloud.google?.connected) { showToast('Collega Google Calendar.'); return false; }
+      if (!cloud.user) {
+        showToast('Accedi prima.');
+        return false;
+      }
+      if (!cloud.google?.connected) {
+        showToast('Collega Google Calendar.');
+        return false;
+      }
+      const lessons = state.lessons.map(item => buildGoogleSyncPayload(item)).filter(Boolean);
       cloud.google.syncing = true;
       cloud.google.lastError = '';
       updateGoogleUi();
       try {
-        /* 1. Flush pending deletes — eventi orfani da sync precedenti falliti */
-        await flushPendingGoogleDeletes();
-        /* 2. Separa: active (scheduled/done) → upsert batch; cancelled con eventId → delete */
-        const activePayloads = [];
-        const toDeleteEventIds = [];
-        state.lessons.forEach(lesson => {
-          const payload = buildGoogleSyncPayload(lesson);
-          if (!payload) return;
-          if (lesson.status === 'cancelled') {
-            if (lesson.googleEventId) {
-              toDeleteEventIds.push(lesson.googleEventId);
-              lesson.googleEventId = '';
-            }
-          } else {
-            activePayloads.push(payload);
+        const result = await googleApi('google-replay-sync', { method: 'POST', body: { lessons } });
+        let changed = false;
+        (result.mappings || []).forEach(mapping => {
+          const lesson = getLesson(mapping.id);
+          if (lesson && mapping.googleEventId && lesson.googleEventId !== mapping.googleEventId) {
+            lesson.googleEventId = mapping.googleEventId;
+            changed = true;
           }
         });
-        /* 3. Batch upsert per le lezioni attive */
-        let synced = 0;
-        if (activePayloads.length) {
-          const result = await googleApi('google-replay-sync', { method: 'POST', body: { lessons: activePayloads } });
-          let changed = false;
-          (result.mappings || []).forEach(mapping => {
-            const lesson = getLesson(mapping.id);
-            if (lesson && mapping.googleEventId && lesson.googleEventId !== mapping.googleEventId) {
-              lesson.googleEventId = mapping.googleEventId;
-              changed = true;
-            }
-          });
-          synced = result.synced || 0;
-          if (changed) saveState();
-        }
-        /* 4. Delete espliciti per le cancelled — se fallisce, accoda per retry */
-        for (const eventId of toDeleteEventIds) {
-          try {
-            await googleApi('google-sync', { method: 'POST', body: { action: 'delete', lesson: { googleEventId: eventId } } });
-          } catch (err) {
-            console.warn('[DSWORLD] syncAll delete failed for', eventId, '— queued for retry');
-            queueGoogleDelete(eventId);
-          }
-        }
-        if (toDeleteEventIds.length || activePayloads.length) saveState();
+        if (changed) saveState();
         cloud.google.lastSyncAt = new Date().toISOString();
         updateGoogleUi();
-        if (showToastOnSuccess) {
-          const delMsg = toDeleteEventIds.length ? `, ${toDeleteEventIds.length} rimossi` : '';
-          showToast(`Google aggiornato: ${synced} lezioni${delMsg}.`);
-        }
+        if (showToastOnSuccess) showToast(`Google aggiornato: ${result.synced || 0} lezioni.`);
         return true;
       } catch (error) {
         console.error(error);
@@ -1522,22 +1429,26 @@
     }
 
     function planStats(plan) {
-      if (!plan) return { total: 0, done: 0, remaining: 0, scheduled: 0, firstLesson: null, nextLesson: null, progress: 0, cancelled: 0 };
+      if (!plan) return { total: 0, done: 0, scheduled: 0, used: 0, remaining: 0, bookable: 0, firstLesson: null, nextLesson: null, progress: 0, cancelled: 0 };
       const pkg = getPackage(plan.packageId);
       const lessons = getLessonsForPlan(plan.id);
       const done = lessons.filter(item => item.status === 'done').length;
-      const cancelled = lessons.filter(item => item.status === 'cancelled').length;
       const scheduled = lessons.filter(item => item.status === 'scheduled').length;
+      const cancelled = lessons.filter(item => item.status === 'cancelled').length;
       const effective = lessons.filter(item => item.status !== 'cancelled');
+      const used = effective.length; // done + scheduled (tutto ciò che occupa uno slot del pacchetto)
       const firstLesson = effective.map(item => item.date).sort()[0] || null;
       const nextLesson = lessons.filter(item => item.status !== 'cancelled' && item.date >= todayISO()).sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`))[0] || null;
       const base = Number(pkg?.lessonsTotal || 0);
       const carryOver = Number(plan?.carryOverLessons || 0);
       const bonus = Number(plan?.bonusLessons || 0);
       const total = base + carryOver + bonus;
-      const remaining = Math.max(total - done, 0);
+      // FONTE UNICA DI VERITÀ: remaining = quante lezioni puoi ancora PRENOTARE su questo pacchetto
+      // (Totale - Fatte - Fissate). Coerente con getPlanCapacity.
+      const remaining = Math.max(total - used, 0);
+      const bookable = remaining; // alias semantico
       const progress = total ? Math.min(100, Math.round((done / total) * 100)) : 0;
-      return { total, done, remaining, scheduled, firstLesson, nextLesson, progress, cancelled, carryOver, bonus };
+      return { total, done, scheduled, used, remaining, bookable, firstLesson, nextLesson, progress, cancelled, carryOver, bonus };
     }
 
     function clientHistoryStats(clientId) {
@@ -1702,10 +1613,7 @@
       if (changed) {
         saveState();
         if (!_rendering) renderAfterLessonChange();
-        /* Non inviamo upsert a Google per le lezioni auto-completate:
-           l'evento è già presente e corretto su Google Calendar.
-           Inviare un upsert per ogni 'done' causava re-creazioni su rete lenta
-           e loop problematici con il polling periodico dell'autoComplete. */
+        changedLessons.forEach(id => requestGoogleLessonSync('upsert', id));
         /* Free session auto-completata → proponi conversione se nessun modal è aperto */
         const noModal = !document.querySelector('.modal-backdrop.open, .confirm-modal-backdrop.open, .fsc-backdrop.open');
         if (noModal) {
@@ -1741,8 +1649,12 @@
             if (due <= today) alerts.push({ type: 'check', clientId: client.id, text: `Check 12 settimane`, when: due });
           }
         }
-        if (managed && stats.remaining > 0 && stats.remaining <= 3) {
-          alerts.push({ type: 'renewal', clientId: client.id, text: `Restano ${stats.remaining} lezioni`, when: stats.nextLesson?.date || today });
+        if (managed && stats.total > 0 && stats.remaining <= 3 && stats.done < stats.total) {
+          // Mostra l'alert anche quando remaining=0 ma ci sono ancora lezioni scheduled (pacchetto saturato ma non ancora completato)
+          const alertText = stats.remaining === 0
+            ? (stats.scheduled > 0 ? `Pacchetto saturato (${stats.scheduled} ancora da svolgere)` : `Pacchetto esaurito`)
+            : `Restano ${stats.remaining} lezioni`;
+          alerts.push({ type: 'renewal', clientId: client.id, text: alertText, when: stats.nextLesson?.date || today });
         }
         if (managed && (client.paymentStatus || 'unpaid') !== 'paid') {
           const planStartDate = activePlan?.startDate || null;
@@ -1835,7 +1747,7 @@
         .filter(client => {
           const plan = getActivePlan(client.id);
           const stats = planStats(plan);
-          return isManagedClient(client) && stats.remaining > 0 && stats.remaining <= 3;
+          return isManagedClient(client) && stats.total > 0 && stats.remaining <= 3 && stats.done < stats.total;
         })
         .sort((a, b) => planStats(getActivePlan(a.id)).remaining - planStats(getActivePlan(b.id)).remaining)[0];
       const followup = alerts.find(item => item.type === 'followup');
@@ -2368,7 +2280,7 @@
       }
       if (createdLessons.length) {
         saveState();
-        /* renderAll() rimosso: il chiamante lo chiama una sola volta dopo tutta la logica */
+        renderAll();
         createdLessons.forEach(id => requestGoogleLessonSync('upsert', id, { allowCreateWithoutEventId: true }));
       }
       return createdLessons.length;
@@ -2788,7 +2700,7 @@ function applyReportFilter() {
       const stats = planStats(plan);
       if (!stats.remaining) { showToast('Nessuna lezione da pianificare.', 'warn'); return; }
 
-      /* Pre-carica i busy Google per i prossimi 6 mesi prima di mostrare la preview —
+      /* Pre-carica i busy Google per i prossimi 6 mesi in background —
          necessario quando si pianifica su un range non ancora visibile nel calendario */
       if (cloud.user && cloud.google?.connected) {
         const futureStart = todayISO();
@@ -3168,15 +3080,6 @@ function applyReportFilter() {
           const id = btn.getAttribute('data-dismiss-alert');
           if (!Array.isArray(state.dismissedAlerts)) state.dismissedAlerts = [];
           if (!state.dismissedAlerts.includes(id)) state.dismissedAlerts.push(id);
-          /* Pulizia: rimuovi ID di clienti eliminati e limita a 150 entries */
-          const existingClientIds = new Set(state.clients.map(c => c.id));
-          state.dismissedAlerts = state.dismissedAlerts
-            .filter(alertId => {
-              const parts = alertId.split('_');
-              const cid = parts.length >= 3 ? parts.slice(1, -1).join('_') : null;
-              return !cid || existingClientIds.has(cid);
-            })
-            .slice(-150);
           saveState(true);
           renderAfterPaymentChange();
           renderOperazioniModal();
@@ -3564,7 +3467,7 @@ function applyReportFilter() {
         const matchesQuery = !q || getClientFullName(client).toLowerCase().includes(q) || String(client.phone || '').toLowerCase().includes(q) || String(client.notes || '').toLowerCase().includes(q) || serviceTypeLabel(serviceType).toLowerCase().includes(q);
         if (!matchesQuery) return false;
         if (state.clientFilter === 'urgent') return isManagedClient(client) && (urgency.level === 'bad' || urgency.level === 'warn');
-        if (state.clientFilter === 'expiring') return isManagedClient(client) && urgency.remaining > 0 && urgency.remaining <= 3;
+        if (state.clientFilter === 'expiring') return isManagedClient(client) && urgency.total > 0 && urgency.remaining <= 3 && urgency.done < urgency.total;
         if (state.clientFilter === 'unpaid') return isManagedClient(client) && (client.paymentStatus || 'unpaid') !== 'paid';
         if (state.clientFilter === 'free_session') return serviceType === 'free_session';
         return true;
@@ -3676,29 +3579,20 @@ function applyReportFilter() {
       }).join('');
     }
 
-    function buildRecurringPreviewDates({ startDate, weekdays, lessonsTotal, time = null, timesByWeekday = null }) {
+    function buildRecurringPreviewDates({ startDate, weekdays, lessonsTotal }) {
       const selectedDays = sortWeekdays(weekdays);
       const total = Number(lessonsTotal || 0);
       if (!startDate || !selectedDays.length || !total) return [];
       const cursor = fromISO(startDate);
       const results = [];
-      let conflictCount = 0;
       let attempts = 0;
       while (results.length < total && attempts < 500) {
         const iso = toISO(cursor);
         const weekday = normalizeWeekday(cursor.getDay());
-        if (selectedDays.includes(weekday)) {
-          const slotTime = (timesByWeekday && timesByWeekday[weekday]) || time;
-          if (slotTime && hasTimeConflict({ date: iso, time: slotTime, duration: 60 })) {
-            conflictCount += 1;
-          } else {
-            results.push(iso);
-          }
-        }
+        if (selectedDays.includes(weekday)) results.push(iso);
         cursor.setDate(cursor.getDate() + 1);
         attempts += 1;
       }
-      results._conflictCount = conflictCount;
       return results;
     }
 
@@ -3714,13 +3608,8 @@ function applyReportFilter() {
       const previewDates = buildRecurringPreviewDates({
         startDate: el.clientStartDate.value || todayISO(),
         weekdays: mode === 'same' ? fixedDays : variableSelections.map(item => item.weekday),
-        lessonsTotal: pkg.lessonsTotal,
-        time: mode === 'same' ? fixedTime : null,
-        timesByWeekday: mode === 'different' ? Object.fromEntries(variableSelections.map(item => [item.weekday, item.time])) : null
+        lessonsTotal: pkg.lessonsTotal
       });
-      const conflictWarn = previewDates._conflictCount > 0
-        ? `<div class="muted small" style="color:var(--warn);">⚠ ${previewDates._conflictCount} slot occupati saltati</div>`
-        : '';
       if (mode === 'same') {
         const summaryDays = fixedDays.length ? fixedDays.map(weekdayLabel).join(', ') : 'giorni da scegliere';
         const summaryTime = fixedTime || 'orario da scegliere';
@@ -3734,7 +3623,7 @@ function applyReportFilter() {
             <span>${index + 1}. ${escapeHtml(formatDateFancy(iso))}</span>
             <span class="tag blue">${summaryTime}</span>
           </div>
-        `).join('') + (previewDates.length > 6 ? `<div class="muted small">+ altre ${previewDates.length - 6} date già pronte</div>` : '') + conflictWarn;
+        `).join('') + (previewDates.length > 6 ? `<div class="muted small">+ altre ${previewDates.length - 6} date già pronte</div>` : '');
         return;
       }
       const summaryDays = variableSelections.length ? variableSelections.map(item => `${weekdayLabel(item.weekday)} ${item.time}`).join(' • ') : 'giorni da scegliere';
@@ -3743,17 +3632,17 @@ function applyReportFilter() {
         el.fixedSchedulePreview.innerHTML = '<div class="muted small">Seleziona i giorni con il relativo orario: qui vedi subito le prime date prima di confermare.</div>';
         return;
       }
-      const timesByWeekdayMap = Object.fromEntries(variableSelections.map(item => [item.weekday, item.time]));
+      const timesByWeekday = Object.fromEntries(variableSelections.map(item => [item.weekday, item.time]));
       el.fixedSchedulePreview.innerHTML = previewDates.slice(0, 6).map((iso, index) => {
         const weekday = normalizeWeekday(fromISO(iso).getDay());
-        const slotTime = timesByWeekdayMap[weekday] || '';
+        const slotTime = timesByWeekday[weekday] || '';
         return `
           <div class="fixed-preview-item">
             <span>${index + 1}. ${escapeHtml(formatDateFancy(iso))}</span>
             <span class="tag blue">${slotTime}</span>
           </div>
         `;
-      }).join('') + (previewDates.length > 6 ? `<div class="muted small">+ altre ${previewDates.length - 6} date già pronte</div>` : '') + conflictWarn;
+      }).join('') + (previewDates.length > 6 ? `<div class="muted small">+ altre ${previewDates.length - 6} date già pronte</div>` : '');
     }
 
     function renderWeekAgenda(anchorDate = getCalendarAnchorDate()) {
@@ -3761,10 +3650,6 @@ function applyReportFilter() {
       const weekDays = Array.from({ length: 7 }, (_, index) => addDays(monday, index));
       const hours = Array.from({ length: 15 }, (_, index) => `${String(index + 7).padStart(2, '0')}:00`);
       const isMobile = window.innerWidth <= 580;
-      /* Durata effettiva del cliente attivo per il check Google busy slot */
-      const _wkClient = getClient(state.selectedClientId);
-      const _wkPkg = getPackage(getActivePlan(_wkClient?.id)?.packageId);
-      const selectedDuration = Number(_wkPkg?.duration || 60);
 
       if (isMobile) {
         const DAY_LETTERS_WEEK = ['L','M','M','G','V','S','D'];
@@ -3844,7 +3729,7 @@ function applyReportFilter() {
                       <strong>${isDuo ? '👥 ' : ''}${escapeHtml(getLessonDisplayTitle(lesson))}</strong>
                       <span>${lesson.time}</span>
                     </button>`;
-                  }).join('') : (getExternalBusyOverlap({ date: iso, time, duration: selectedDuration }) ? `<div class="lesson-pill agenda-inline-pill" style="opacity:.68;cursor:not-allowed;"><strong>OCCUPATO</strong><span>${time}</span></div>` : `<button type="button" class="agenda-week-add" data-add-slot="${iso}|${time}">Slot libero</button>`)}
+                  }).join('') : (getExternalBusyOverlap({ date: iso, time, duration: 60 }) ? `<div class="lesson-pill agenda-inline-pill" style="opacity:.68;cursor:not-allowed;"><strong>OCCUPATO</strong><span>${time}</span></div>` : `<button type="button" class="agenda-week-add" data-add-slot="${iso}|${time}">Slot libero</button>`)}
                 </div>
               `;
             }).join('')}
@@ -4395,6 +4280,7 @@ function applyReportFilter() {
       }
       const previousStatus = lesson.status;
       lesson.status = status;
+      // Sincronizza stato al partner DUO
       const duoPartnerStatus = getDuoPartner(lesson);
       if (duoPartnerStatus) {
         duoPartnerStatus.status = status;
@@ -4402,16 +4288,25 @@ function applyReportFilter() {
       }
       saveState(true);
       renderAfterLessonChange();
-      /* Se annullata e aveva un evento Google → delete, non upsert */
+
+      /* Fix Bug 3: se la lezione viene annullata e ha un googleEventId,
+         cancelliamo l'evento su Google (non solo aggiornaimo lo status).
+         Questo previene che un evento annullato rimanga visibile su Google Calendar. */
       if (status === 'cancelled' && lesson.googleEventId) {
+        /* Costruiamo il payload prima di modificare, con l'eventId preservato */
         const cancelPayload = buildGoogleSyncPayload(lesson);
-        if (cancelPayload) requestGoogleLessonSync('delete', cancelPayload);
+        if (cancelPayload) {
+          requestGoogleLessonSync('delete', cancelPayload);
+        }
       } else {
         requestGoogleLessonSync('upsert', lesson);
       }
+
+      /* Invalida busy cache quando lo stato cambia tra scheduled/cancelled */
       if ((status === 'cancelled' || previousStatus === 'cancelled') && cloud.google?.connected) {
         state.googleBlockingBusyKey = '';
       }
+
       openLessonModal(lesson.id);
       showToast('Stato aggiornato.', 'ok');
 
@@ -4437,8 +4332,14 @@ function applyReportFilter() {
       if (client?.scheduleMode === 'same') client.fixedTime = time;
       saveState(true);
       renderAfterLessonChange();
+      /* Upsert Google: il payload lazy leggerà il nuovo time dal lesson aggiornato.
+         L'evento vecchio viene aggiornato (non duplicato) perché il googleEventId è preservato. */
       requestGoogleLessonSync('upsert', lesson);
-      if (oldTime !== time && cloud.google?.connected) state.googleBlockingBusyKey = '';
+      /* Se l'orario è cambiato, invalida il busy cache per il giorno interessato
+         così il calendario non mostra più lo slot come occupato dal vecchio evento */
+      if (oldTime !== time && cloud.google?.connected) {
+        state.googleBlockingBusyKey = '';
+      }
       openLessonModal(lesson.id);
       showToast('Orario aggiornato.', 'ok');
     }
@@ -4455,7 +4356,6 @@ function applyReportFilter() {
         showToast('Conflitto di orario.', 'warn');
         return;
       }
-      const oldTime = lesson.time;
       lesson.time = newTime;
       lesson.note = el.lessonNoteInput.value.trim();
       const client = getClient(lesson.clientId);
@@ -4470,7 +4370,6 @@ function applyReportFilter() {
       saveState();
       renderAfterLessonChange();
       requestGoogleLessonSync('upsert', lesson);
-      if (oldTime !== newTime && cloud.google?.connected) state.googleBlockingBusyKey = '';
       openLessonModal(lesson.id);
       showToast('Lezione salvata.', 'ok');
     }
@@ -4532,12 +4431,14 @@ function applyReportFilter() {
       if (!wasCancelled) {
         lesson.status = 'cancelled';
         saveState();
+        /* Se aveva un googleEventId, cancella l'evento prima di crearne uno nuovo */
         if (lesson.googleEventId) {
           const cancelPayload = buildGoogleSyncPayload(lesson);
           if (cancelPayload) requestGoogleLessonSync('delete', cancelPayload);
         } else {
           requestGoogleLessonSync('upsert', lesson);
         }
+        /* Invalida busy cache: lo slot vecchio torna libero */
         if (cloud.google?.connected) state.googleBlockingBusyKey = '';
       }
       const ok = createLesson({
@@ -4587,17 +4488,17 @@ function applyReportFilter() {
 
       const oldPlanForPreview = getActivePlan(client.id);
       const oldStatsForPreview = oldPlanForPreview ? planStats(oldPlanForPreview) : { remaining: 0, scheduled: 0 };
-      const scheduledFuture = (oldStatsForPreview.scheduled || 0);
-      const carryPreview = Math.max(0, (oldStatsForPreview.remaining || 0) - scheduledFuture);
+      // Quante lezioni del vecchio pacchetto restano in calendario (NON vengono trasferite)
+      const oldScheduledPreview = Number(oldStatsForPreview.scheduled || 0);
 
       const syncPrice = () => {
         const pkg = getPackage(el.renewPackage.value);
         const defaultPrice = Number(client.packagePrice || pkg?.totalPrice || 0);
         if (el.renewPrice && !el.renewPrice._touched) el.renewPrice.value = defaultPrice;
-        let carryNote = '';
-        if (carryPreview > 0) carryNote = ` · +${carryPreview} lezioni riportate`;
-        else if (scheduledFuture > 0) carryNote = ` · ${scheduledFuture} già pianificate`;
-        if (el.renewPriceHint) el.renewPriceHint.textContent = `Default: ${formatCurrency(defaultPrice)}${carryNote}`;
+        const oldNote = oldScheduledPreview > 0
+          ? ` · ${oldScheduledPreview} lezioni del pacchetto precedente restano in calendario`
+          : '';
+        if (el.renewPriceHint) el.renewPriceHint.textContent = `Default: ${formatCurrency(defaultPrice)}${oldNote}`;
         el.renewPreview.innerHTML = buildPackageSummary(pkg, Number(el.renewPrice?.value || defaultPrice));
       };
       syncPrice();
@@ -5019,11 +4920,7 @@ function applyReportFilter() {
         return;
       }
       const phone = normalizeItalianPhone(client.phone);
-      const trainerName = cloud.user?.user_metadata?.full_name
-        || cloud.user?.user_metadata?.name
-        || (cloud.user?.email ? cloud.user.email.split('@')[0] : '')
-        || 'il tuo personal trainer';
-      const message = `Ciao ${client.firstName || getClientFullName(client)}, sono ${trainerName} di DSWORLD. Ti scrivo per organizzare la tua free session.`;
+      const message = `Ciao ${client.firstName || getClientFullName(client)}, sono Dejan di DSWORLD. Ti scrivo per organizzare la tua free session.`;
       const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
       window.open(url, '_blank', 'noopener,noreferrer');
     }
@@ -5305,10 +5202,6 @@ function applyReportFilter() {
       localStorage.removeItem(BACKUP_LATEST_KEY);
       localStorage.removeItem(BACKUP_HISTORY_KEY);
       localStorage.removeItem(SESSION_BACKUP_KEY);
-      /* Pulizia sessione trainer — necessario su device condivisi */
-      localStorage.removeItem(ONBOARDING_KEY);
-      localStorage.removeItem(PUSH_SUB_KEY);
-      localStorage.removeItem('dsworld_push_banner_dismissed');
     }
 
     async function logoutCloud() {
@@ -5378,7 +5271,6 @@ function renderClientFormStickySummary() {
       renderAlerts();
       renderCalendarHead();
       renderCalendar();
-      refreshGoogleBlockingAvailability().catch(err => console.warn('[DSWORLD] Google busy refresh:', err));
     }
 
     function renderOpenSecondaryViews() {
@@ -5494,7 +5386,7 @@ function renderClientFormStickySummary() {
       updateAuthMessage('Modalità locale attiva. Nessuna sincronizzazione cloud.');
       renderAll();
     });
-    el.openAccountBtn.addEventListener('click', async () => { populateCloudConfigInputs(); await refreshGoogleStatus(); updatePushUi(); openModal('accountModalBackdrop'); });
+    el.openAccountBtn.addEventListener('click', async () => { populateCloudConfigInputs(); await refreshGoogleStatus(); openModal('accountModalBackdrop'); });
     el.manualSyncBtn.addEventListener('click', async () => {
       const ok = await syncStateToCloud(true);
       if (ok) showToast('Sincronizzazione completata.');
@@ -5564,6 +5456,7 @@ function renderClientFormStickySummary() {
       el.packagePreview.innerHTML = buildPackageSummary(pkg, Number(el.clientPackagePrice?.value || pkg?.totalPrice || 0));
       renderClientWeekdayPicker(getSelectedClientWeekdays().length ? getSelectedClientWeekdays() : [normalizeWeekday(fromISO(el.clientStartDate.value || todayISO()).getDay())], Math.max(1, Number(pkg?.perWeek || 1)));
       updateFixedScheduleUI();
+      if (el.clientPackagePrice && pkg) el.clientPackagePrice.value = Number(pkg.totalPrice || 0);
       updateClientServiceUi();
       renderFixedSchedulePreview();
     });
@@ -5693,12 +5586,7 @@ function renderClientFormStickySummary() {
         renderAll();
         closeModal('clientModalBackdrop');
         if (oldClientName !== newClientName) {
-          /* Resync solo lezioni scheduled con googleEventId — le cancelled vengono
-             auto-cancellate da requestGoogleLessonSync, le done non vanno toccate */
-          lessonsToResyncForName.forEach(id => {
-            const l = getLesson(id);
-            if (l && l.status === 'scheduled' && l.googleEventId) requestGoogleLessonSync('upsert', l);
-          });
+          lessonsToResyncForName.forEach(id => requestGoogleLessonSync('upsert', id));
         }
         showToast('Cliente aggiornato.');
         return;
@@ -5772,9 +5660,9 @@ function renderClientFormStickySummary() {
           firstLessonType: packageIsPack99 && !freeSessionDone ? 'free_session' : serviceType,
           standardLessonType: 'personal'
         });
+      } else {
+        renderAll();
       }
-      /* renderAll sempre una sola volta, dopo tutta la logica */
-      renderAll();
       closeModal('clientModalBackdrop');
       showToast(plannedCount ? `Cliente creato. ${plannedCount} lezioni già fissate.` : 'Cliente creato.');
     });
@@ -5877,13 +5765,10 @@ function renderClientFormStickySummary() {
     document.getElementById('quickRecoverBtn').addEventListener('click', () => {
       const lesson = getLesson(state.selectedLessonId);
       if (!lesson) return;
-      const cancelPayload = lesson.googleEventId ? buildGoogleSyncPayload(lesson) : null;
       lesson.status = 'cancelled';
       saveState();
       renderAfterLessonChange();
-      if (cancelPayload) requestGoogleLessonSync('delete', cancelPayload);
-      else requestGoogleLessonSync('upsert', lesson);
-      if (cloud.google?.connected) state.googleBlockingBusyKey = '';
+      requestGoogleLessonSync('upsert', lesson);
       openLessonModal(lesson.id);
       showToast('Lezione segnata come annullata.');
     });
@@ -5895,11 +5780,12 @@ function renderClientFormStickySummary() {
       const pkg = getPackage(el.renewPackage.value);
       if (!client || !pkg) return;
 
-      // Calcola le lezioni rimanenti da riportare — esclude quelle già scheduled nel calendario
-      const oldPlan = getActivePlan(client.id);
-      const oldStats = oldPlan ? planStats(oldPlan) : { remaining: 0, scheduled: 0 };
-      const scheduledFutureCount = oldStats.scheduled || 0;
-      const carryOver = Math.max(0, (oldStats.remaining || 0) - scheduledFutureCount);
+      // POLITICA RINNOVO (decisa dall'utente):
+      // Le lezioni già fissate del vecchio pacchetto RESTANO legate al vecchio piano.
+      // Nessun carry-over automatico: il nuovo pacchetto inizia con la sua capienza nominale.
+      // Le lezioni davvero non utilizzate (mai prenotate) si perdono - questo è coerente con
+      // la logica commerciale: ciò che il cliente non ha fissato in tempo non si trasferisce.
+      const carryOver = 0;
 
       const newPlanId = uid('plan');
       state.plans.push({
@@ -5911,7 +5797,7 @@ function renderClientFormStickySummary() {
         saleType: 'renewal',
         planType: 'personal',
         totalPrice: Number(el.renewPrice?.value ?? client.packagePrice ?? pkg.totalPrice ?? 0),
-        carryOverLessons: carryOver,   // lezioni riportate dal pacchetto precedente
+        carryOverLessons: carryOver,   // sempre 0 con la nuova politica
         createdAt: new Date().toISOString()
       });
 
@@ -5945,8 +5831,16 @@ function renderClientFormStickySummary() {
       saveState(true);
       renderAll();
       closeModal('renewModalBackdrop');
-      const carryMsg = carryOver > 0 ? ` (+ ${carryOver} lezioni riportate)` : '';
-      showToast(`Rinnovo registrato${carryMsg}.`, 'ok');
+      // Informa l'utente se ci sono ancora lezioni del vecchio pacchetto in calendario
+      const oldPlanRef = state.plans.filter(p => p.clientId === client.id && p.id !== newPlanId)
+        .sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt))).slice(-1)[0];
+      const oldScheduled = oldPlanRef
+        ? state.lessons.filter(l => l.planId === oldPlanRef.id && l.status === 'scheduled').length
+        : 0;
+      const oldMsg = oldScheduled > 0
+        ? ` Restano ${oldScheduled} lezioni del pacchetto precedente in calendario: verranno scaricate da quel pacchetto.`
+        : '';
+      showToast(`Rinnovo registrato.${oldMsg}`, 'ok');
     });
 
     // "Chiudi senza rinnovo": rimuove gli alert di pagamento/rinnovo senza creare un nuovo piano
@@ -6444,12 +6338,15 @@ function renderClientFormStickySummary() {
       requestAnimationFrame(() => document.getElementById('mpConfirmBtn')?.focus());
     }
 
-
     /* ═══════════════════════════════════════════════════════════
        ONBOARDING — wizard 3 step per nuovi utenti
+       Mostrato una sola volta, controllato via localStorage.
     ═══════════════════════════════════════════════════════════ */
     function shouldShowOnboarding() {
-      try { if (localStorage.getItem(ONBOARDING_KEY)) return false; } catch(_) {}
+      try {
+        if (localStorage.getItem(ONBOARDING_KEY)) return false;
+      } catch(_) {}
+      /* Mostra solo se non ci sono né clienti né piani (account vergine) */
       return state.clients.length === 0 && state.plans.length === 0;
     }
 
@@ -6462,11 +6359,31 @@ function renderClientFormStickySummary() {
       if (!backdrop) return;
       let step = 1;
       const totalSteps = 3;
+
       const steps = [
-        { icon: '📦', title: 'Crea i tuoi pacchetti', text: 'Definisci i pacchetti che offri: numero di lezioni, durata e prezzo. Puoi usare quelli di default o crearne di nuovi.', cta: 'Avanti' },
-        { icon: '👤', title: 'Aggiungi il primo cliente', text: 'Inserisci nome, pacchetto e giorni preferiti. DSWORLD pianifica automaticamente tutte le lezioni del percorso.', cta: 'Avanti' },
-        { icon: '📅', title: 'Gestisci tutto dal calendario', text: 'Agenda, incassi, messaggi e portale cliente. Tocca un giorno per vedere gli slot liberi e fissare una lezione in un tap.', cta: 'Inizia' }
+        {
+          icon: '📦',
+          title: 'Crea i tuoi pacchetti',
+          text: 'Definisci i pacchetti che offri ai clienti: numero di lezioni, durata e prezzo. Puoi crearli subito o usare quelli di default.',
+          cta: 'Avanti',
+          action: null
+        },
+        {
+          icon: '👤',
+          title: 'Aggiungi il primo cliente',
+          text: 'Inserisci nome, pacchetto acquistato e giorni preferiti. DSWORLD pianifica automaticamente tutte le lezioni del percorso.',
+          cta: 'Avanti',
+          action: null
+        },
+        {
+          icon: '📅',
+          title: 'Gestisci tutto dal calendario',
+          text: 'Agenda, incassi, messaggi e portale cliente. Tocca un giorno per vedere gli slot liberi e fissare una lezione in un tap.',
+          cta: 'Inizia',
+          action: null
+        }
       ];
+
       function renderStep() {
         const s = steps[step - 1];
         const dots = Array.from({ length: totalSteps }, (_, i) =>
@@ -6480,21 +6397,34 @@ function renderClientFormStickySummary() {
             <div style="display:flex;justify-content:center;gap:6px;margin-bottom:24px;">${dots}</div>
             <div style="display:grid;gap:10px;">
               <button id="onboardingCtaBtn" class="btn btn-primary" style="width:100%;padding:14px;">${escapeHtml(s.cta)}</button>
-              ${step === 1 ? '<button id="onboardingSkipBtn" class="btn btn-ghost btn-small" style="opacity:0.6;">Salta introduzione</button>' : ''}
+              ${step === 1 ? `<button id="onboardingSkipBtn" class="btn btn-ghost btn-small" style="opacity:0.6;">Salta introduzione</button>` : ''}
             </div>
-          </div>`;
+          </div>
+        `;
         document.getElementById('onboardingCtaBtn')?.addEventListener('click', () => {
-          if (step < totalSteps) { step++; renderStep(); }
-          else closeOnboarding(true);
+          if (step < totalSteps) {
+            step++;
+            renderStep();
+          } else {
+            closeOnboarding(true);
+          }
         });
         document.getElementById('onboardingSkipBtn')?.addEventListener('click', () => closeOnboarding(false));
       }
+
       function closeOnboarding(openPackages = false) {
         markOnboardingDone();
         backdrop.classList.remove('open');
         unlockBodyScroll();
-        if (openPackages) setTimeout(() => { renderPackages(); openModal('packagesModalBackdrop'); }, 250);
+        if (openPackages) {
+          /* Dopo il wizard apre il modal pacchetti per guidare la creazione */
+          setTimeout(() => {
+            renderPackages();
+            openModal('packagesModalBackdrop');
+          }, 250);
+        }
       }
+
       renderStep();
       backdrop.classList.add('open');
       lockBodyScroll();
@@ -6503,7 +6433,11 @@ function renderClientFormStickySummary() {
 
     /* ═══════════════════════════════════════════════════════════
        PUSH NOTIFICATIONS — Web Push API
+       Richiede: VAPID key configurata + Netlify Function push-subscribe
+                 + service worker con push handler
     ═══════════════════════════════════════════════════════════ */
+    const PUSH_SUB_KEY = 'dsworld_push_subscribed_v1';
+
     function isPushSupported() {
       return 'Notification' in window && 'PushManager' in window && 'serviceWorker' in navigator;
     }
@@ -6513,20 +6447,33 @@ function renderClientFormStickySummary() {
     }
 
     async function requestPushPermission() {
-      if (!isPushSupported()) { showToast('Notifiche push non supportate su questo dispositivo.', 'warn'); return false; }
-      if (!PUSH_VAPID_KEY) { console.warn('[DSWORLD] PUSH_VAPID_KEY non configurata.'); return false; }
+      if (!isPushSupported()) {
+        showToast('Notifiche push non supportate su questo dispositivo.', 'warn');
+        return false;
+      }
+      if (!PUSH_VAPID_KEY) {
+        console.warn('[DSWORLD] PUSH_VAPID_KEY non configurata — push disabilitate.');
+        return false;
+      }
       try {
         const permission = await Notification.requestPermission();
-        if (permission !== 'granted') { showToast('Permesso notifiche negato.', 'warn'); return false; }
+        if (permission !== 'granted') {
+          showToast('Permesso notifiche negato.', 'warn');
+          return false;
+        }
         const reg = await navigator.serviceWorker.ready;
-        const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(PUSH_VAPID_KEY) });
+        const sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(PUSH_VAPID_KEY)
+        });
+        /* Salva la subscription sul server via Netlify Function */
         const token = getAuthToken();
         if (token) {
           await fetch(`${GOOGLE_FN_BASE}/push-subscribe`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
             body: JSON.stringify({ subscription: sub.toJSON() })
-          }).catch(err => console.warn('[DSWORLD] push-subscribe:', err));
+          });
         }
         try { localStorage.setItem(PUSH_SUB_KEY, '1'); } catch(_) {}
         showToast('Notifiche push attivate!', 'ok');
@@ -6545,28 +6492,16 @@ function renderClientFormStickySummary() {
       return Uint8Array.from([...rawData].map(char => char.charCodeAt(0)));
     }
 
+    /* Banner push — mostrato una volta sola dopo il login se non già iscritto */
     function maybeShowPushBanner() {
       if (!isPushSupported()) return;
       if (isPushSubscribed()) return;
       if (!cloud.user) return;
       if (!PUSH_VAPID_KEY) return;
-      try { if (localStorage.getItem('dsworld_push_banner_dismissed')) return; } catch(_) {}
+      /* Mostra il banner push nella UI se presente */
       const banner = document.getElementById('pushPermissionBanner');
       if (banner) banner.classList.add('show');
     }
-
-    function updatePushUi() {
-      const row = document.getElementById('pushNotificationsRow');
-      const label = document.getElementById('pushStatusLabel');
-      if (!row) return;
-      if (!isPushSupported()) { row.style.display = 'none'; return; }
-      row.style.display = '';
-      if (label) label.textContent = isPushSubscribed() ? 'Attive' : 'Non attive';
-      const btn = document.getElementById('enablePushBtn');
-      if (btn) { btn.textContent = isPushSubscribed() ? 'Già attive ✓' : 'Attiva notifiche'; btn.disabled = isPushSubscribed(); }
-    }
-
-        async function initApp() {
       loadStateLocal();
       resetPackageForm();
       el.clientStartDate.value = todayISO();
@@ -6605,10 +6540,7 @@ function renderClientFormStickySummary() {
       }
       if (googleFlag === 'connected') {
         await refreshGoogleStatus();
-        if (cloud.google.connected) {
-          await flushPendingGoogleDeletes();
-          await syncAllLessonsToGoogle(false);
-        }
+        if (cloud.google.connected) await syncAllLessonsToGoogle(false);
         showToast('Google Calendar collegato.', 'ok');
         clearUrlParams(['google']);
       } else if (googleFlag === 'disconnected') {
@@ -6630,17 +6562,27 @@ function renderClientFormStickySummary() {
       initRealtimeMessages();
 
       /* ── Onboarding wizard — prima apertura ───────────────── */
-      if (shouldShowOnboarding()) setTimeout(() => openOnboardingModal(), 600);
+      if (shouldShowOnboarding()) {
+        setTimeout(() => openOnboardingModal(), 600);
+      }
 
-      /* ── Push notifications banner + bottoni ─────────────── */
+      /* ── Push notifications banner ────────────────────────── */
       maybeShowPushBanner();
+
+      /* ── Inizializza bottone push nel modal account ────────── */
       document.getElementById('enablePushBtn')?.addEventListener('click', async () => {
         const ok = await requestPushPermission();
-        if (ok) { document.getElementById('pushPermissionBanner')?.classList.remove('show'); updatePushUi(); }
+        if (ok) {
+          const banner = document.getElementById('pushPermissionBanner');
+          if (banner) banner.classList.remove('show');
+          document.getElementById('enablePushBtn')?.closest('.push-row')?.remove();
+        }
       });
       document.getElementById('pushBannerEnableBtn')?.addEventListener('click', async () => {
         const ok = await requestPushPermission();
-        if (ok) { document.getElementById('pushPermissionBanner')?.classList.remove('show'); updatePushUi(); }
+        if (ok) {
+          document.getElementById('pushPermissionBanner')?.classList.remove('show');
+        }
       });
       document.getElementById('pushBannerDismissBtn')?.addEventListener('click', () => {
         document.getElementById('pushPermissionBanner')?.classList.remove('show');
@@ -6709,7 +6651,7 @@ function renderClientFormStickySummary() {
       if (bnavAddCliente) bnavAddCliente.addEventListener('click', event => { closeDrawer(); openNewClientModal(event.currentTarget); });
       if (bnavResoconto) bnavResoconto.addEventListener('click', () => { closeDrawer(); renderReport(); openModal('reportModalBackdrop'); });
       if (bnavPacchetti) bnavPacchetti.addEventListener('click', () => { closeDrawer(); renderPackages(); openModal('packagesModalBackdrop'); });
-      if (openAccountBtnMobile) openAccountBtnMobile.addEventListener('click', async () => { populateCloudConfigInputs(); await refreshGoogleStatus(); updatePushUi(); openModal('accountModalBackdrop'); });
+      if (openAccountBtnMobile) openAccountBtnMobile.addEventListener('click', async () => { populateCloudConfigInputs(); await refreshGoogleStatus(); openModal('accountModalBackdrop'); });
 
       function setActiveBnav(activeBtn) {
         document.querySelectorAll('.bnav-btn').forEach(b => b.classList.remove('active'));

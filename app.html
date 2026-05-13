@@ -4183,9 +4183,9 @@
           </div>
         </div>
 
-        <div class="mini-card" id="pushNotificationsRow">
+        <div class="mini-card push-row" id="pushNotificationsRow">
           <div class="summary-row"><span>Notifiche push</span><strong id="pushStatusLabel">Non attive</strong></div>
-          <div class="muted small">Ricevi avvisi anche con l'app chiusa: rinnovi in scadenza, pagamenti aperti, lezioni del giorno.</div>
+          <div class="muted small">Ricevi avvisi anche quando l'app è chiusa: rinnovi in scadenza, pagamenti aperti, lezioni del giorno.</div>
           <div class="inline-actions" style="margin-top:12px;">
             <button class="btn btn-soft" type="button" id="enablePushBtn">Attiva notifiche</button>
           </div>
@@ -4262,8 +4262,7 @@
     </div>
   </div>
 
-  
-  <!-- ═══ ONBOARDING WIZARD MODAL ═══ -->
+  <!-- ═══ ONBOARDING MODAL ═══ -->
   <div class="modal-backdrop" id="onboardingModalBackdrop" role="dialog" aria-modal="true" aria-labelledby="onboardingTitle" style="z-index:9999;">
     <div class="modal" style="max-width:360px;padding:28px 24px 24px;">
       <h2 id="onboardingTitle" class="sr-only">Benvenuto in DSWORLD</h2>
@@ -4272,12 +4271,18 @@
   </div>
 
   <!-- ═══ PUSH NOTIFICATIONS BANNER ═══ -->
-  <style>
-    #pushPermissionBanner { display:none; position:fixed; bottom:80px; left:12px; right:12px; z-index:9000; background:rgba(20,20,20,0.97); border:1px solid rgba(229,9,20,0.3); border-radius:16px; padding:14px 16px; box-shadow:0 8px 32px rgba(0,0,0,0.5); backdrop-filter:blur(12px); align-items:center; gap:12px; }
-    #pushPermissionBanner.show { display:flex !important; }
-    @media(min-width:600px){ #pushPermissionBanner { left:auto; right:20px; max-width:360px; bottom:20px; } }
-  </style>
-  <div id="pushPermissionBanner">
+  <div id="pushPermissionBanner" style="
+    display:none;position:fixed;bottom:80px;left:12px;right:12px;z-index:9000;
+    background:rgba(20,20,20,0.97);border:1px solid rgba(229,9,20,0.3);
+    border-radius:16px;padding:14px 16px;
+    box-shadow:0 8px 32px rgba(0,0,0,0.5);
+    backdrop-filter:blur(12px);
+    align-items:center;gap:12px;
+  " class="push-banner">
+    <style>
+      #pushPermissionBanner.show { display:flex !important; }
+      @media(min-width:600px){#pushPermissionBanner{left:auto;right:20px;max-width:360px;bottom:20px;}}
+    </style>
     <div style="font-size:1.4rem;flex-shrink:0;">🔔</div>
     <div style="flex:1;min-width:0;">
       <div style="font-size:0.88rem;font-weight:700;margin-bottom:2px;">Attiva le notifiche</div>
@@ -5722,21 +5727,26 @@
     }
 
     function planStats(plan) {
-      if (!plan) return { total: 0, done: 0, remaining: 0, firstLesson: null, nextLesson: null, progress: 0, cancelled: 0 };
+      if (!plan) return { total: 0, done: 0, scheduled: 0, used: 0, remaining: 0, bookable: 0, firstLesson: null, nextLesson: null, progress: 0, cancelled: 0 };
       const pkg = getPackage(plan.packageId);
       const lessons = getLessonsForPlan(plan.id);
       const done = lessons.filter(item => item.status === 'done').length;
+      const scheduled = lessons.filter(item => item.status === 'scheduled').length;
       const cancelled = lessons.filter(item => item.status === 'cancelled').length;
       const effective = lessons.filter(item => item.status !== 'cancelled');
+      const used = effective.length; // done + scheduled (tutto ciò che occupa uno slot del pacchetto)
       const firstLesson = effective.map(item => item.date).sort()[0] || null;
       const nextLesson = lessons.filter(item => item.status !== 'cancelled' && item.date >= todayISO()).sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`))[0] || null;
       const base = Number(pkg?.lessonsTotal || 0);
       const carryOver = Number(plan?.carryOverLessons || 0);
       const bonus = Number(plan?.bonusLessons || 0);
       const total = base + carryOver + bonus;
-      const remaining = Math.max(total - done, 0);
+      // FONTE UNICA DI VERITÀ: remaining = quante lezioni puoi ancora PRENOTARE su questo pacchetto
+      // (Totale - Fatte - Fissate). Coerente con getPlanCapacity.
+      const remaining = Math.max(total - used, 0);
+      const bookable = remaining; // alias semantico
       const progress = total ? Math.min(100, Math.round((done / total) * 100)) : 0;
-      return { total, done, remaining, firstLesson, nextLesson, progress, cancelled, carryOver, bonus };
+      return { total, done, scheduled, used, remaining, bookable, firstLesson, nextLesson, progress, cancelled, carryOver, bonus };
     }
 
     function clientHistoryStats(clientId) {
@@ -5936,8 +5946,12 @@
             if (due <= today) alerts.push({ type: 'check', clientId: client.id, text: `Check 12 settimane`, when: due });
           }
         }
-        if (managed && stats.remaining > 0 && stats.remaining <= 3) {
-          alerts.push({ type: 'renewal', clientId: client.id, text: `Restano ${stats.remaining} lezioni`, when: stats.nextLesson?.date || today });
+        if (managed && stats.total > 0 && stats.remaining <= 3 && stats.done < stats.total) {
+          // Mostra l'alert anche quando remaining=0 ma ci sono ancora lezioni scheduled (pacchetto saturato ma non ancora completato)
+          const alertText = stats.remaining === 0
+            ? (stats.scheduled > 0 ? `Pacchetto saturato (${stats.scheduled} ancora da svolgere)` : `Pacchetto esaurito`)
+            : `Restano ${stats.remaining} lezioni`;
+          alerts.push({ type: 'renewal', clientId: client.id, text: alertText, when: stats.nextLesson?.date || today });
         }
         if (managed && (client.paymentStatus || 'unpaid') !== 'paid') {
           const planStartDate = activePlan?.startDate || null;
@@ -6030,7 +6044,7 @@
         .filter(client => {
           const plan = getActivePlan(client.id);
           const stats = planStats(plan);
-          return isManagedClient(client) && stats.remaining > 0 && stats.remaining <= 3;
+          return isManagedClient(client) && stats.total > 0 && stats.remaining <= 3 && stats.done < stats.total;
         })
         .sort((a, b) => planStats(getActivePlan(a.id)).remaining - planStats(getActivePlan(b.id)).remaining)[0];
       const followup = alerts.find(item => item.type === 'followup');
@@ -7741,7 +7755,7 @@ function applyReportFilter() {
         const matchesQuery = !q || getClientFullName(client).toLowerCase().includes(q) || String(client.phone || '').toLowerCase().includes(q) || String(client.notes || '').toLowerCase().includes(q) || serviceTypeLabel(serviceType).toLowerCase().includes(q);
         if (!matchesQuery) return false;
         if (state.clientFilter === 'urgent') return isManagedClient(client) && (urgency.level === 'bad' || urgency.level === 'warn');
-        if (state.clientFilter === 'expiring') return isManagedClient(client) && urgency.remaining > 0 && urgency.remaining <= 3;
+        if (state.clientFilter === 'expiring') return isManagedClient(client) && urgency.total > 0 && urgency.remaining <= 3 && urgency.done < urgency.total;
         if (state.clientFilter === 'unpaid') return isManagedClient(client) && (client.paymentStatus || 'unpaid') !== 'paid';
         if (state.clientFilter === 'free_session') return serviceType === 'free_session';
         return true;
@@ -8723,15 +8737,18 @@ function applyReportFilter() {
       el.renewStartDate.value = lastLesson || todayISO();
 
       const oldPlanForPreview = getActivePlan(client.id);
-      const oldStatsForPreview = oldPlanForPreview ? planStats(oldPlanForPreview) : { remaining: 0 };
-      const carryPreview = Math.max(0, oldStatsForPreview.remaining || 0);
+      const oldStatsForPreview = oldPlanForPreview ? planStats(oldPlanForPreview) : { remaining: 0, scheduled: 0 };
+      // Quante lezioni del vecchio pacchetto restano in calendario (NON vengono trasferite)
+      const oldScheduledPreview = Number(oldStatsForPreview.scheduled || 0);
 
       const syncPrice = () => {
         const pkg = getPackage(el.renewPackage.value);
         const defaultPrice = Number(client.packagePrice || pkg?.totalPrice || 0);
         if (el.renewPrice && !el.renewPrice._touched) el.renewPrice.value = defaultPrice;
-        const carryNote = carryPreview > 0 ? ` · +${carryPreview} lezioni riportate` : '';
-        if (el.renewPriceHint) el.renewPriceHint.textContent = `Default: ${formatCurrency(defaultPrice)}${carryNote}`;
+        const oldNote = oldScheduledPreview > 0
+          ? ` · ${oldScheduledPreview} lezioni del pacchetto precedente restano in calendario`
+          : '';
+        if (el.renewPriceHint) el.renewPriceHint.textContent = `Default: ${formatCurrency(defaultPrice)}${oldNote}`;
         el.renewPreview.innerHTML = buildPackageSummary(pkg, Number(el.renewPrice?.value || defaultPrice));
       };
       syncPrice();
@@ -9994,10 +10011,12 @@ function renderClientFormStickySummary() {
       const pkg = getPackage(el.renewPackage.value);
       if (!client || !pkg) return;
 
-      // Calcola le lezioni rimanenti dal piano attuale da riportare
-      const oldPlan = getActivePlan(client.id);
-      const oldStats = oldPlan ? planStats(oldPlan) : { remaining: 0 };
-      const carryOver = Math.max(0, oldStats.remaining || 0);
+      // POLITICA RINNOVO (decisa dall'utente):
+      // Le lezioni già fissate del vecchio pacchetto RESTANO legate al vecchio piano.
+      // Nessun carry-over automatico: il nuovo pacchetto inizia con la sua capienza nominale.
+      // Le lezioni davvero non utilizzate (mai prenotate) si perdono - questo è coerente con
+      // la logica commerciale: ciò che il cliente non ha fissato in tempo non si trasferisce.
+      const carryOver = 0;
 
       const newPlanId = uid('plan');
       state.plans.push({
@@ -10009,7 +10028,7 @@ function renderClientFormStickySummary() {
         saleType: 'renewal',
         planType: 'personal',
         totalPrice: Number(el.renewPrice?.value ?? client.packagePrice ?? pkg.totalPrice ?? 0),
-        carryOverLessons: carryOver,   // lezioni riportate dal pacchetto precedente
+        carryOverLessons: carryOver,   // sempre 0 con la nuova politica
         createdAt: new Date().toISOString()
       });
 
@@ -10043,8 +10062,16 @@ function renderClientFormStickySummary() {
       saveState(true);
       renderAll();
       closeModal('renewModalBackdrop');
-      const carryMsg = carryOver > 0 ? ` (+ ${carryOver} lezioni riportate)` : '';
-      showToast(`Rinnovo registrato${carryMsg}.`, 'ok');
+      // Informa l'utente se ci sono ancora lezioni del vecchio pacchetto in calendario
+      const oldPlanRef = state.plans.filter(p => p.clientId === client.id && p.id !== newPlanId)
+        .sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt))).slice(-1)[0];
+      const oldScheduled = oldPlanRef
+        ? state.lessons.filter(l => l.planId === oldPlanRef.id && l.status === 'scheduled').length
+        : 0;
+      const oldMsg = oldScheduled > 0
+        ? ` Restano ${oldScheduled} lezioni del pacchetto precedente in calendario: verranno scaricate da quel pacchetto.`
+        : '';
+      showToast(`Rinnovo registrato.${oldMsg}`, 'ok');
     });
 
     // "Chiudi senza rinnovo": rimuove gli alert di pagamento/rinnovo senza creare un nuovo piano

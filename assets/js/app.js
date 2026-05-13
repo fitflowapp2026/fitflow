@@ -4920,7 +4920,7 @@ function applyReportFilter() {
         return;
       }
       const phone = normalizeItalianPhone(client.phone);
-      const message = `Ciao ${client.firstName || getClientFullName(client)}, sono Dejan di DSWORLD. Ti scrivo per organizzare la tua free session.`;
+      const message = `Ciao ${client.firstName || getClientFullName(client)}, sono Dejan, personal trainer della FitActive di Vicenza Pioppi, ti contatto in merito alla tua Free Session ovvero la prima consulenza e allenamento incluso assistito con il trainer. Quando saresti disponibile per fissarla?💪🏼`;
       const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
       window.open(url, '_blank', 'noopener,noreferrer');
     }

@@ -4306,6 +4306,9 @@
         }
         var s = document.createElement('script');
         s.src = urls[idx];
+        /* Impronta del file (SRI): il browser lo esegue solo se è esattamente quello atteso */
+        s.integrity = SUPABASE_JS_INTEGRITY;
+        s.crossOrigin = 'anonymous';
         s.onerror = function () {
           console.warn('[DSWORLD] CDN non disponibile:', urls[idx], '— provo il successivo…');
           document.head.removeChild(s);
@@ -4313,10 +4316,17 @@
         };
         document.head.appendChild(s);
       }
+      /* Versione FISSA: prima era "@2", cioè l'ultima uscita, qualunque fosse.
+         Per aggiornare: cambia la versione e copia in SUPABASE_JS_INTEGRITY il valore
+         "hash" del file /dist/umd/supabase.js che trovi su
+         https://data.jsdelivr.com/v1/packages/npm/@supabase/supabase-js@VERSIONE?structure=flat
+         (la stessa coppia versione/impronta è in client.html).
+         Stesso identico file da due CDN: se il primo non risponde si prova il secondo. */
+      var SUPABASE_JS_FILE = '/@supabase/supabase-js@2.119.0/dist/umd/supabase.js';
+      var SUPABASE_JS_INTEGRITY = 'sha256-qGftvPsCk3Cu7HIj3WGAtWC2IfvjvGTGWE+wNp0be84=';
       tryLoad([
-        'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2',
-        'https://unpkg.com/@supabase/supabase-js@2',
-        'https://esm.sh/@supabase/supabase-js@2'
+        'https://cdn.jsdelivr.net/npm' + SUPABASE_JS_FILE,
+        'https://unpkg.com' + SUPABASE_JS_FILE
       ], 0);
     })();
   </script>
@@ -4327,6 +4337,8 @@
       return new Promise((resolve, reject) => {
         const s = document.createElement('script');
         s.src = 'https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js';
+        s.integrity = 'sha256-fknaaFiOJQ27i7oZDSyqirN4fMAoS9odiy+AXE33Qsk=';
+        s.crossOrigin = 'anonymous';
         s.onload = () => { _excelJsLoaded = true; resolve(); };
         s.onerror = () => reject(new Error('ExcelJS load failed'));
         document.head.appendChild(s);

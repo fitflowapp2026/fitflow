@@ -3,6 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
+  <meta name="referrer" content="no-referrer" />
+  <meta name="robots" content="noindex, nofollow" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="DSWORLD Cliente" />
@@ -588,7 +590,10 @@ async function markTrainerMsgsRead() {
 
 function initClientRealtime() {
   const script = document.createElement('script');
-  script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js';
+  /* Versione fissa + impronta (SRI), le stesse usate da app.html (src/html/shell.html) */
+  script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0/dist/umd/supabase.js';
+  script.integrity = 'sha256-qGftvPsCk3Cu7HIj3WGAtWC2IfvjvGTGWE+wNp0be84=';
+  script.crossOrigin = 'anonymous';
   script.onload = () => {
     const sb = window.supabase.createClient(SUPA_URL, ANON_KEY);
 

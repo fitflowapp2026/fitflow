@@ -1,37 +1,18 @@
-const { json, getBearerToken, getEnv } = require('./_lib/utils');
-const { verifyUser } = require('./_lib/supabase');
-
-async function rawGetGoogleConnection(userId) {
-  const base = getEnv('SUPABASE_URL').replace(/\/$/, '');
-  const key = getEnv('SUPABASE_SERVICE_ROLE_KEY');
-  const url = `${base}/rest/v1/google_calendar_connections?user_id=eq.${encodeURIComponent(userId)}&select=*`;
-  console.log('[google-status] query url:', url);
-  const response = await fetch(url, {
-    method: 'GET',
-    headers: {
-      apikey: key,
-      Authorization: `Bearer ${key}`,
-      'Content-Type': 'application/json'
-    }
-  });
-  const text = await response.text();
-  console.log('[google-status] raw status:', response.status);
-  console.log('[google-status] raw body:', text);
-  const rows = text ? JSON.parse(text) : [];
-  return Array.isArray(rows) && rows[0] ? rows[0] : null;
-}
+const { json, getBearerToken } = require('./_lib/utils');
+const { verifyUser, getGoogleConnection } = require('./_lib/supabase');
 
 exports.handler = async function handler(event) {
   if (event.httpMethod !== 'GET') return json(405, { error: 'Method not allowed' });
+
+  let user;
   try {
-    const accessToken = getBearerToken(event);
-    const user = await verifyUser(accessToken);
-    console.log('[google-status] user.id:', JSON.stringify(user.id));
-    console.log('[google-status] user.id length:', user.id?.length);
-    console.log('[google-status] user.email:', user.email);
+    user = await verifyUser(getBearerToken(event));
+  } catch (error) {
+    return json(401, { error: 'Unauthorized' });
+  }
 
-    const connection = await rawGetGoogleConnection(user.id);
-
+  try {
+    const connection = await getGoogleConnection(user.id);
     return json(200, {
       connected: Boolean(connection?.is_connected && connection?.calendar_id && connection?.refresh_token_enc),
       calendarId: connection?.calendar_id || '',
@@ -39,7 +20,8 @@ exports.handler = async function handler(event) {
       googleEmail: connection?.google_email || ''
     });
   } catch (error) {
+    // Niente dati utente o token nei log: solo il messaggio dell'errore
     console.error('[google-status] error:', error.message);
-    return json(401, { error: error.message || 'Unauthorized' });
+    return json(500, { error: 'Stato Google non disponibile' });
   }
 };

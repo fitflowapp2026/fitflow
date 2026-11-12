@@ -8,6 +8,26 @@ const CORS = {
   'Content-Type': 'application/json',
 }
 
+const TOKEN_RE = /^[A-Za-z0-9_-]{12,64}$/
+const ALLOWED_ACTIONS = new Set([
+  'get_data',
+  'send_message',
+  'cancel_request',
+  'reschedule_request',
+  'mark_read',
+  'mark_delivered',
+])
+const MAX_FIELD = 60
+// Limite di invii per ogni link: evita che un link venga usato per inondare il trainer
+const WRITE_ACTIONS = new Set(['send_message', 'cancel_request', 'reschedule_request'])
+const MAX_PER_MINUTE = 6
+const MAX_PER_DAY = 150
+
+// Accetta solo stringhe brevi: evita testi arbitrari/lunghissimi nei messaggi automatici
+function shortText(value: unknown): string {
+  return typeof value === 'string' ? value.trim().slice(0, MAX_FIELD) : ''
+}
+
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), { status, headers: CORS })
 }
@@ -24,21 +44,38 @@ Deno.serve(async (req: Request) => {
   let body: { token?: string; action?: string; payload?: Record<string, unknown> }
   try { body = await req.json() } catch { return json({ error: 'Body non valido' }, 400) }
 
-  const { token, action, payload } = body
-  if (!token) return json({ error: 'Token mancante' }, 400)
+  const { action, payload } = body
+  const token = typeof body.token === 'string' ? body.token : ''
+  // I token validi sono stringhe alfanumeriche lunghe: scarta subito tutto il resto
+  if (!TOKEN_RE.test(token)) return json({ error: 'Link non valido o scaduto' }, 404)
+  if (typeof action !== 'string' || !ALLOWED_ACTIONS.has(action)) {
+    return json({ error: 'Azione non riconosciuta' }, 400)
+  }
 
-  // Trova il cliente con questo token scansionando tutti gli stati
-  const { data: states, error: statesErr } = await supabase
+  // Cerca SOLO la riga del trainer che possiede questo token (filtro jsonb nel database),
+  // invece di caricare in memoria i dati di tutti i trainer.
+  let rows: { user_id: string; app_data: unknown }[] | null = null
+  const lookup = await supabase
     .from('user_app_state')
     .select('user_id, app_data')
+    .contains('app_data', { clients: [{ shareToken: token }] })
+    .limit(1)
 
-  if (statesErr) return json({ error: 'Errore database' }, 500)
+  if (lookup.error) {
+    // Fallback (es. colonna non jsonb): scansione completa come prima.
+    console.error('[client-portal] lookup mirato fallito, uso scansione:', lookup.error.message)
+    const all = await supabase.from('user_app_state').select('user_id, app_data')
+    if (all.error) return json({ error: 'Errore database' }, 500)
+    rows = all.data
+  } else {
+    rows = lookup.data
+  }
 
   let foundUserId: string | null = null
   let foundClient: Record<string, unknown> | null = null
   let appData: Record<string, unknown> | null = null
 
-  for (const row of states ?? []) {
+  for (const row of rows ?? []) {
     const data = row.app_data as Record<string, unknown>
     const clients = (data?.clients ?? []) as Record<string, unknown>[]
     const match = clients.find((c) => c.shareToken === token)
@@ -51,6 +88,30 @@ Deno.serve(async (req: Request) => {
   }
 
   if (!foundClient || !appData) return json({ error: 'Link non valido o scaduto' }, 404)
+
+  // Il cliente può agire solo sulle proprie lezioni
+  const clientLessons = ((appData.lessons ?? []) as Record<string, unknown>[])
+    .filter((l) => l.clientId === foundClient!.id)
+  const ownsLesson = (lessonId: string) => clientLessons.some((l) => l.id === lessonId)
+
+  // ── Limite di invii ───────────────────────────────────────────
+  // Conta i messaggi già arrivati da questo link nell'ultimo minuto e nelle ultime
+  // 24 ore. Se il conteggio non riesce si lascia passare: meglio un messaggio in
+  // più che bloccare un cliente per un errore del database.
+  if (WRITE_ACTIONS.has(action)) {
+    const sentSince = async (ms: number) => {
+      const { count, error } = await supabase
+        .from('client_messages')
+        .select('id', { count: 'exact', head: true })
+        .eq('client_token', token)
+        .eq('sender', 'client')
+        .gte('created_at', new Date(Date.now() - ms).toISOString())
+      return error ? 0 : (count ?? 0)
+    }
+    if ((await sentSince(60_000)) >= MAX_PER_MINUTE || (await sentSince(86_400_000)) >= MAX_PER_DAY) {
+      return json({ error: 'Troppi messaggi in poco tempo. Riprova tra qualche minuto.' }, 429)
+    }
+  }
 
   // ── GET DATA ──────────────────────────────────────────────────
   if (action === 'get_data') {
@@ -111,7 +172,7 @@ Deno.serve(async (req: Request) => {
 
   // ── SEND MESSAGE ──────────────────────────────────────────────
   if (action === 'send_message') {
-    const text = ((payload?.text ?? '') as string).trim()
+    const text = typeof payload?.text === 'string' ? payload.text.trim() : ''
     if (!text) return json({ error: 'Messaggio vuoto' }, 400)
     if (text.length > 1000) return json({ error: 'Messaggio troppo lungo' }, 400)
 
@@ -130,16 +191,17 @@ Deno.serve(async (req: Request) => {
 
   // ── CANCEL REQUEST ────────────────────────────────────────────
   if (action === 'cancel_request') {
-    const lessonId = payload?.lessonId as string
-    const lessonDate = payload?.lessonDate as string
+    const lessonId = shortText(payload?.lessonId)
+    const lessonDate = shortText(payload?.lessonDate)
     if (!lessonId) return json({ error: 'lessonId mancante' }, 400)
+    if (!ownsLesson(lessonId)) return json({ error: 'Lezione non trovata' }, 404)
 
     const { error } = await supabase.from('client_messages').insert({
       client_token: token,
       user_id: foundUserId,
       client_id: foundClient.id,
       sender: 'client',
-      text: `Richiesta disdetta lezione del ${lessonDate ?? lessonId}`,
+      text: `Richiesta disdetta lezione del ${lessonDate || lessonId}`,
       type: 'cancel_request',
       lesson_id: lessonId,
       read: false,
@@ -150,10 +212,11 @@ Deno.serve(async (req: Request) => {
 
   // ── RESCHEDULE REQUEST ────────────────────────────────────────
   if (action === 'reschedule_request') {
-    const lessonId = payload?.lessonId as string
-    const lessonDate = payload?.lessonDate as string
-    const preferredDate = payload?.preferredDate as string | undefined
+    const lessonId = shortText(payload?.lessonId)
+    const lessonDate = shortText(payload?.lessonDate)
+    const preferredDate = shortText(payload?.preferredDate)
     if (!lessonId) return json({ error: 'lessonId mancante' }, 400)
+    if (!ownsLesson(lessonId)) return json({ error: 'Lezione non trovata' }, 404)
 
     const msg = preferredDate
       ? `Richiesta spostamento lezione del ${lessonDate} → preferenza: ${preferredDate}`
@@ -173,33 +236,9 @@ Deno.serve(async (req: Request) => {
     return json({ ok: true })
   }
 
-  // ── TRAINER REPLY (chiamata da index.html con auth normale) ───
-  // Nota: questa action è chiamata dalla app trainer, non dal cliente.
-  // Il trainer usa il proprio JWT, ma per semplicità usiamo lo stesso endpoint.
-  if (action === 'trainer_reply') {
-    const text = ((payload?.text ?? '') as string).trim()
-    if (!text) return json({ error: 'Risposta vuota' }, 400)
-
-    const { error } = await supabase.from('client_messages').insert({
-      client_token: token,
-      user_id: foundUserId,
-      client_id: foundClient.id,
-      sender: 'trainer',
-      text,
-      type: 'message',
-      read: false,
-    })
-    if (error) return json({ error: 'Errore risposta' }, 500)
-
-    // Segna tutti i messaggi del cliente come letti
-    await supabase
-      .from('client_messages')
-      .update({ read: true })
-      .eq('client_token', token)
-      .eq('sender', 'client')
-
-    return json({ ok: true })
-  }
+  // NB: l'azione "trainer_reply" è stata rimossa. Chiunque avesse il link del portale
+  // poteva usarla per scrivere messaggi a nome del trainer. Il trainer risponde dalla
+  // app con il proprio login (insert diretto su client_messages, protetto da RLS).
 
   // ── MARK READ — cliente segna messaggi trainer come letti ──────
   if (action === 'mark_read') {

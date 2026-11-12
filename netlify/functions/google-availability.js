@@ -1,26 +1,8 @@
 
 const { getBearerToken, json, parseJsonBody } = require('./_lib/utils');
-const { verifyUser, getGoogleConnection, upsertGoogleConnection } = require('./_lib/supabase');
-const { decryptRefreshToken, refreshGoogleAccessToken, ensureCalendar, listCalendars, queryFreeBusy } = require('./_lib/google-calendar');
-
-async function getReadyConnection(userId) {
-  const connection = await getGoogleConnection(userId);
-  if (!connection?.is_connected || !connection?.refresh_token_enc) return null;
-  const refreshToken = decryptRefreshToken(connection);
-  if (!refreshToken) return null;
-  const accessToken = await refreshGoogleAccessToken(refreshToken);
-  const calendar = await ensureCalendar(accessToken, connection, userId);
-  if (calendar.id !== connection.calendar_id || calendar.summary !== connection.calendar_name) {
-    await upsertGoogleConnection({
-      user_id: userId,
-      calendar_id: calendar.id,
-      calendar_name: calendar.summary || 'FitFlow Clienti',
-      is_connected: true,
-      connected_at: connection.connected_at || new Date().toISOString()
-    });
-  }
-  return { accessToken, calendarId: calendar.id, calendarName: calendar.summary || 'FitFlow Clienti' };
-}
+const { verifyUser } = require('./_lib/supabase');
+const { listCalendars, queryFreeBusy } = require('./_lib/google-calendar');
+const { getReadyConnection } = require('./_lib/google-lessons');
 
 exports.handler = async function handler(event) {
   if (event.httpMethod !== 'POST') return json(405, { error: 'Method not allowed' });

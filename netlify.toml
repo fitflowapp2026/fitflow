@@ -1,2 +1,30 @@
+# Netlify pubblica SOLO la cartella dist/, riempita da scripts/make-dist.js con
+# le pagine e le icone. Script, copie di lavoro (app_source.html, assets/),
+# funzioni e cartella supabase/ non sono raggiungibili dal sito.
 [build]
-  publish = "."
+  command   = "node scripts/make-dist.js"
+  publish   = "dist"
+  functions = "netlify/functions"
+
+[build.environment]
+  NODE_VERSION = "18"
+
+# ── Header di sicurezza per tutte le pagine ──────────────────────
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options    = "nosniff"
+    X-Frame-Options           = "DENY"
+    Content-Security-Policy   = "frame-ancestors 'none'; base-uri 'self'; object-src 'none'"
+    Referrer-Policy           = "strict-origin-when-cross-origin"
+    Strict-Transport-Security = "max-age=31536000"
+    Permissions-Policy        = "camera=(), microphone=(), geolocation=(), payment=()"
+
+# Il portale cliente ha il token nell'URL (?t=...): non deve mai finire
+# nel Referer verso terzi né in cache condivise.
+[[headers]]
+  for = "/client.html"
+  [headers.values]
+    Referrer-Policy = "no-referrer"
+    Cache-Control   = "private, no-cache"
+    X-Robots-Tag    = "noindex, nofollow"

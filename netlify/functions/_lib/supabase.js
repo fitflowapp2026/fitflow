@@ -20,8 +20,10 @@ async function serviceRequest(path, { method = 'GET', body = null, headers = {} 
     body: body ? JSON.stringify(body) : undefined
   });
   if (!response.ok) {
+    // Il dettaglio resta nei log del server: al browser arriva solo un errore generico
     const text = await response.text();
-    throw new Error(`Supabase request failed: ${response.status} ${text}`);
+    console.error(`[supabase] request failed: ${method} ${path.split('?')[0]} → ${response.status} ${text.slice(0, 300)}`);
+    throw new Error('Errore database');
   }
   if (response.status === 204) return null;
   const text = await response.text();
@@ -38,8 +40,8 @@ async function verifyUser(accessToken) {
     }
   });
   if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`Supabase auth failed: ${response.status} ${text}`);
+    console.error(`[supabase] auth failed: ${response.status}`);
+    throw new Error('Unauthorized');
   }
   return response.json();
 }

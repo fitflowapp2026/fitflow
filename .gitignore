@@ -1,3 +1,18 @@
 node_modules/
 # app.html e' generato da build.js
 app.html
+
+# macOS
+.DS_Store
+
+# Cartella pubblicata da Netlify (creata da scripts/make-dist.js)
+dist/
+
+# Supabase CLI (contiene ID progetto e URL del database)
+supabase/.temp/
+
+# Segreti e configurazione locale
+.env
+.env.*
+.netlify/
+.claude/

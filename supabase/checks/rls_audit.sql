@@ -1,5 +1,6 @@
 -- ════════════════════════════════════════════════════════════════════
 -- CONTROLLO SICUREZZA DEL DATABASE — sola lettura, non modifica nulla
+-- (eseguito il 2026-11-13; correzioni in supabase/migrations/20261113060000_rls_hardening.sql)
 --
 -- Come usarlo: Supabase → SQL Editor → incolla TUTTO questo file → Run.
 -- Il risultato è un'unica tabella. Non contiene dati dei clienti (solo

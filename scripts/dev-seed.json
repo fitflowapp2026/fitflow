@@ -1,0 +1,6 @@
+{
+  "_nota": "Credenziali valide SOLO sul server di prova locale (scripts/dev-server.js). Non esistono sul sito vero.",
+  "email": "prova@dsworld.test",
+  "password": "prova-8739c5d2954d",
+  "demoClients": 135
+}

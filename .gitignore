@@ -1,6 +1,4 @@
 node_modules/
-# app.html e' generato da build.js
-app.html
 
 # macOS
 .DS_Store

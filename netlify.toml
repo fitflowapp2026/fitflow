@@ -1,6 +1,6 @@
 # Netlify pubblica SOLO la cartella dist/, riempita da scripts/make-dist.js con
-# le pagine e le icone. Script, copie di lavoro (app_source.html, assets/),
-# funzioni e cartella supabase/ non sono raggiungibili dal sito.
+# le pagine e le icone. Script, prove, funzioni e cartella supabase/ non sono
+# raggiungibili dal sito.
 [build]
   command   = "node scripts/make-dist.js"
   publish   = "dist"
@@ -17,7 +17,12 @@
   [headers.values]
     X-Content-Type-Options    = "nosniff"
     X-Frame-Options           = "DENY"
-    Content-Security-Policy   = "frame-ancestors 'none'; base-uri 'self'; object-src 'none'"
+    # Da dove le pagine possono caricare script, stili, caratteri e a chi possono
+    # inviare dati. Se un giorno si aggiunge un servizio esterno (o un dominio
+    # personalizzato per Supabase) va aggiunto qui, altrimenti il browser lo blocca.
+    #   script : il sito + le librerie a versione fissa (Supabase, ExcelJS)
+    #   connect: il sito (funzioni Netlify) + Supabase (dati, login, tempo reale)
+    Content-Security-Policy   = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://cdn.jsdelivr.net https://unpkg.com; worker-src 'self'; manifest-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'self'; object-src 'none'"
     Referrer-Policy           = "strict-origin-when-cross-origin"
     Strict-Transport-Security = "max-age=31536000"
     Permissions-Policy        = "camera=(), microphone=(), geolocation=(), payment=()"

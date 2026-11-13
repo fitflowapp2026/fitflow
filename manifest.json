@@ -1,6 +1,6 @@
 {
-  "name": "DSWORLD",
-  "short_name": "DSWORLD",
+  "name": "FitFlow",
+  "short_name": "FitFlow",
   "description": "Gestione clienti e calendario per personal trainer",
   "start_url": "./app.html",
   "scope": "./",

@@ -12,7 +12,7 @@ function appendStatus(returnTo, flag, reason = '') {
 
 exports.handler = async function handler(event) {
   const query = event.queryStringParameters || {};
-  const fallback = getSiteOrigin(event);
+  const fallback = `${getSiteOrigin(event)}/app.html`;
   if (query.error) {
     return redirect(appendStatus(fallback, 'error', query.error));
   }

@@ -1,13 +1,13 @@
 {
-  "name": "dsworld",
+  "name": "fitflow",
   "version": "1.0.0",
   "private": true,
   "scripts": {
     "build": "node scripts/make-dist.js",
-    "dev": "node build.js --watch",
-    "test": "node tests/funzioni-netlify.test.js && node tests/portale-cliente.test.mjs"
+    "dev": "node scripts/make-dist.js && node scripts/dev-server.js",
+    "test": "node tests/funzioni-netlify.test.js && node tests/portale-cliente.test.mjs && node tests/logica-app.test.js && node tests/avvio-app.test.js"
   },
   "engines": {
-    "node": ">=16"
+    "node": ">=22"
   }
 }

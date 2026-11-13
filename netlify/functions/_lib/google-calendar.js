@@ -9,6 +9,7 @@ const GOOGLE_SCOPE = [
 ].join(' ');
 const GOOGLE_AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
 const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token';
+const GOOGLE_REVOKE_URL = 'https://oauth2.googleapis.com/revoke';
 const GOOGLE_CALENDAR_API = 'https://www.googleapis.com/calendar/v3';
 
 function getRedirectUri() {
@@ -66,6 +67,24 @@ async function refreshGoogleAccessToken(refreshToken) {
   const data = await response.json();
   if (!response.ok) throw new Error(data.error_description || data.error || 'Google refresh token failed');
   return data.access_token;
+}
+
+// Toglie a FitFlow l'accesso al calendario dal lato di Google: dopo questa
+// chiamata il token salvato non vale più. Se Google risponde che il token non
+// era già più valido, il risultato voluto c'è comunque.
+async function revokeGoogleToken(token) {
+  const response = await fetch(GOOGLE_REVOKE_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ token }),
+    // Google lento o irraggiungibile non deve bloccare chi aspetta la risposta
+    signal: AbortSignal.timeout(5000)
+  });
+  if (response.ok) return true;
+  let reason = '';
+  try { reason = String((await response.json())?.error || ''); } catch (_) { reason = ''; }
+  if (response.status === 400 && reason === 'invalid_token') return true;
+  throw new Error(`Google revoke failed: ${response.status} ${reason}`.trim());
 }
 
 function encryptRefreshToken(refreshToken) {
@@ -280,6 +299,7 @@ module.exports = {
   buildAuthUrl,
   exchangeCodeForTokens,
   refreshGoogleAccessToken,
+  revokeGoogleToken,
   encryptRefreshToken,
   decryptRefreshToken,
   ensureCalendar,

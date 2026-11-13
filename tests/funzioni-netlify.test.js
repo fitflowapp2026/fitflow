@@ -71,7 +71,7 @@ const quiet = console.error; console.error = () => {};
   assert.strictEqual(r.statusCode, 405);
   r = await sync(ev('POST', { lesson }, 'bad'));
   assert.strictEqual(r.statusCode, 401, 'senza login: non autorizzato, non errore del server');
-  for (const name of ['google-sync.js', 'google-replay-sync.js', 'google-availability.js', 'google-disconnect.js', 'google-auth-start.js']) {
+  for (const name of ['google-sync.js', 'google-replay-sync.js', 'google-availability.js', 'google-disconnect.js', 'google-auth-start.js', 'delete-account.js']) {
     const res = await fn(name).handler(ev('POST', {}, 'bad'));
     assert.strictEqual(res.statusCode, 401, name + ' senza login');
     assert.deepStrictEqual(JSON.parse(res.body), { error: 'Unauthorized' }, name + ': nessun dettaglio interno');
@@ -83,6 +83,12 @@ const quiet = console.error; console.error = () => {};
   let b = JSON.parse(r.body);
   assert.strictEqual(b.synced, 2);
   assert.deepStrictEqual(b.mappings.map(m => m.googleEventId), ['evNew', 'ev1']);
+  r = await replay(ev('POST', { lessons: [lesson, { id: 'rotta' }, { ...lesson, id: 'l3' }] }));
+  b = JSON.parse(r.body);
+  assert.strictEqual(r.statusCode, 200, 'una lezione incompleta non fa fallire tutto il blocco');
+  assert.strictEqual(b.synced, 2);
+  assert.strictEqual(b.failed, 1);
+  assert.deepStrictEqual(b.mappings.map(m => m.id), ['l1', 'rotta', 'l3'], 'risposte nello stesso ordine delle lezioni inviate');
 
   const avail = fn('google-availability.js').handler;
   r = await avail(ev('POST', { start: 's', end: 'e' }));
@@ -115,6 +121,217 @@ const quiet = console.error; console.error = () => {};
   const state = new URL(JSON.parse(r.body).url).searchParams.get('state');
   const payload = JSON.parse(Buffer.from(state.split('.')[0], 'base64url').toString());
   assert.strictEqual(payload.returnTo, 'https://site.test', 'returnTo esterno rifiutato');
+
+  // ── Eliminazione dell'account ──────────────────────────────────────
+  // Database finto con due trainer (Anna e Bruno): chi chiama elimina solo se stesso.
+  {
+    const A = '11111111-1111-4111-8111-111111111111';
+    const B = '22222222-2222-4222-8222-222222222222';
+    const tokens = { 'token-anna': A, 'token-bruno': B, 'token-strano': 'u1' };
+    let db, revoked, log;
+    let failOn = '';          // nome del passaggio che deve rispondere con un errore
+    let googleAnswer = 'ok';  // 'ok' | 'gia-revocato' | 'errore'
+    const reset = () => {
+      db = {
+        users: new Map([[A, 'anna@test'], [B, 'bruno@test'], ['u1', 'x@test']]),
+        user_app_state: [{ user_id: A, app_data: { clients: [1, 2] } }, { user_id: B, app_data: { clients: [3] } }],
+        client_messages: [{ id: 'm1', user_id: A }, { id: 'm2', user_id: A }, { id: 'm3', user_id: B }],
+        google_calendar_connections: [
+          { user_id: A, is_connected: true, calendar_id: 'calA', ...encryptRefreshToken('refresh-anna') },
+          { user_id: B, is_connected: true, calendar_id: 'calB', ...encryptRefreshToken('refresh-bruno') }
+        ]
+      };
+      revoked = [];
+      log = [];
+      failOn = '';
+      googleAnswer = 'ok';
+    };
+    const rowsOf = id => ['user_app_state', 'client_messages', 'google_calendar_connections'].map(t => db[t].filter(r => r.user_id === id).length);
+    const brunoIntatto = () => {
+      assert.deepStrictEqual(rowsOf(B), [1, 1, 1], 'i dati di un altro trainer non si toccano');
+      assert.ok(db.users.has(B), "l'account di un altro trainer non si tocca");
+    };
+    const nessunaEliminazione = () => {
+      assert.deepStrictEqual(rowsOf(A), [1, 2, 1]);
+      assert.ok(db.users.has(A));
+      assert.ok(!log.some(line => line.startsWith('DELETE')), 'nessuna richiesta di eliminazione partita');
+      assert.deepStrictEqual(revoked, [], 'nessuna revoca Google partita');
+      brunoIntatto();
+    };
+
+    const previousFetch = global.fetch;
+    global.fetch = async (url, opts = {}) => {
+      const method = opts.method || 'GET';
+      const u = new URL(String(url));
+      calls.push(`${method} ${u.origin}${u.pathname}`);
+      log.push(`${method} ${u.pathname}${u.search}`);
+      const headers = opts.headers || {};
+      if (u.pathname === '/auth/v1/user') {
+        const id = tokens[String(headers.Authorization || '').replace('Bearer ', '')];
+        return id && db.users.has(id) ? res(200, { id, email: db.users.get(id) }) : res(401, { msg: 'bad jwt SEGRETO' });
+      }
+      if (u.origin === 'https://oauth2.googleapis.com' && u.pathname === '/revoke') {
+        assert.strictEqual(method, 'POST');
+        if (googleAnswer === 'errore') return res(503, { error: 'backend_error SEGRETO' });
+        if (googleAnswer === 'gia-revocato') return res(400, { error: 'invalid_token' });
+        revoked.push(new URLSearchParams(String(opts.body)).get('token'));
+        return res(200, {});
+      }
+      // Da qui in poi tutto deve arrivare con la chiave di servizio
+      assert.strictEqual(headers.apikey, 'service-key', 'chiave di servizio mancante: ' + method + ' ' + u.pathname);
+      assert.strictEqual(headers.Authorization, 'Bearer service-key');
+      if (u.pathname.startsWith('/rest/v1/')) {
+        const table = u.pathname.slice('/rest/v1/'.length);
+        assert.ok(Array.isArray(db[table]), 'tabella non prevista: ' + table);
+        // Come nel database vero: una richiesta senza filtro riguarda TUTTE le righe
+        const filter = u.searchParams.get('user_id');
+        const match = row => filter === null || filter === `eq.${row.user_id}`;
+        if (method === 'GET') return failOn === 'lettura' ? res(500, { message: 'SEGRETO' }) : res(200, db[table].filter(match));
+        if (method === 'DELETE') {
+          if (failOn === table) return res(500, { message: 'permission denied SEGRETO' });
+          db[table] = db[table].filter(row => !match(row));
+          return res(204, null);
+        }
+      }
+      const admin = u.pathname.match(/^\/auth\/v1\/admin\/users\/([^/]+)$/);
+      if (admin && method === 'DELETE') {
+        if (failOn === 'auth') return res(500, { msg: 'SEGRETO' });
+        return db.users.delete(admin[1]) ? res(200, {}) : res(404, { msg: 'User not found' });
+      }
+      throw new Error('fetch non previsto: ' + method + ' ' + url);
+    };
+
+    const del = fn('delete-account.js').handler;
+    const conferma = { confirmEmail: 'anna@test' };
+
+    // Senza login (token sbagliato o assente): 401 e nulla viene toccato
+    reset();
+    r = await del(ev('POST', conferma, 'bad'));
+    assert.strictEqual(r.statusCode, 401);
+    assert.deepStrictEqual(JSON.parse(r.body), { error: 'Unauthorized' });
+    r = await del({ httpMethod: 'POST', headers: { host: 'site.test' }, body: JSON.stringify(conferma) });
+    assert.strictEqual(r.statusCode, 401, 'senza intestazione di login');
+    nessunaEliminazione();
+
+    // Solo POST
+    for (const method of ['GET', 'DELETE', 'PUT']) {
+      r = await del(ev(method, conferma, 'token-anna'));
+      assert.strictEqual(r.statusCode, 405, method + ' non ammesso');
+    }
+    nessunaEliminazione();
+
+    // Senza la conferma (email riscritta) non si elimina nulla
+    for (const body of [null, {}, { confirmEmail: '' }, { confirmEmail: 'bruno@test' }, { confirmEmail: 'anna@test.it' }, { userId: B }]) {
+      r = await del(ev('POST', body, 'token-anna'));
+      assert.strictEqual(r.statusCode, 400, 'conferma non valida: ' + JSON.stringify(body));
+    }
+    // Anche una richiesta scritta male (non un oggetto, email non testuale) viene solo rifiutata
+    for (const raw of ['null', '[]', '"anna@test"', '42', '{"confirmEmail":["anna@test"]}', '{"confirmEmail":{"a":1}}', 'non è json']) {
+      r = await del({ ...ev('POST', null, 'token-anna'), body: raw });
+      assert.strictEqual(r.statusCode, 400, 'richiesta scritta male: ' + raw);
+      assert.deepStrictEqual(JSON.parse(r.body), { error: 'Conferma non valida' });
+    }
+    nessunaEliminazione();
+
+    // Un id utente che non è un UUID non fa partire nessuna eliminazione
+    r = await del(ev('POST', { confirmEmail: 'x@test' }, 'token-strano'));
+    assert.strictEqual(r.statusCode, 500);
+    nessunaEliminazione();
+
+    // Il database non risponde già alla prima lettura: ci si ferma prima di toccare qualcosa
+    failOn = 'lettura';
+    r = await del(ev('POST', conferma, 'token-anna'));
+    assert.strictEqual(r.statusCode, 500);
+    assert.ok(!r.body.includes('SEGRETO'));
+    nessunaEliminazione();
+
+    // Eliminazione riuscita: spariscono solo i dati e l'account di chi chiama
+    reset();
+    r = await del(ev('POST', { confirmEmail: '  Anna@Test ' }, 'token-anna'));
+    assert.strictEqual(r.statusCode, 200);
+    assert.deepStrictEqual(JSON.parse(r.body), { ok: true, googleRevoked: true });
+    assert.deepStrictEqual(rowsOf(A), [0, 0, 0], 'dati, messaggi e collegamento Google eliminati');
+    assert.ok(!db.users.has(A), 'utente di accesso eliminato');
+    brunoIntatto();
+    assert.deepStrictEqual(revoked, ['refresh-anna'], 'revocato il token Google di chi chiama, non quello di un altro');
+    const deletes = log.filter(line => line.startsWith('DELETE'));
+    assert.deepStrictEqual(deletes, [
+      `DELETE /rest/v1/google_calendar_connections?user_id=eq.${A}`,
+      `DELETE /rest/v1/user_app_state?user_id=eq.${A}`,
+      `DELETE /rest/v1/client_messages?user_id=eq.${A}`,
+      `DELETE /auth/v1/admin/users/${A}`
+    ], "ogni eliminazione è filtrata sull'utente; l'account di accesso per ultimo");
+    assert.ok(log.indexOf('POST /revoke') < log.indexOf(deletes[0]), 'la revoca Google avviene prima di eliminare il token salvato');
+    // A eliminazione avvenuta il vecchio login non vale più
+    r = await del(ev('POST', conferma, 'token-anna'));
+    assert.strictEqual(r.statusCode, 401);
+
+    // Un id scritto nella richiesta viene ignorato: vale solo chi ha fatto login
+    reset();
+    r = await del(ev('POST', { confirmEmail: 'bruno@test', userId: A, user_id: A, id: A }, 'token-bruno'));
+    assert.strictEqual(r.statusCode, 200);
+    assert.deepStrictEqual(rowsOf(B), [0, 0, 0]);
+    assert.ok(!db.users.has(B));
+    assert.deepStrictEqual(rowsOf(A), [1, 2, 1], "i dati dell'utente indicato nella richiesta restano intatti");
+    assert.ok(db.users.has(A), "l'account indicato nella richiesta resta intatto");
+    assert.deepStrictEqual(revoked, ['refresh-bruno']);
+
+    // Google non collegato: nessuna revoca, eliminazione normale
+    reset();
+    db.google_calendar_connections = db.google_calendar_connections.filter(row => row.user_id !== A);
+    r = await del(ev('POST', conferma, 'token-anna'));
+    assert.deepStrictEqual(JSON.parse(r.body), { ok: true, googleRevoked: null });
+    assert.deepStrictEqual(revoked, []);
+    assert.ok(!db.users.has(A));
+    brunoIntatto();
+
+    // Google non risponde: l'account viene eliminato lo stesso e l'app può avvisare
+    reset();
+    googleAnswer = 'errore';
+    r = await del(ev('POST', conferma, 'token-anna'));
+    assert.deepStrictEqual(JSON.parse(r.body), { ok: true, googleRevoked: false });
+    assert.deepStrictEqual(rowsOf(A), [0, 0, 0]);
+    assert.ok(!db.users.has(A));
+    // Accesso già revocato dal lato di Google: va bene così
+    reset();
+    googleAnswer = 'gia-revocato';
+    r = await del(ev('POST', conferma, 'token-anna'));
+    assert.deepStrictEqual(JSON.parse(r.body), { ok: true, googleRevoked: true });
+
+    // Un errore a metà viene segnalato, senza dettagli interni, e l'account resta
+    // (così la richiesta si può ripetere)
+    reset();
+    failOn = 'client_messages';
+    r = await del(ev('POST', conferma, 'token-anna'));
+    assert.strictEqual(r.statusCode, 500, 'errore a metà: segnalato');
+    assert.deepStrictEqual(JSON.parse(r.body), { error: 'Eliminazione account non completata' });
+    assert.ok(!r.body.includes('SEGRETO') && !r.body.includes('client_messages'), 'nessun dettaglio interno nella risposta');
+    assert.ok(db.users.has(A), "dopo un errore a metà l'utente di accesso esiste ancora");
+    assert.ok(!log.some(line => line.startsWith('DELETE /auth/')), "l'utente di accesso non viene toccato se un passaggio prima è fallito");
+    assert.deepStrictEqual(rowsOf(A), [0, 2, 0], 'i messaggi non eliminati sono ancora lì');
+    brunoIntatto();
+    failOn = '';
+    r = await del(ev('POST', conferma, 'token-anna'));
+    assert.strictEqual(r.statusCode, 200, 'ripetendo la richiesta si completa');
+    assert.deepStrictEqual(rowsOf(A), [0, 0, 0]);
+    assert.ok(!db.users.has(A));
+    brunoIntatto();
+
+    // Errore proprio all'ultimo passaggio (utente di accesso): segnalato anche questo
+    reset();
+    failOn = 'auth';
+    r = await del(ev('POST', conferma, 'token-anna'));
+    assert.strictEqual(r.statusCode, 500);
+    assert.ok(!r.body.includes('SEGRETO'));
+    assert.ok(db.users.has(A));
+    failOn = '';
+    r = await del(ev('POST', conferma, 'token-anna'));
+    assert.strictEqual(r.statusCode, 200);
+    assert.ok(!db.users.has(A));
+    brunoIntatto();
+
+    global.fetch = previousFetch;
+  }
 
   console.error = quiet;
   console.log('OK — tutte le funzioni Netlify rispondono come previsto (' + calls.length + ' chiamate finte)');

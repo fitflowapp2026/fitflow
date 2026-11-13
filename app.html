@@ -5,11 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
   <meta http-equiv="X-Content-Type-Options" content="nosniff" />
   <meta name="color-scheme" content="dark" />
-  <meta name="description" content="DSWORLD — Gestione clienti e calendario per personal trainer" />
+  <meta name="description" content="FitFlow — Gestione clienti e calendario per personal trainer" />
   <meta name="theme-color" content="#141414" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="DSWORLD" />
+  <meta name="apple-mobile-web-app-title" content="FitFlow" />
   <meta name="mobile-web-app-capable" content="yes" />
   <link rel="manifest" href="manifest.json" />
   <!-- PWA: icona Home screen iOS — genera icon-180.png dalla tua icona -->
@@ -25,7 +25,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
-  <title>DSWORLD — Gestione Clienti</title>
+  <title>FitFlow — Gestione Clienti</title>
   <style>
     :root {
       --bg: #141414;
@@ -3284,7 +3284,7 @@
 
   <div class="auth-shell" id="authShell">
     <div class="auth-card">
-      <div class="auth-brand">DSWORLD Cloud</div>
+      <div class="auth-brand">FITFLOW Cloud</div>
       <div>
         <h2>Account</h2>
         <div class="muted">Accedi per sincronizzare clienti, lezioni e pacchetti.</div>
@@ -3322,6 +3322,7 @@
           <input id="authSignupPassword" type="password" placeholder="Minimo 8 caratteri" autocomplete="new-password" required minlength="8" />
         </label>
         <button class="btn btn-primary" type="submit">Crea account</button>
+        <div class="muted small">Creando l'account accetti i <a href="termini.html" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline;">Termini di Servizio</a> e la <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline;">Privacy Policy</a>.</div>
       </form>
 
       <form class="auth-panel" id="resetPanel" novalidate>
@@ -3398,7 +3399,7 @@
   <!-- Mobile sidebar drawer -->
   <aside class="sidebar-drawer" id="sidebarDrawer">
     <div class="drawer-close-row">
-      <span class="brand"><span class="brand-main">DSWORLD</span><span class="brand-sub">FITNESS</span></span>
+      <span class="brand"><span class="brand-main">FITFLOW</span><span class="brand-sub">FITNESS</span></span>
       <button class="drawer-close-btn" id="drawerCloseBtn">✕ Chiudi</button>
     </div>
     <section class="panel" style="flex:1;min-height:0;">
@@ -3429,7 +3430,7 @@
 
   <div class="app" id="mainApp">
     <header class="topbar">
-      <div class="brand"><span class="brand-main">DSWORLD</span><span class="brand-sub">FITNESS</span></div>
+      <div class="brand"><span class="brand-main">FITFLOW</span><span class="brand-sub">FITNESS</span></div>
       <div class="top-actions">
         <span class="user-badge" id="userBadge">Non connesso</span>
         <span id="syncBadge" style="display:none;">Cloud disattivato</span>
@@ -3473,7 +3474,7 @@
     <!-- PWA Install Banner -->
     <div class="pwa-install-banner" id="pwaInstallBanner" role="complementary" aria-label="Installa app">
       <div class="pwa-text">
-        <strong>📲 Installa DSWORLD</strong>
+        <strong>📲 Installa FitFlow</strong>
         Accesso rapido dalla home screen, funziona anche offline
       </div>
       <div class="pwa-actions">
@@ -3644,9 +3645,14 @@
           </label>
         </div>
         <div class="form-grid-2">
+          <label>Telefono
+            <input id="clientPhone" type="tel" placeholder="Es. 333 1234567" autocomplete="tel" inputmode="tel" enterkeyhint="next" maxlength="24" />
+          </label>
           <label>Email cliente
             <input id="clientEmail" type="email" placeholder="email@cliente.com" autocomplete="email" autocapitalize="none" autocorrect="off" enterkeyhint="next" />
           </label>
+        </div>
+        <div class="form-grid-2">
           <label>Invia appuntamenti calendario
             <select id="clientSendCalendarInvite">
               <option value="no">No</option>
@@ -4165,7 +4171,7 @@
           <div class="summary-row"><span>Stato</span><strong id="cloudStatusLabel">Offline</strong></div>
         </div>
         
-        <div class="mini-card">
+        <div class="mini-card" style="display:none" aria-hidden="true">
           <div class="summary-row"><span>Configurazione</span><strong>Cloud integrato</strong></div>
           <div class="muted small">Questo account usa già il progetto Supabase collegato.</div>
           <input id="cloudProjectUrl" type="hidden" value="" />
@@ -4175,7 +4181,7 @@
 
         <div class="mini-card">
           <div class="summary-row"><span>Google Calendar</span><strong id="googleStatusLabel">Non collegato</strong></div>
-          <div class="muted small" id="googleStatusHint">Collega Google per creare e sincronizzare automaticamente il calendario DSWORLD Clienti. Gli altri calendari Google selezionati sul tuo account bloccano gli slot non disponibili.</div>
+          <div class="muted small" id="googleStatusHint">Collega Google per creare e sincronizzare automaticamente il calendario FitFlow Clienti. Gli altri calendari Google selezionati sul tuo account bloccano gli slot non disponibili.</div>
           <div class="inline-actions" style="margin-top:12px;">
             <button class="btn btn-soft" type="button" id="connectGoogleBtn">Collega Google Calendar</button>
             <button class="btn btn-soft" type="button" id="googleResyncBtn">Sync Google</button>
@@ -4183,11 +4189,38 @@
           </div>
         </div>
 
-        <div class="mini-card push-row" id="pushNotificationsRow">
-          <div class="summary-row"><span>Notifiche push</span><strong id="pushStatusLabel">Non attive</strong></div>
-          <div class="muted small">Ricevi avvisi anche quando l'app è chiusa: rinnovi in scadenza, pagamenti aperti, lezioni del giorno.</div>
+        <div class="mini-card" id="trainerProfileCard">
+          <div class="summary-row"><span>Profilo trainer</span><strong id="trainerProfileStatus">Da completare</strong></div>
+          <div class="muted small">Il tuo nome e la tua struttura compaiono nei messaggi WhatsApp che invii ai contatti.</div>
+          <div class="form-grid-2" style="margin-top:12px;">
+            <label>Il tuo nome
+              <input id="trainerNameInput" type="text" placeholder="Es. Marco" autocomplete="given-name" autocapitalize="words" maxlength="60" />
+            </label>
+            <label>Palestra / studio
+              <input id="trainerStudioInput" type="text" placeholder="Es. Studio Rossi" autocapitalize="words" maxlength="80" />
+            </label>
+          </div>
+          <label style="margin-top:12px;">Messaggio WhatsApp per le free session
+            <textarea id="trainerWaTemplateInput" maxlength="700" placeholder="Lascia vuoto per usare il messaggio standard"></textarea>
+          </label>
+          <div class="muted small" style="margin-top:6px;">Nel testo puoi scrivere {nome} (nome del contatto), {trainer} (il tuo nome) e {studio}. Anteprima: <span id="trainerWaPreview"></span></div>
           <div class="inline-actions" style="margin-top:12px;">
-            <button class="btn btn-soft" type="button" id="enablePushBtn">Attiva notifiche</button>
+            <button class="btn btn-soft" type="button" id="saveTrainerProfileBtn">Salva profilo</button>
+          </div>
+        </div>
+
+        <div class="mini-card" id="autoBackupCard">
+          <div class="summary-row"><span>Backup automatici</span><strong id="autoBackupCount">—</strong></div>
+          <div class="muted small">Ogni giorno una copia dei dati resta su questo dispositivo per 14 giorni. Puoi tornare alla situazione di una data precedente.</div>
+          <div id="autoBackupList" style="display:grid;gap:8px;margin-top:12px;"></div>
+        </div>
+
+        <div class="mini-card" id="yourDataCard">
+          <div class="summary-row"><span>I tuoi dati</span><strong>Copia ed eliminazione</strong></div>
+          <div class="muted small">Puoi scaricare quando vuoi una copia completa di ciò che hai salvato in FitFlow: clienti, piani, lezioni, pacchetti, impostazioni e messaggi. Oppure puoi eliminare per sempre l'account con tutti i suoi dati. <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline;">Privacy Policy</a></div>
+          <div class="inline-actions" style="margin-top:12px;">
+            <button class="btn btn-soft" type="button" id="downloadAllDataBtn">Scarica tutti i miei dati</button>
+            <button class="btn btn-danger" type="button" id="deleteAccountBtn">Elimina account</button>
           </div>
         </div>
 
@@ -4197,6 +4230,51 @@
           <button class="btn btn-danger" type="button" id="logoutBtnModal">Esci</button>
         </div>
 
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ ELIMINA ACCOUNT: spiegazione, copia dei dati e conferma con l'email ═══ -->
+  <div class="modal-backdrop" id="deleteAccountModalBackdrop">
+    <div class="modal narrow" role="dialog" aria-modal="true" aria-labelledby="deleteAccountTitle">
+      <div class="modal-top">
+        <div>
+          <h3 class="modal-title" id="deleteAccountTitle">Elimina account</h3>
+          <div class="muted small">Operazione definitiva: non si può annullare.</div>
+        </div>
+        <button class="btn btn-ghost btn-small" type="button" data-close="deleteAccountModalBackdrop">Chiudi</button>
+      </div>
+      <div style="display:grid;gap:14px;">
+        <div class="mini-card">
+          <strong>Cosa viene cancellato, per sempre</strong>
+          <ul style="margin:10px 0;padding-left:20px;display:grid;gap:6px;font-size:0.92rem;line-height:1.4;">
+            <li id="deleteAccountCounts">Tutti i clienti, i piani, le lezioni e i pacchetti</li>
+            <li>Tutti i messaggi scambiati con i clienti</li>
+            <li>Il collegamento a Google Calendar: FitFlow non potrà più accedere al tuo calendario</li>
+            <li>Il tuo profilo e il tuo accesso: con questa email e password non potrai più entrare</li>
+            <li>I dati e le copie di backup salvati su questo dispositivo</li>
+          </ul>
+          <div class="muted small">I link del portale che hai dato ai clienti smettono di funzionare. Gli appuntamenti già scritti nel tuo Google Calendar restano lì: puoi eliminarli da Google. Se usi FitFlow anche su un altro telefono o computer, prima esci dall'account anche lì (Cloud → Esci): così i dati vengono tolti anche da quel dispositivo.</div>
+        </div>
+        <div class="mini-card">
+          <strong>Prima scarica una copia</strong>
+          <div class="muted small" style="margin-top:4px;">Dopo l'eliminazione non sarà più possibile riavere i tuoi dati.</div>
+          <div class="inline-actions" style="margin-top:12px;">
+            <button class="btn btn-soft" type="button" id="deleteAccountDownloadBtn">Scarica tutti i miei dati</button>
+          </div>
+          <div class="muted small" id="deleteAccountDownloadStatus" role="status" style="margin-top:8px;"></div>
+        </div>
+        <!-- Non è un modulo: il tasto Invio nel campo non deve poter avviare l'eliminazione -->
+        <div style="display:grid;gap:12px;">
+          <label><span>Per confermare, scrivi qui la tua email: <strong id="deleteAccountEmailHint" style="color:var(--text);"></strong></span>
+            <input id="deleteAccountEmailInput" type="text" inputmode="email" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="La tua email" />
+          </label>
+          <div class="auth-note" id="deleteAccountError" role="alert" style="display:none;color:#ffb3b3;border-color:rgba(239,68,68,0.35);"></div>
+          <div class="inline-actions">
+            <button class="btn btn-ghost" type="button" data-close="deleteAccountModalBackdrop">Annulla</button>
+            <button class="btn btn-danger" type="button" id="deleteAccountConfirmBtn" disabled style="opacity:0.45;">Elimina definitivamente</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -4265,7 +4343,7 @@
   <!-- ═══ ONBOARDING MODAL ═══ -->
   <div class="modal-backdrop" id="onboardingModalBackdrop" role="dialog" aria-modal="true" aria-labelledby="onboardingTitle" style="z-index:9999;">
     <div class="modal" style="max-width:360px;padding:28px 24px 24px;">
-      <h2 id="onboardingTitle" class="sr-only">Benvenuto in DSWORLD</h2>
+      <h2 id="onboardingTitle" class="sr-only">Benvenuto in FitFlow</h2>
       <div id="onboardingContent"></div>
     </div>
   </div>
@@ -4301,7 +4379,7 @@
     (function () {
       function tryLoad(urls, idx) {
         if (idx >= urls.length) {
-          console.error('[DSWORLD] Impossibile caricare supabase-js da tutti i CDN disponibili.');
+          console.error('[FitFlow] Impossibile caricare supabase-js da tutti i CDN disponibili.');
           return;
         }
         var s = document.createElement('script');
@@ -4310,7 +4388,7 @@
         s.integrity = SUPABASE_JS_INTEGRITY;
         s.crossOrigin = 'anonymous';
         s.onerror = function () {
-          console.warn('[DSWORLD] CDN non disponibile:', urls[idx], '— provo il successivo…');
+          console.warn('[FitFlow] CDN non disponibile:', urls[idx], '— provo il successivo…');
           document.head.removeChild(s);
           tryLoad(urls, idx + 1);
         };
@@ -4346,6 +4424,9 @@
     }
   </script>
   <script>
+    /* Le chiavi qui sotto conservano il vecchio prefisso "dsworld": sono i nomi sotto
+       cui i dati sono salvati sui dispositivi di chi usa già l'app. Cambiarle farebbe
+       sparire quei dati dal telefono: NON rinominarle. */
     const STORAGE_KEY = 'dsworld_clienti_v2';
     const LEGACY_KEY = 'fitplanner_clienti_v1';
     const BACKUP_LATEST_KEY = 'dsworld_clienti_backup_latest_v1';
@@ -4362,39 +4443,93 @@
       const sorted = [...counts.entries()].sort((a, b) => b[1] - a[1]).map(e => e[0]).slice(0, 10);
       return sorted.length >= 5 ? sorted : _FALLBACK_TIMES;
     }
+    /* Sotto i 580px l'app passa alla disposizione da telefono: la colonna clienti e
+       la scheda cliente grande (con il riquadro messaggi) sono nascoste e si usano
+       il pannello a scomparsa e la scheda compatta. Stessa soglia delle regole CSS
+       "@media (max-width: 580px)". Si usa matchMedia e non una misura degli
+       elementi: misurare obbligherebbe il browser a ricalcolare tutta la pagina a
+       ogni aggiornamento dello schermo. */
+    const _narrowScreenQuery = window.matchMedia('(max-width: 580px)');
+    function isClientPanelVisible() {
+      return !_narrowScreenQuery.matches && !document.body.classList.contains('signed-out');
+    }
+
     const SUPABASE_CONFIG_KEY = 'dsworld_supabase_config_v1';
+    const SYNC_META_KEY = 'dsworld_sync_meta_v1';
+    const UI_STATE_KEY = 'dsworld_ui_state_v1';
     const GOOGLE_FN_BASE = '/.netlify/functions';
 
     /* ── Credenziali Supabase ───────────────────────────────────────
-       Strategia a 3 livelli (sicura + sempre funzionante):
-       1. Prova a caricarle da /api/config (Netlify Function — più sicuro)
-       2. Se /api/config non è ancora deployata, prova /.netlify/functions/config
-       3. Se entrambe falliscono, usa i valori di fallback hardcoded
-          (accettabile finché il sito non ha utenti multipli)
-       Le credenziali Supabase anon key sono pubbliche per design:
-       la sicurezza reale è garantita dalle RLS policy su Supabase.
+       Indirizzo e chiave pubblica arrivano dalla funzione Netlify "config".
+       L'ultima risposta valida resta salvata sul dispositivo: così l'app
+       parte subito (senza aspettare la funzione) e si apre anche senza rete.
+       La chiave pubblica (anon) non è un segreto: la protezione dei dati
+       è data dalle regole RLS su Supabase.
     ─────────────────────────────────────────────────────────────── */
-    let DEFAULT_SUPABASE_URL = ''; // Sarà caricato da un endpoint sicuro
-    let DEFAULT_SUPABASE_ANON_KEY = ''; // Sarà caricato da un endpoint sicuro
+    let DEFAULT_SUPABASE_URL = '';
+    let DEFAULT_SUPABASE_ANON_KEY = '';
 
-    async function loadRemoteConfig() {
-      const endpoints = ['/api/config', '/.netlify/functions/config'];
+    function readCachedRemoteConfig() {
+      try {
+        const cached = JSON.parse(localStorage.getItem(SUPABASE_CONFIG_KEY) || 'null');
+        return cached?.supabaseUrl && cached?.supabaseAnonKey ? cached : null;
+      } catch (_) { return null; }
+    }
+
+    async function fetchRemoteConfig() {
+      const endpoints = ['/.netlify/functions/config', '/api/config'];
       for (const url of endpoints) {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 8000);
         try {
-          const res = await fetch(url, { cache: 'no-store' });
+          const res = await fetch(url, { cache: 'no-store', signal: controller.signal });
           if (!res.ok) continue;
           const cfg = await res.json();
           if (cfg.supabaseUrl && cfg.supabaseAnonKey) {
-            DEFAULT_SUPABASE_URL = cfg.supabaseUrl;
-            DEFAULT_SUPABASE_ANON_KEY = cfg.supabaseAnonKey;
-            console.info('[DSWORLD] Config cloud caricata da', url);
-            return;
+            try { localStorage.setItem(SUPABASE_CONFIG_KEY, JSON.stringify({ supabaseUrl: cfg.supabaseUrl, supabaseAnonKey: cfg.supabaseAnonKey })); } catch (_) {}
+            return cfg;
           }
-        } catch (_) { /* prova il prossimo endpoint */ }
+        } catch (_) { /* prova il prossimo indirizzo */ } finally { clearTimeout(timer); }
       }
-      console.info('[DSWORLD] Usando config locale (Netlify Function non ancora attiva)');
+      return null;
     }
-    const cloud = { client: null, session: null, user: null, config: null, saveTimer: null, listenerBound: false, saving: false, allowLocalOnly: false, hydrated: false, google: { connected: false, calendarId: '', calendarName: '', googleEmail: '', lastError: '', lastSyncAt: '', syncing: false }, googleQueue: Promise.resolve() };
+
+    async function loadRemoteConfig() {
+      const cached = readCachedRemoteConfig();
+      if (cached) {
+        DEFAULT_SUPABASE_URL = cached.supabaseUrl;
+        DEFAULT_SUPABASE_ANON_KEY = cached.supabaseAnonKey;
+        /* Aggiorna la copia salvata in sottofondo. Se il progetto cloud è cambiato
+           (caso raro) la copia in uso non vale più: ricarica con quella nuova. */
+        fetchRemoteConfig().then(fresh => {
+          if (fresh && (fresh.supabaseUrl !== cached.supabaseUrl || fresh.supabaseAnonKey !== cached.supabaseAnonKey)) {
+            window.location.reload();
+          }
+        }).catch(() => {});
+        return;
+      }
+      const cfg = await fetchRemoteConfig();
+      if (cfg) {
+        DEFAULT_SUPABASE_URL = cfg.supabaseUrl;
+        DEFAULT_SUPABASE_ANON_KEY = cfg.supabaseAnonKey;
+      } else {
+        console.warn('[FitFlow] Configurazione cloud non raggiungibile.');
+      }
+    }
+    const cloud = {
+      client: null, session: null, user: null, config: null, saveTimer: null, listenerBound: false,
+      saving: false,          // un invio al cloud è in corso
+      savePending: false,     // sono arrivate altre modifiche durante l'invio: ne serve un altro
+      savePromise: null,
+      changeSeq: 0,           // cresce a ogni modifica ai dati
+      allowLocalOnly: false,
+      hydrated: false,        // i dati del cloud sono stati caricati per l'utente attuale
+      offlineOwner: null,     // id utente quando l'app è aperta senza rete con i dati salvati sul dispositivo
+      deletingAccount: false, // eliminazione dell'account in corso: nessun invio e nessuno scaricamento
+      refreshing: false, lastRefreshCheck: 0,
+      google: { connected: false, calendarId: '', calendarName: '', googleEmail: '', lastError: '', lastSyncAt: '', syncing: false },
+      googleQueue: Promise.resolve()
+    };
 
     const state = {
       clients: [],
@@ -4422,13 +4557,79 @@
     const derived = {
       lessonsByDate: null,
       alerts: null,
-      monthSnapshots: null
+      monthSnapshots: null,
+      planStats: null,
+      day: ''
     };
 
     function invalidateDerivedData() {
       derived.lessonsByDate = null;
       derived.alerts = null;
       derived.monthSnapshots = null;
+      derived.planStats = null;
+      derived.day = '';
+      _indexes.clients = _indexes.packages = _indexes.plans = _indexes.lessons = null;
+      _lessonGroups = null;
+    }
+
+    /* I valori calcolati (avvisi, statistiche dei piani) dipendono anche dalla data
+       di oggi: se l'app resta aperta oltre la mezzanotte vanno ricalcolati. */
+    function ensureDerivedDay() {
+      const today = todayISO();
+      if (derived.day === today) return;
+      derived.alerts = null;
+      derived.planStats = null;
+      derived.day = today;
+    }
+
+    /* ── Indici per id ───────────────────────────────────────────────
+       Cercare un cliente o una lezione scorrendo ogni volta tutta la lista
+       rallenta l'app quando i dati crescono. Ogni indice viene ricostruito
+       da solo quando la lista cambia (lista sostituita o di lunghezza diversa)
+       e a ogni salvataggio. */
+    const _indexes = { clients: null, packages: null, plans: null, lessons: null };
+    function indexById(name) {
+      const list = state[name];
+      let index = _indexes[name];
+      if (!index || index.list !== list || index.size !== list.length) {
+        const map = new Map();
+        /* a parità di id vale il primo, come con Array.find */
+        for (const item of list) if (item && !map.has(item.id)) map.set(item.id, item);
+        index = _indexes[name] = { list, size: list.length, map };
+      }
+      return index.map;
+    }
+
+    /* Lezioni raggruppate per cliente e per piano, già in ordine di data e ora */
+    let _lessonGroups = null;
+    /* Date (AAAA-MM-GG) e orari (HH:MM) si confrontano come testo semplice:
+       molto più rapido di localeCompare, stesso risultato. */
+    function compareLessonsByDateTime(a, b) {
+      const dateA = String(a.date || ''), dateB = String(b.date || '');
+      if (dateA !== dateB) return dateA < dateB ? -1 : 1;
+      const timeA = String(a.time || ''), timeB = String(b.time || '');
+      if (timeA !== timeB) return timeA < timeB ? -1 : 1;
+      return 0;
+    }
+    function lessonGroups() {
+      const list = state.lessons;
+      if (!_lessonGroups || _lessonGroups.list !== list || _lessonGroups.size !== list.length) {
+        const byClient = new Map();
+        const byPlan = new Map();
+        for (const lesson of list) {
+          if (!lesson) continue;
+          let group = byClient.get(lesson.clientId);
+          if (!group) byClient.set(lesson.clientId, group = []);
+          group.push(lesson);
+          group = byPlan.get(lesson.planId);
+          if (!group) byPlan.set(lesson.planId, group = []);
+          group.push(lesson);
+        }
+        byClient.forEach(group => group.sort(compareLessonsByDateTime));
+        byPlan.forEach(group => group.sort(compareLessonsByDateTime));
+        _lessonGroups = { list, size: list.length, byClient, byPlan };
+      }
+      return _lessonGroups;
     }
 
     const el = {
@@ -4461,6 +4662,7 @@
       clientName: document.getElementById('clientName'),
       clientSurname: document.getElementById('clientSurname'),
       clientEmail: document.getElementById('clientEmail'),
+      clientPhone: document.getElementById('clientPhone'),
       clientSendCalendarInvite: document.getElementById('clientSendCalendarInvite'),
       clientServiceType: document.getElementById('clientServiceType'),
       clientPackage: document.getElementById('clientPackage'),
@@ -4693,7 +4895,18 @@
       const icons = { ok: '✓', warn: '⚠', error: '✕', info: '' };
       const durations = { ok: 2200, warn: 4000, error: 4500, info: 2200 };
       const icon = icons[type] || '';
-      el.toast.innerHTML = icon ? `<span class="toast-icon">${icon}</span><span>${message}</span>` : message;
+      /* Il testo viene inserito come testo semplice: un nome cliente con caratteri
+         speciali (<, &, ') non può alterare la pagina. */
+      el.toast.textContent = '';
+      if (icon) {
+        const iconEl = document.createElement('span');
+        iconEl.className = 'toast-icon';
+        iconEl.textContent = icon;
+        el.toast.appendChild(iconEl);
+      }
+      const textEl = document.createElement('span');
+      textEl.textContent = String(message ?? '');
+      el.toast.appendChild(textEl);
       el.toast.className = 'toast';
       if (type !== 'info') el.toast.classList.add(`toast-${type}`);
       el.toast.classList.add('show');
@@ -4950,7 +5163,8 @@
         lessons: state.lessons,
         selectedClientId: state.selectedClientId,
         viewDate: toISO(state.viewDate),
-        dismissedAlerts: state.dismissedAlerts || []
+        dismissedAlerts: state.dismissedAlerts || [],
+        settings: state.settings || {}
       };
     }
 
@@ -4958,47 +5172,212 @@
       return Boolean((payload?.clients || []).length || (payload?.plans || []).length || (payload?.lessons || []).length || (payload?.packages || []).length);
     }
 
-    function persistBackupSnapshot(snapshot) {
-      const payload = { ...snapshot, backupAt: new Date().toISOString() };
-      try {
-        localStorage.setItem(BACKUP_LATEST_KEY, JSON.stringify(payload));
-        sessionStorage.setItem(SESSION_BACKUP_KEY, JSON.stringify(payload));
-        const history = JSON.parse(localStorage.getItem(BACKUP_HISTORY_KEY) || '[]');
-        const now = new Date();
-        const todayKey   = now.toISOString().slice(0, 10);
-        const weekKey    = `w${Math.floor((now - new Date(now.getFullYear(), 0, 1)) / 604800000)}`;
-        // Keep one slot per calendar day (last 7 days) + one per week (last 4 weeks)
-        const byDay  = {};
-        const byWeek = {};
-        history.forEach(item => {
-          const d = String(item.backupAt || '').slice(0, 10);
-          const diffDays = Math.floor((now - new Date(d)) / 86400000);
-          if (diffDays < 7)  byDay[d]  = byDay[d]  || item;
-          const w = `w${Math.floor((new Date(d) - new Date(new Date(d).getFullYear(), 0, 1)) / 604800000)}`;
-          const diffWeeks = Math.floor((now - new Date(d)) / 604800000);
-          if (diffWeeks < 4) byWeek[w] = byWeek[w] || item;
-        });
-        byDay[todayKey]  = payload;
-        byWeek[weekKey]  = payload;
-        const merged = Object.values({ ...byWeek, ...byDay });
-        merged.sort((a, b) => String(b.backupAt).localeCompare(String(a.backupAt)));
-        localStorage.setItem(BACKUP_HISTORY_KEY, JSON.stringify(merged.slice(0, 11)));
-      } catch (error) {
-        console.error('persistBackupSnapshot error:', error);
+    /* ── Stato della sincronizzazione ────────────────────────────────
+       owner     : utente a cui appartengono i dati salvati su questo dispositivo
+       dirty     : ci sono modifiche locali non ancora arrivate al cloud
+       changedAt : quando è stata fatta l'ultima modifica locale
+       syncedAt  : versione del cloud (updated_at) su cui si basano i dati locali
+       Ogni scheda del browser tiene la propria copia in memoria. */
+    let _syncMeta = null;
+    function getSyncMeta() {
+      if (!_syncMeta) {
+        try { _syncMeta = JSON.parse(localStorage.getItem(SYNC_META_KEY) || 'null') || {}; } catch (_) { _syncMeta = {}; }
       }
+      return _syncMeta;
+    }
+    function setSyncMeta(patch) {
+      _syncMeta = { ...getSyncMeta(), ...patch };
+      try { localStorage.setItem(SYNC_META_KEY, JSON.stringify(_syncMeta)); } catch (_) {}
+      return _syncMeta;
     }
 
-        function saveLocalState() {
-      // ATTENZIONE: I dati sensibili dei clienti memorizzati localmente (localStorage)
-      // non sono crittografati. Per una sicurezza enterprise, questi dati dovrebbero
-      // essere crittografati prima di essere salvati e decrittografati al recupero.
-      // Considerare l'uso di IndexedDB con crittografia per dati offline sensibili.
+    /* Ultima versione dei dati uguale a quella del cloud: serve per capire, quando
+       due dispositivi hanno lavorato insieme, chi ha aggiunto e chi ha eliminato cosa. */
+    let _baseSnapshotJson = null;
+    function storeBaseSnapshot(json, snapshot = null) {
+      _baseSnapshotJson = json;
+      try { localStorage.setItem(BACKUP_LATEST_KEY, json); } catch (error) { console.warn('Copia di base non salvata:', error?.name || error); }
+      /* quanti clienti e lezioni c'erano: serve al controllo di sicurezza sugli invii */
+      if (snapshot) setSyncMeta({ baseClients: (snapshot.clients || []).length, baseLessons: (snapshot.lessons || []).length });
+    }
+    function loadBaseSnapshot() {
+      try {
+        const raw = _baseSnapshotJson || localStorage.getItem(BACKUP_LATEST_KEY);
+        return raw ? JSON.parse(raw) : null;
+      } catch (_) { return null; }
+    }
+
+    /* ── Posizione nell'app (cliente aperto, mese mostrato) ───────────
+       Non sono dati: si salvano in una voce minuscola a parte, senza riscrivere
+       tutto l'archivio e senza inviarlo al cloud a ogni tocco. */
+    /* Diventa true quando i dati del dispositivo sono stati letti (loadStateLocal).
+       Prima di allora non si salva nulla: se l'avvio si interrompesse per un errore,
+       lo stato ancora vuoto non deve finire al posto dei dati veri. */
+    let _stateLoaded = false;
+
+    function saveUiState() {
+      if (!_stateLoaded) return;
+      try {
+        localStorage.setItem(UI_STATE_KEY, JSON.stringify({ selectedClientId: state.selectedClientId, viewDate: toISO(state.viewDate) }));
+      } catch (_) {}
+    }
+    function applySavedUiState() {
+      try {
+        const ui = JSON.parse(localStorage.getItem(UI_STATE_KEY) || 'null');
+        if (!ui) return;
+        if (ui.selectedClientId && getClient(ui.selectedClientId)) state.selectedClientId = ui.selectedClientId;
+        if (ui.viewDate) state.viewDate = startOfMonth(fromISO(ui.viewDate));
+      } catch (_) {}
+    }
+
+    /* ── Copie di sicurezza giornaliere ───────────────────────────────
+       Una copia per giorno, per gli ultimi 14 giorni, in IndexedDB: non occupa
+       lo spazio (limitato) di localStorage e non rallenta ogni salvataggio. */
+    const BACKUP_DB_NAME = 'dsworld_backups_v1';
+    const BACKUP_KEEP_DAYS = 14;
+    const BACKUP_MIN_INTERVAL = 5 * 60 * 1000;
+    let _backupDbPromise = null;
+    let _backupTimer = null;
+    let _backupPending = false;
+    let _lastBackupAt = 0;
+
+    function openBackupDb() {
+      if (_backupDbPromise) return _backupDbPromise;
+      _backupDbPromise = new Promise((resolve, reject) => {
+        if (!('indexedDB' in window)) { reject(new Error('IndexedDB non disponibile')); return; }
+        const request = indexedDB.open(BACKUP_DB_NAME, 1);
+        request.onupgradeneeded = () => { request.result.createObjectStore('daily', { keyPath: 'key' }); };
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      }).catch(error => { _backupDbPromise = null; throw error; });
+      return _backupDbPromise;
+    }
+
+    function backupStore(mode, work) {
+      return openBackupDb().then(db => new Promise((resolve, reject) => {
+        const tx = db.transaction('daily', mode);
+        let result;
+        const request = work(tx.objectStore('daily'));
+        if (request) request.onsuccess = () => { result = request.result; };
+        tx.oncomplete = () => resolve(result);
+        tx.onerror = tx.onabort = () => reject(tx.error);
+      }));
+    }
+
+    function backupOwnerKey() {
+      return cloud.user?.id || cloud.offlineOwner || getSyncMeta().owner || 'locale';
+    }
+
+    /* tag: copia speciale tenuta a parte, es. "prima-import" (non viene
+       sovrascritta dalla copia normale del giorno) */
+    function writeDailyBackup({ tag = '' } = {}) {
+      if (!tag) {
+        _backupPending = false;
+        clearTimeout(_backupTimer);
+        _backupTimer = null;
+      }
+      const snapshot = getSnapshot();
+      if (!hasMeaningfulState(snapshot)) return Promise.resolve(false);
+      /* Dati crollati all'improvviso e non ancora confermati: la copia buona di oggi
+         non va sostituita con quella sospetta (le copie con etichetta si salvano sempre). */
+      if (!tag && detectMassDeletion(snapshot)) return Promise.resolve(false);
+      if (!tag) _lastBackupAt = Date.now();
+      const owner = backupOwnerKey();
+      const day = todayISO();
+      const record = {
+        key: `${owner}|${day}${tag ? '|' + tag : ''}`, owner, day, tag,
+        savedAt: new Date().toISOString(),
+        counts: { clients: snapshot.clients.length, lessons: snapshot.lessons.length },
+        data: snapshot
+      };
+      const limit = toISO(addDays(new Date(), -BACKUP_KEEP_DAYS));
+      return backupStore('readwrite', store => {
+        store.put(record);
+        /* elimina le copie più vecchie di 14 giorni */
+        const cursorRequest = store.openCursor();
+        cursorRequest.onsuccess = () => {
+          const cursor = cursorRequest.result;
+          if (!cursor) return;
+          if (cursor.value.day < limit) cursor.delete();
+          cursor.continue();
+        };
+        return null;
+      }).then(() => true).catch(error => { console.warn('Copia di sicurezza non salvata:', error); return false; });
+    }
+
+    function scheduleDailyBackup() {
+      _backupPending = true;
+      if (_backupTimer) return;
+      const wait = Math.max(1500, BACKUP_MIN_INTERVAL - (Date.now() - _lastBackupAt));
+      _backupTimer = setTimeout(() => { writeDailyBackup(); }, wait);
+    }
+
+    function flushDailyBackup() {
+      if (_backupPending) writeDailyBackup();
+    }
+
+    function listDailyBackups() {
+      const owner = backupOwnerKey();
+      return backupStore('readonly', store => store.getAll())
+        .then(rows => (rows || []).filter(row => row.owner === owner)
+          .sort((a, b) => b.day.localeCompare(a.day) || String(b.savedAt).localeCompare(String(a.savedAt))))
+        .catch(() => []);
+    }
+
+    function clearDailyBackups(keepOwner = null) {
+      return backupStore('readwrite', store => {
+        const cursorRequest = store.openCursor();
+        cursorRequest.onsuccess = () => {
+          const cursor = cursorRequest.result;
+          if (!cursor) return;
+          if (!keepOwner || cursor.value.owner !== keepOwner) cursor.delete();
+          cursor.continue();
+        };
+        return null;
+      }).catch(() => {});
+    }
+
+    /* Le vecchie versioni tenevano fino a 11 copie complete in localStorage
+       (diversi MB): si spostano in IndexedDB e si libera lo spazio. */
+    function migrateLegacyBackupHistory() {
+      let history = null;
+      try { history = JSON.parse(localStorage.getItem(BACKUP_HISTORY_KEY) || 'null'); } catch (_) { history = null; }
+      const cleanup = () => {
+        try { localStorage.removeItem(BACKUP_HISTORY_KEY); sessionStorage.removeItem(SESSION_BACKUP_KEY); } catch (_) {}
+      };
+      if (!Array.isArray(history) || !history.length) { cleanup(); return; }
+      const owner = backupOwnerKey();
+      const limit = toISO(addDays(new Date(), -BACKUP_KEEP_DAYS));
+      backupStore('readwrite', store => {
+        history.forEach(item => {
+          const day = String(item?.backupAt || '').slice(0, 10);
+          if (!day || day < limit || !hasMeaningfulState(item)) return;
+          const key = `${owner}|${day}`;
+          const existing = store.get(key);
+          existing.onsuccess = () => {
+            if (existing.result) return;
+            store.put({ key, owner, day, savedAt: item.backupAt, counts: { clients: (item.clients || []).length, lessons: (item.lessons || []).length }, data: item });
+          };
+        });
+        return null;
+      }).then(cleanup).catch(error => console.warn('Vecchie copie non spostate:', error));
+    }
+
+    function saveLocalState() {
+      // I dati sul dispositivo (localStorage) non sono cifrati: chi ha accesso al
+      // browser sbloccato può leggerli. All'uscita dall'account vengono rimossi.
+      if (!_stateLoaded) return;
       const snapshot = getSnapshot();
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
-        persistBackupSnapshot(snapshot);
       } catch (error) {
         if (error.name === 'QuotaExceededError' || error.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
+          /* Spazio finito: libera le vecchie copie e riprova una volta */
+          try {
+            localStorage.removeItem(BACKUP_HISTORY_KEY);
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
+            return;
+          } catch (_) {}
           showToast('Spazio locale esaurito. Esporta un backup per liberare spazio.', 'error');
           console.error('localStorage quota exceeded:', error);
         } else {
@@ -5008,11 +5387,10 @@
     }
 
     function getBackupSnapshot() {
-      const candidates = [
-        localStorage.getItem(BACKUP_LATEST_KEY),
-        sessionStorage.getItem(SESSION_BACKUP_KEY)
-      ];
+      const candidates = [];
       try {
+        candidates.push(localStorage.getItem(BACKUP_LATEST_KEY));
+        candidates.push(sessionStorage.getItem(SESSION_BACKUP_KEY));
         const history = JSON.parse(localStorage.getItem(BACKUP_HISTORY_KEY) || '[]');
         history.forEach(item => candidates.push(JSON.stringify(item)));
       } catch (error) {
@@ -5045,19 +5423,33 @@
       el.authMessage.textContent = message;
     }
 
+    function syncBadgeTone(message) {
+      const msg = String(message || '').toLowerCase();
+      const syncing = msg.includes('sincroniz') || msg.includes('caricamento');
+      const online  = msg.includes('salvato') || msg.includes('caricato') || msg.includes('completat') || msg.includes('aggiornato') || msg.includes('pronto');
+      const error   = msg.includes('errore') || msg.includes('non riuscit') || msg.includes('disattivato') || msg.includes('non configurato') || msg.includes('troppo grandi') || msg.includes('scadut') || msg.includes('negato');
+      const warn    = msg.includes('local') || msg.includes('offline') || msg.includes('attesa') || msg.includes('login');
+      const color = error ? '#ef4444' : warn ? '#f59e0b' : online ? '#1db954' : 'rgba(255,255,255,0.25)';
+      return { syncing, color };
+    }
+
     function updateSyncBadge(message) {
       el.syncBadge.textContent = message;
       el.cloudStatusLabel.textContent = message;
+      const tone = syncBadgeTone(message);
       const dot = document.getElementById('cloudDot');
       if (dot) {
-        const msg = message.toLowerCase();
-        const isSyncing = msg.includes('sincroniz') || msg.includes('caricamento');
-        const isOnline  = msg.includes('salvato') || msg.includes('caricato') || msg.includes('completat') || msg.includes('aggiornato');
-        const isError   = msg.includes('errore') || msg.includes('non riuscit') || msg.includes('disattivato') || msg.includes('non configurato') || msg.includes('troppo grandi');
-        const isWarn    = msg.includes('locale') || msg.includes('offline') || msg.includes('attesa') || msg.includes('login');
-        dot.classList.toggle('syncing', isSyncing);
-        dot.style.background = isSyncing ? '' : isOnline ? '#1db954' : isError ? '#ef4444' : isWarn ? '#f59e0b' : 'rgba(255,255,255,0.25)';
+        dot.classList.toggle('syncing', tone.syncing);
+        dot.style.background = tone.syncing ? '' : tone.color;
         dot.title = message;
+      }
+      /* Su telefono lo stato è il pallino in alto: prima diventava verde con qualunque
+         testo contenesse "cloud", anche "Errore cloud". */
+      const mobileDot = document.getElementById('syncBadgeMobile');
+      if (mobileDot) {
+        mobileDot.style.color = tone.syncing ? '#f59e0b' : tone.color;
+        mobileDot.title = message;
+        mobileDot.setAttribute('aria-label', `Stato sync: ${message}`);
       }
       const banner = document.getElementById('offlineBanner');
       if (banner) {
@@ -5067,10 +5459,10 @@
     }
 
     function updateUserBadge() {
-      const email = cloud.user?.email || 'Non connesso';
+      const email = cloud.user?.email || (cloud.offlineOwner ? 'Offline' : 'Non connesso');
       el.userBadge.textContent = email;
       el.cloudUserEmail.textContent = email;
-      document.body.classList.toggle('signed-out', !cloud.user && !cloud.allowLocalOnly);
+      document.body.classList.toggle('signed-out', !cloud.user && !cloud.allowLocalOnly && !cloud.offlineOwner);
     }
 
     function populateCloudConfigInputs() {
@@ -5087,8 +5479,14 @@
         cloud.client = null;
         return false;
       }
+      /* Un solo client per configurazione: crearne un secondo fa lavorare in parallelo
+         due gestori della stessa sessione (rinnovi doppi del login, uscite inattese). */
+      if (cloud.client && cloud.clientConfig?.url === config.url && cloud.clientConfig?.key === config.key) {
+        cloud.config = config;
+        return true;
+      }
       if (!window.supabase?.createClient) {
-        console.error('[DSWORLD] Libreria Supabase non caricata.');
+        console.error('[FitFlow] Libreria Supabase non caricata.');
         cloud.client = null;
         updateSyncBadge('Errore libreria Supabase');
         return false;
@@ -5097,77 +5495,406 @@
         cloud.config = config;
         const client = window.supabase.createClient(config.url, config.key);
         if (!client || !client.auth) {
-          console.error('[DSWORLD] Client Supabase non valido o incompleto.');
+          console.error('[FitFlow] Client Supabase non valido o incompleto.');
           cloud.client = null;
           updateSyncBadge('Errore inizializzazione cloud');
           return false;
         }
         cloud.client = client;
+        cloud.clientConfig = { url: config.url, key: config.key };
+        cloud.listenerBound = false;
         cloud.allowLocalOnly = false;
         populateCloudConfigInputs();
         updateSyncBadge('Cloud pronto');
         return true;
       } catch (err) {
-        console.error('[DSWORLD] Errore createClient:', err);
+        console.error('[FitFlow] Errore createClient:', err);
         cloud.client = null;
         updateSyncBadge('Errore inizializzazione cloud');
         return false;
       }
     }
 
-    async function syncStateToCloud(force = false) {
-      if (!cloud.client || !cloud.user || cloud.allowLocalOnly) return false;
-      if (cloud.saving && !force) return false;
-      cloud.saving = true;
-      updateSyncBadge('Sincronizzazione...');
-      const payload = getSnapshot();
-      const payloadStr = JSON.stringify(payload);
-      if (payloadStr.length > 4 * 1024 * 1024) {
-        cloud.saving = false;
-        updateSyncBadge('Dati troppo grandi');
-        showToast('I dati superano il limite cloud. Esporta un backup.', 'error');
-        return false;
-      }
-      const { error } = await cloud.client
-        .from('user_app_state')
-        .upsert({ user_id: cloud.user.id, app_data: payload, updated_at: new Date().toISOString() });
-      cloud.saving = false;
-      if (error) {
-        console.error('syncStateToCloud error:', error);
-        /* Granular error handling */
-        if (error.status === 401 || error.message?.includes('JWT') || error.message?.includes('token')) {
-          updateSyncBadge('Sessione scaduta');
+    function isNetworkError(error) {
+      if (!navigator.onLine) return true;
+      const text = String(error?.message || error || '').toLowerCase();
+      return error?.name === 'AuthRetryableFetchError'
+        || text.includes('failed to fetch') || text.includes('load failed')
+        || text.includes('networkerror') || text.includes('network request failed')
+        || text.includes('fetcherror') || text.includes('typeerror');
+    }
+
+    /* Mostra l'errore di sincronizzazione una sola volta per tipo: i tentativi
+       automatici successivi non riempiono lo schermo di avvisi. */
+    function reportSyncError(error, status = 0) {
+      console.error('[FitFlow] Sync cloud:', error);
+      const message = String(error?.message || '');
+      let kind = 'generic';
+      if (status === 401 || message.includes('JWT')) kind = 'session';
+      else if (status === 403) kind = 'denied';
+      else if (!status || isNetworkError(error)) kind = 'offline';
+      else if (status >= 500) kind = 'server';
+      const firstTime = cloud.lastErrorKind !== kind;
+      cloud.lastErrorKind = kind;
+      if (kind === 'session') {
+        updateSyncBadge('Sessione scaduta');
+        if (firstTime) {
           showToast('Sessione scaduta — effettua di nuovo il login.', 'warn');
-        } else if (error.status === 403) {
-          updateSyncBadge('Accesso negato');
-          showToast('Permesso negato dal cloud. Contatta il supporto.', 'error');
-        } else if (error.status === 0 || error.message?.includes('network') || error.message?.includes('fetch')) {
-          updateSyncBadge('Offline');
-          showToast('Nessuna connessione. I dati sono salvati in locale.', 'warn');
-        } else if (error.status >= 500) {
-          updateSyncBadge('Errore server');
-          showToast('Errore server cloud. Riprova tra qualche secondo.', 'error');
-        } else {
-          updateSyncBadge('Errore cloud');
-          showToast('Sync cloud non riuscita.', 'error');
+          requireLoginAgain();
         }
+      } else if (kind === 'denied') {
+        updateSyncBadge('Accesso negato');
+        if (firstTime) showToast('Permesso negato dal cloud. Contatta il supporto.', 'error');
+      } else if (kind === 'offline') {
+        updateSyncBadge('Offline — dati locali');
+        if (firstTime) showToast('Nessuna connessione: le modifiche restano sul dispositivo e partono appena torna la rete.', 'warn');
+      } else if (kind === 'server') {
+        updateSyncBadge('Errore server');
+        if (firstTime) showToast('Errore server cloud. Riprovo tra poco.', 'error');
+      } else {
+        updateSyncBadge('Errore cloud');
+        if (firstTime) showToast('Sync cloud non riuscita.', 'error');
+      }
+    }
+
+    /* Il cloud non riconosce più il login (sessione revocata o scaduta senza
+       possibilità di rinnovo). Si chiude la sessione SOLO su questo dispositivo:
+       i dati e le modifiche non ancora inviate restano qui e, rifatto l'accesso
+       con lo stesso account, vengono uniti a quelli del cloud. */
+    function requireLoginAgain() {
+      if (!cloud.client || !cloud.user) return;
+      updateAuthMessage('Sessione scaduta: accedi di nuovo. Le modifiche fatte restano su questo dispositivo.');
+      cloud.client.auth.signOut({ scope: 'local' }).catch(error => console.error(error));
+    }
+
+    /* ── Unione dei dati di due dispositivi ───────────────────────────
+       base   = ultima versione uguale su dispositivo e cloud
+       local  = dati di questo dispositivo
+       remote = dati arrivati dal cloud (modificati da un altro dispositivo)
+       Regole: ciò che è stato aggiunto da una parte resta, ciò che è stato
+       eliminato da una parte sparisce, se lo stesso elemento è stato modificato
+       da entrambe vale la versione di questo dispositivo.
+       (Le funzioni tra i due segnaposto "prova:unione" vengono eseguite da
+       tests/logica-app.test.js: non spostare i segnaposto.) */
+    /* prova:unione:inizio */
+    function stableStringify(value) {
+      if (value === null || typeof value !== 'object') return JSON.stringify(value) ?? 'null';
+      if (Array.isArray(value)) return '[' + value.map(stableStringify).join(',') + ']';
+      return '{' + Object.keys(value).sort().filter(key => value[key] !== undefined)
+        .map(key => JSON.stringify(key) + ':' + stableStringify(value[key])).join(',') + '}';
+    }
+
+    function mergeCollection(baseList, localList, remoteList) {
+      const local = Array.isArray(localList) ? localList : [];
+      const remote = Array.isArray(remoteList) ? remoteList : [];
+      const baseMap = Array.isArray(baseList) ? new Map(baseList.filter(Boolean).map(item => [item.id, item])) : null;
+      const remoteMap = new Map(remote.filter(Boolean).map(item => [item.id, item]));
+      const same = (a, b) => stableStringify(a) === stableStringify(b);
+      const localIds = new Set();
+      const merged = [];
+      for (const item of local) {
+        if (!item) continue;
+        localIds.add(item.id);
+        const theirs = remoteMap.get(item.id);
+        const original = baseMap ? baseMap.get(item.id) : undefined;
+        if (!theirs) {
+          /* Nel cloud non c'è più: se qui non è stato toccato, l'ha eliminato l'altro dispositivo */
+          if (original && same(original, item)) continue;
+          merged.push(item);
+        } else if (original && same(original, item)) {
+          merged.push(theirs);
+        } else {
+          merged.push(item);
+        }
+      }
+      for (const item of remote) {
+        if (!item || localIds.has(item.id)) continue;
+        /* Esisteva nella versione di partenza e qui non c'è più: eliminato su questo dispositivo */
+        if (baseMap && baseMap.has(item.id)) continue;
+        merged.push(item);
+      }
+      return merged;
+    }
+
+    function mergeIdList(baseList, localList, remoteList) {
+      const base = new Set(baseList || []);
+      const local = new Set(localList || []);
+      const remote = new Set(remoteList || []);
+      const merged = new Set();
+      for (const id of local) if (remote.has(id) || !base.has(id)) merged.add(id);
+      for (const id of remote) if (!local.has(id) && !base.has(id)) merged.add(id);
+      return [...merged];
+    }
+
+    function mergeSettings(base, local, remote) {
+      const merged = { ...(remote || {}) };
+      Object.keys(local || {}).forEach(key => {
+        if (!base || stableStringify(base[key]) !== stableStringify(local[key])) merged[key] = local[key];
+      });
+      return merged;
+    }
+
+    function mergeSnapshots(base, local, remote) {
+      const merged = {
+        clients: mergeCollection(base?.clients, local?.clients, remote?.clients),
+        packages: mergeCollection(base?.packages, local?.packages, remote?.packages),
+        plans: mergeCollection(base?.plans, local?.plans, remote?.plans),
+        lessons: mergeCollection(base?.lessons, local?.lessons, remote?.lessons),
+        selectedClientId: local?.selectedClientId || null,
+        viewDate: local?.viewDate || remote?.viewDate,
+        dismissedAlerts: mergeIdList(base?.dismissedAlerts, local?.dismissedAlerts, remote?.dismissedAlerts),
+        settings: mergeSettings(base?.settings, local?.settings, remote?.settings)
+      };
+      /* Un cliente eliminato da una parte porta via piani e lezioni, anche quelli
+         aggiunti nel frattempo dall'altra: niente lezioni senza cliente. */
+      const clientIds = new Set(merged.clients.map(client => client.id));
+      merged.plans = merged.plans.filter(plan => clientIds.has(plan.clientId));
+      merged.lessons = merged.lessons.filter(lesson => clientIds.has(lesson.clientId));
+      return merged;
+    }
+    /* prova:unione:fine */
+
+    function isAnyModalOpen() {
+      return Boolean(document.querySelector('.modal-backdrop.open, .confirm-modal-backdrop.open, .fsc-backdrop.open, .mp-backdrop.open'));
+    }
+
+    /* Alcune finestre lavorano su un cliente o un piano letto all'apertura:
+       se i dati vengono sostituiti da quelli del cloud vanno chiuse. */
+    function closeStaleModals() {
+      ['pianificaModalBackdrop', 'bonusLessonsModalBackdrop', 'paymentQuickModalBackdrop'].forEach(id => {
+        if (document.getElementById(id)?.classList.contains('open')) closeModal(id);
+      });
+      const fsc = document.getElementById('fscBackdrop');
+      if (fsc?.classList.contains('open')) { fsc.classList.remove('open'); unlockBodyScroll(); }
+    }
+
+    /* ── Controllo di sicurezza sugli invii ───────────────────────────
+       Se su questo dispositivo risultano all'improvviso meno della metà dei
+       clienti o delle lezioni dell'ultima versione sincronizzata, l'invio si
+       ferma e chiede conferma. Un errore dell'app o un archivio locale rovinato
+       non deve poter cancellare i dati buoni che stanno nel cloud.
+       Importare o ripristinare un backup (già confermati dall'utente) non lo attiva. */
+    function detectMassDeletion(payload) {
+      if (cloud.massChangeConfirmed) return null;
+      const meta = getSyncMeta();
+      const before = { clients: Number(meta.baseClients || 0), lessons: Number(meta.baseLessons || 0) };
+      const now = { clients: (payload.clients || []).length, lessons: (payload.lessons || []).length };
+      const collapsed = (was, is, minimum) => was >= minimum && is < was * 0.5;
+      if (collapsed(before.clients, now.clients, 6) || collapsed(before.lessons, now.lessons, 20)) return { before, now };
+      return null;
+    }
+
+    function pauseSyncForReview(info = cloud.pauseInfo) {
+      if (!info) return;
+      cloud.syncPaused = true;
+      cloud.pauseInfo = info;
+      clearTimeout(cloud.retryTimer);
+      updateSyncBadge('Sync in pausa — controllo richiesto');
+      if (document.getElementById('confirmModalBackdrop')?.classList.contains('open')) return;
+      showConfirm(
+        'Controllo di sicurezza',
+        `Su questo dispositivo risultano ${info.now.clients} clienti e ${info.now.lessons} lezioni; nell'ultima versione sincronizzata erano ${info.before.clients} clienti e ${info.before.lessons} lezioni. Per sicurezza non ho inviato nulla al cloud. Se li hai eliminati tu, conferma; altrimenti recupera i dati dal cloud.`,
+        () => {
+          cloud.massChangeConfirmed = true;
+          cloud.syncPaused = false;
+          cloud.pauseInfo = null;
+          syncStateToCloud(true).catch(error => console.error(error));
+        },
+        'Li ho eliminati io',
+        () => { recoverFromCloud().catch(error => console.error(error)); },
+        'Recupera dal cloud'
+      );
+    }
+
+    /* Rimette su questo dispositivo i dati del cloud (dopo il controllo di sicurezza).
+       Lo stato locale scartato resta comunque tra i backup automatici. */
+    async function recoverFromCloud() {
+      const userId = cloud.user?.id;
+      if (!cloud.client || !userId) return;
+      const { data, error, status } = await cloud.client
+        .from('user_app_state')
+        .select('app_data, updated_at')
+        .eq('user_id', userId)
+        .maybeSingle();
+      if (error || !data?.app_data) {
+        reportSyncError(error || new Error('Nessun dato nel cloud'), status);
+        showToast('Recupero non riuscito: riprova da Cloud → Sincronizza ora.', 'error');
+        return;
+      }
+      await writeDailyBackup({ tag: 'prima-recupero' });
+      applySnapshot(data.app_data);
+      storeBaseSnapshot(JSON.stringify(data.app_data), data.app_data);
+      setSyncMeta({ owner: userId, syncedAt: data.updated_at, dirty: false, changedAt: null });
+      cloud.syncPaused = false;
+      cloud.pauseInfo = null;
+      cloud.lastErrorKind = '';
+      saveLocalState();
+      closeStaleModals();
+      renderAll();
+      updateSyncBadge('Cloud caricato');
+      showToast('Dati recuperati dal cloud.', 'ok');
+    }
+
+    function scheduleSyncRetry() {
+      clearTimeout(cloud.retryTimer);
+      if (!cloud.user || !getSyncMeta().dirty || cloud.syncPaused) return;
+      cloud.retryDelay = Math.min(60000, (cloud.retryDelay || 2500) * 2);
+      cloud.retryTimer = setTimeout(() => {
+        if (cloud.user && !cloud.saving) syncStateToCloud().catch(error => console.error(error));
+      }, cloud.retryDelay);
+    }
+
+    /* Un invio al cloud. Aggiorna solo se il cloud è ancora alla versione che
+       questo dispositivo conosce: così non si sovrascrive mai, senza accorgersene,
+       il lavoro fatto nel frattempo da un altro dispositivo. */
+    async function pushSnapshotOnce() {
+      const seq = cloud.changeSeq;
+      const userId = cloud.user.id;
+      const payload = getSnapshot();
+      const payloadJson = JSON.stringify(payload);
+      if (payloadJson.length > 4 * 1024 * 1024) {
+        updateSyncBadge('Dati troppo grandi');
+        if (cloud.lastErrorKind !== 'size') showToast('I dati superano il limite cloud. Esporta un backup.', 'error');
+        cloud.lastErrorKind = 'size';
         return false;
       }
-      updateSyncBadge('Cloud salvato');
+      const suspicious = detectMassDeletion(payload);
+      if (suspicious) {
+        pauseSyncForReview(suspicious);
+        return false;
+      }
+      const meta = getSyncMeta();
+      let row = null;
+      if (meta.syncedAt && meta.owner === userId) {
+        const { data, error, status } = await cloud.client
+          .from('user_app_state')
+          .update({ app_data: payload })
+          .eq('user_id', userId)
+          .eq('updated_at', meta.syncedAt)
+          .select('updated_at');
+        if (error) { reportSyncError(error, status); return false; }
+        if (!Array.isArray(data) || !data.length) return resolveCloudConflict();
+        row = data[0];
+      } else {
+        const { data, error, status } = await cloud.client
+          .from('user_app_state')
+          .upsert({ user_id: userId, app_data: payload })
+          .select('updated_at');
+        if (error) { reportSyncError(error, status); return false; }
+        row = Array.isArray(data) ? data[0] : data;
+      }
+      if (cloud.user?.id !== userId || cloud.deletingAccount) return false;
+      storeBaseSnapshot(payloadJson, payload);
+      cloud.massChangeConfirmed = false;
+      const stillDirty = cloud.changeSeq !== seq;
+      setSyncMeta({ owner: userId, syncedAt: row?.updated_at || null, dirty: stillDirty });
+      if (stillDirty) cloud.savePending = true;
       return true;
     }
 
-    function queueCloudSave(urgent = false) {
-      if (!cloud.client || !cloud.user || cloud.allowLocalOnly) return;
-      clearTimeout(cloud.saveTimer);
-      const delay = urgent ? 800 : 2500;
-      cloud.saveTimer = setTimeout(() => { syncStateToCloud().catch(err => console.error('Cloud save failed:', err)); }, delay);
+    /* Il cloud è cambiato dall'ultima volta: scarica, unisce e riprova l'invio. */
+    async function resolveCloudConflict() {
+      const userId = cloud.user.id;
+      const { data, error, status } = await cloud.client
+        .from('user_app_state')
+        .select('app_data, updated_at')
+        .eq('user_id', userId)
+        .maybeSingle();
+      if (error) { reportSyncError(error, status); return false; }
+      if (cloud.user?.id !== userId || cloud.deletingAccount) return false;
+      if (!data) {
+        /* Nel cloud non c'è più nulla per questo account: si ricrea da qui */
+        setSyncMeta({ owner: userId, syncedAt: null, dirty: true });
+        cloud.savePending = true;
+        return true;
+      }
+      const merged = mergeSnapshots(loadBaseSnapshot(), getSnapshot(), data.app_data || {});
+      applySnapshot(merged);
+      storeBaseSnapshot(JSON.stringify(data.app_data || {}), data.app_data || {});
+      setSyncMeta({ owner: userId, syncedAt: data.updated_at, dirty: true });
+      saveLocalState();
+      closeStaleModals();
+      renderAll();
+      showToast('Dati uniti con le modifiche fatte da un altro dispositivo.', 'ok');
+      cloud.savePending = true;
+      return true;
     }
 
+    async function syncStateToCloud(force = false) {
+      if (!cloud.client || !cloud.user || cloud.allowLocalOnly || cloud.deletingAccount) return false;
+      clearTimeout(cloud.saveTimer);
+      cloud.saveTimer = null;
+      /* Un invio alla volta. Se nel frattempo arrivano altre modifiche, l'invio in
+         corso se ne accorge da solo (changeSeq) e ne fa partire subito un altro. */
+      if (cloud.saving) return cloud.savePromise;
+      /* In attesa della risposta al controllo di sicurezza: non si invia nulla.
+         "Sincronizza ora" riapre la domanda. */
+      if (cloud.syncPaused) {
+        if (force) pauseSyncForReview();
+        return false;
+      }
+      /* Niente di nuovo da inviare */
+      if (!force && !getSyncMeta().dirty) return true;
+      cloud.saving = true;
+      updateSyncBadge('Sincronizzazione...');
+      cloud.savePromise = (async () => {
+        let ok = false;
+        try {
+          let rounds = 0;
+          do {
+            cloud.savePending = false;
+            ok = await pushSnapshotOnce();
+            rounds += 1;
+          } while (ok && cloud.savePending && rounds < 5);
+        } catch (error) {
+          reportSyncError(error, 0);
+          ok = false;
+        } finally {
+          cloud.saving = false;
+        }
+        if (ok) {
+          cloud.retryDelay = 0;
+          cloud.lastErrorKind = '';
+          clearTimeout(cloud.retryTimer);
+          if (getSyncMeta().dirty) queueCloudSave(true);
+          else updateSyncBadge('Cloud salvato');
+        } else {
+          scheduleSyncRetry();
+        }
+        return ok;
+      })();
+      return cloud.savePromise;
+    }
+
+    function queueCloudSave(urgent = false) {
+      if (!cloud.client || !cloud.user || cloud.allowLocalOnly || cloud.deletingAccount) return;
+      clearTimeout(cloud.saveTimer);
+      const delay = urgent ? 800 : 2500;
+      cloud.saveTimer = setTimeout(() => {
+        cloud.saveTimer = null;
+        syncStateToCloud().catch(err => console.error('Cloud save failed:', err));
+      }, delay);
+    }
+
+    /* Da chiamare dopo ogni modifica ai DATI (clienti, lezioni, piani, pacchetti).
+       Per il solo cambio di cliente aperto o di mese mostrato usare saveUiState(). */
     function saveState(urgent = false) {
       invalidateDerivedData();
+      if (!_stateLoaded) return;
+      cloud.changeSeq += 1;
+      setSyncMeta({ dirty: true, changedAt: new Date().toISOString() });
       saveLocalState();
+      saveUiState();
+      scheduleDailyBackup();
       queueCloudSave(urgent);
+    }
+
+    function ensureShareTokens() {
+      let added = false;
+      state.clients.forEach(client => {
+        if (client && !client.shareToken) { client.shareToken = generateShareToken(); added = true; }
+      });
+      return added;
     }
 
     function applySnapshot(parsed) {
@@ -5180,6 +5907,7 @@
       state.selectedClientId = parsed.selectedClientId || null;
       state.viewDate = parsed.viewDate ? startOfMonth(fromISO(parsed.viewDate)) : startOfMonth(new Date());
       state.dismissedAlerts = Array.isArray(parsed.dismissedAlerts) ? parsed.dismissedAlerts : [];
+      state.settings = parsed.settings && typeof parsed.settings === 'object' && !Array.isArray(parsed.settings) ? parsed.settings : {};
 
       let normalizedPlans = false;
       state.plans.forEach(plan => {
@@ -5191,11 +5919,14 @@
       });
 
       if (!state.packages.length) state.packages = seedPackages();
+      /* Cliente aperto e mese mostrato sono quelli di questo dispositivo */
+      applySavedUiState();
       if (!state.selectedClientId || !getClient(state.selectedClientId)) state.selectedClientId = getDefaultSelectedClientId(state.selectedClientId);
       if (normalizedPlans) saveLocalState();
     }
 
     function loadStateLocal() {
+      _stateLoaded = true;
       let loaded = false;
       try {
         const raw = localStorage.getItem(STORAGE_KEY);
@@ -5225,94 +5956,238 @@
       if (!state.packages.length) state.packages = seedPackages();
       if (!state.selectedClientId || !getClient(state.selectedClientId)) state.selectedClientId = getDefaultSelectedClientId(state.selectedClientId);
       /* Genera shareToken per clienti esistenti che non ce l'hanno */
-      let needsSave = false;
-      state.clients.forEach(c => { if (!c.shareToken) { c.shareToken = generateShareToken(); needsSave = true; } });
-      if (needsSave) saveLocalState();
+      if (ensureShareTokens()) saveLocalState();
     }
 
-    async function hydrateStateFromCloud() {
-      if (!cloud.client || !cloud.user || cloud.allowLocalOnly) return false;
-      updateSyncBadge('Caricamento cloud...');
-      const { data, error, status } = await cloud.client
-        .from('user_app_state')
-        .select('app_data, updated_at')
-        .eq('user_id', cloud.user.id)
-        .maybeSingle();
+    /* Carica i dati dal cloud per l'utente attuale. Se sul dispositivo ci sono
+       modifiche non ancora inviate (lavoro fatto senza rete, invio non riuscito)
+       NON vengono buttate: si uniscono a quelle del cloud e poi si inviano. */
+    async function hydrateStateFromCloud({ announce = true } = {}) {
+      if (!cloud.client || !cloud.user || cloud.allowLocalOnly || cloud.deletingAccount) return false;
+      const userId = cloud.user.id;
+      if (announce) updateSyncBadge('Caricamento cloud...');
+      let response;
+      try {
+        response = await cloud.client
+          .from('user_app_state')
+          .select('app_data, updated_at')
+          .eq('user_id', userId)
+          .maybeSingle();
+      } catch (error) {
+        response = { data: null, error, status: 0 };
+      }
+      const { data, error, status } = response;
+      /* Utente cambiato o account in eliminazione mentre si aspettava la risposta:
+         i dati arrivati non vanno più scritti su questo dispositivo */
+      if (cloud.user?.id !== userId || cloud.deletingAccount) return false;
 
       if (error && status !== 406) {
         console.error('hydrateStateFromCloud error:', error);
         if (status === 401 || error.message?.includes('JWT')) {
           updateSyncBadge('Sessione scaduta');
           showToast('Sessione scaduta — effettua di nuovo il login.', 'warn');
-        } else if (!navigator.onLine || status === 0) {
+          requireLoginAgain();
+        } else if (!status || isNetworkError(error)) {
           updateSyncBadge('Offline — dati locali');
-          showToast('Nessuna connessione. Usando dati locali.', 'warn');
+          if (announce) showToast('Nessuna connessione. Usando dati locali.', 'warn');
         } else {
           updateSyncBadge('Errore caricamento');
-          showToast('Impossibile caricare i dati cloud.', 'error');
+          if (announce) showToast('Impossibile caricare i dati cloud.', 'error');
         }
         return false;
       }
 
+      const meta = getSyncMeta();
+      const localIsMine = meta.owner === userId;
       if (data?.app_data) {
+        /* Le modifiche locali contano solo se sul dispositivo ci sono davvero dei
+           dati: un archivio locale vuoto (cache cancellata, errore) non deve mai
+           essere "inviato" al posto dei clienti che stanno nel cloud. */
+        const localHasData = state.clients.length > 0 || state.lessons.length > 0 || state.plans.length > 0;
+        const cloudHasClients = Array.isArray(data.app_data.clients) && data.app_data.clients.length > 0;
+        const localLooksEmptied = !state.clients.length && cloudHasClients;
+        if (localIsMine && meta.dirty && localHasData && !localLooksEmptied) {
+          if (!(meta.syncedAt && data.updated_at === meta.syncedAt)) {
+            /* Sono cambiati sia il cloud sia questo dispositivo: unione */
+            const merged = mergeSnapshots(loadBaseSnapshot(), getSnapshot(), data.app_data);
+            applySnapshot(merged);
+            storeBaseSnapshot(JSON.stringify(data.app_data), data.app_data);
+            setSyncMeta({ owner: userId, syncedAt: data.updated_at, dirty: true });
+            saveLocalState();
+          }
+          syncStateToCloud().catch(err => console.error(err));
+          return true;
+        }
         applySnapshot(data.app_data);
+        storeBaseSnapshot(JSON.stringify(data.app_data), data.app_data);
+        setSyncMeta({ owner: userId, syncedAt: data.updated_at, dirty: false, changedAt: null });
         saveLocalState();
         updateSyncBadge('Cloud caricato');
+        /* Clienti senza link del portale (dati vecchi): si crea e si salva una volta sola */
+        if (ensureShareTokens()) saveState();
         return true;
       }
 
-      if (hasMeaningfulState(getSnapshot())) {
-        await syncStateToCloud(true);
-      } else {
-        if (!state.packages.length) state.packages = seedPackages();
-        saveLocalState();
-        await syncStateToCloud(true);
+      /* Nessun dato nel cloud per questo account. Se sul dispositivo ci sono dati
+         che non risultano suoi (rimasti da un altro accesso) NON vengono caricati
+         nel suo spazio: si riparte puliti, con i pacchetti di esempio. */
+      if (!localIsMine && (state.clients.length || state.lessons.length || state.plans.length)) {
+        wipeLocalData();
+        clearDailyBackups(userId);
       }
+      if (!state.packages.length) state.packages = seedPackages();
+      setSyncMeta({ owner: userId, syncedAt: null, dirty: true, changedAt: new Date().toISOString() });
+      saveLocalState();
+      await syncStateToCloud();
       return false;
     }
 
-    async function handleSession(session) {
+    /* Al ritorno sull'app o della rete: controlla se un altro dispositivo ha
+       cambiato qualcosa. Scarica tutto solo se la versione del cloud è diversa. */
+    async function refreshFromCloudIfNewer({ force = false } = {}) {
+      if (!cloud.client || !cloud.user || cloud.allowLocalOnly || !cloud.hydrated || cloud.deletingAccount) return false;
+      if (cloud.refreshing || cloud.saving) return false;
+      const now = Date.now();
+      if (!force && now - cloud.lastRefreshCheck < 15000) return false;
+      cloud.lastRefreshCheck = now;
+      cloud.refreshing = true;
+      try {
+        const userId = cloud.user.id;
+        const { data, error } = await cloud.client
+          .from('user_app_state')
+          .select('updated_at')
+          .eq('user_id', userId)
+          .maybeSingle();
+        if (error || cloud.user?.id !== userId || cloud.deletingAccount) return false;
+        const meta = getSyncMeta();
+        if (data && meta.syncedAt && data.updated_at === meta.syncedAt) {
+          if (meta.dirty) queueCloudSave(true);
+          else if (cloud.lastErrorKind) { cloud.lastErrorKind = ''; updateSyncBadge('Cloud salvato'); }
+          return false;
+        }
+        /* Con una finestra aperta non si sostituiscono i dati sotto le mani: si riprova dopo */
+        if (isAnyModalOpen()) {
+          setTimeout(() => refreshFromCloudIfNewer({ force: true }).catch(() => {}), 20000);
+          return false;
+        }
+        const changed = await hydrateStateFromCloud({ announce: false });
+        if (changed) renderAll();
+        return changed;
+      } catch (error) {
+        console.error(error);
+        return false;
+      } finally {
+        cloud.refreshing = false;
+      }
+    }
+
+    function wipeLocalData() {
+      try {
+        [STORAGE_KEY, BACKUP_LATEST_KEY, BACKUP_HISTORY_KEY, UI_STATE_KEY, SYNC_META_KEY].forEach(key => localStorage.removeItem(key));
+        sessionStorage.removeItem(SESSION_BACKUP_KEY);
+      } catch (_) {}
+      _syncMeta = {};
+      _baseSnapshotJson = null;
+      clearTimeout(cloud.saveTimer);
+      clearTimeout(cloud.retryTimer);
+      state.clients = [];
+      state.plans = [];
+      state.lessons = [];
+      state.packages = [];
+      state.dismissedAlerts = [];
+      state.settings = {};
+      state.selectedClientId = null;
+      invalidateDerivedData();
+    }
+
+    /* Gli eventi di sessione vengono gestiti uno alla volta, in ordine */
+    let _sessionChain = Promise.resolve();
+    function handleSession(session, event = '') {
+      _sessionChain = _sessionChain
+        .then(() => applySession(session, event))
+        .catch(error => console.error('[FitFlow] handleSession:', error));
+      return _sessionChain;
+    }
+
+    async function applySession(session, event) {
       const previousUserId = cloud.user?.id || null;
       cloud.session = session || null;
       cloud.user = session?.user || null;
-
-      /* Se l'utente cambia (logout + login con altro account), pulisci
-         immediatamente tutto il localStorage e lo stato in memoria.
-         Previene che i dati di un trainer finiscano in un altro account. */
       const newUserId = cloud.user?.id || null;
-      if (previousUserId && newUserId && previousUserId !== newUserId) {
-        try {
-          localStorage.removeItem(STORAGE_KEY);
-          localStorage.removeItem(BACKUP_LATEST_KEY);
-          localStorage.removeItem(BACKUP_HISTORY_KEY);
-          sessionStorage.removeItem(SESSION_BACKUP_KEY);
-        } catch (_) {}
-        state.clients  = [];
-        state.plans    = [];
-        state.lessons  = [];
-        state.packages = [];
-        state.selectedClientId = null;
-      }
 
-      updateUserBadge();
-      if (!cloud.user) {
+      if (!newUserId) {
+        if (event === 'SIGNED_OUT') cloud.offlineOwner = null;
+        cloud.hydrated = false;
+        clearTimeout(cloud.saveTimer);
+        clearTimeout(cloud.retryTimer);
+        updateUserBadge();
         resetGoogleState();
-        updateSyncBadge(cloud.allowLocalOnly ? 'Solo cache locale' : 'Login richiesto');
+        updateSyncBadge(cloud.allowLocalOnly ? 'Solo cache locale' : cloud.offlineOwner ? 'Offline — dati locali' : 'Login richiesto');
         /* Rimuovi canale realtime se logout */
         if (_realtimeChannel && cloud.client) {
           cloud.client.removeChannel(_realtimeChannel);
           _realtimeChannel = null;
         }
+        stopMessagePolling();
         updateMsgBadges(0);
         renderAll();
         return;
       }
+
+      cloud.offlineOwner = null;
+      /* I dati salvati su questo dispositivo appartengono a un altro account
+         (uscita e accesso con un'altra email): non devono mai finire in questo. */
+      const localOwner = getSyncMeta().owner || null;
+      if ((localOwner && localOwner !== newUserId) || (previousUserId && previousUserId !== newUserId)) {
+        wipeLocalData();
+        clearDailyBackups(newUserId);
+        cloud.hydrated = false;
+      }
+
+      updateUserBadge();
+      /* Stesso utente già caricato (rinnovo della sessione, ritorno sulla scheda):
+         non si riscarica tutto. Eventuali novità arrivano da refreshFromCloudIfNewer. */
+      if (previousUserId === newUserId && cloud.hydrated) return;
+
       await hydrateStateFromCloud();
-      await refreshGoogleStatus();
-      /* Riavvia Realtime per il nuovo utente */
+      if (cloud.user?.id !== newUserId) return;
+      cloud.hydrated = true;
+      migrateLegacyBackupHistory();
+      renderAll();
       refreshUnreadMessages();
       initRealtimeMessages();
-      renderAll();
+      await refreshGoogleStatus();
+    }
+
+    /* Senza rete e con la sessione da rinnovare Supabase non conferma il login:
+       se su questo dispositivo ci sono i dati di un account, l'app si apre lo
+       stesso su quelli e si riallinea da sola quando torna la connessione. */
+    function enterOfflineModeIfPossible() {
+      const owner = getSyncMeta().owner;
+      const possible = Boolean(owner && state.clients.length);
+      cloud.offlineOwner = possible ? owner : null;
+      return possible;
+    }
+
+    /* L'app è aperta sui dati del dispositivo perché all'avvio mancava la rete:
+       quando torna, si recupera la sessione e ci si riallinea al cloud. */
+    async function recoverSessionIfOffline() {
+      if (cloud.user || !cloud.offlineOwner || cloud.recovering) return;
+      cloud.recovering = true;
+      try {
+        if (!cloud.client) {
+          /* All'avvio mancavano libreria o configurazione: si riparte da capo,
+             i dati sono al sicuro sul dispositivo. */
+          if (!isAnyModalOpen()) window.location.reload();
+          return;
+        }
+        const { data } = await cloud.client.auth.getSession();
+        if (data?.session) await handleSession(data.session, 'RECOVERED');
+      } catch (error) {
+        console.warn('[FitFlow] Sessione non ancora recuperabile:', error?.message || error);
+      } finally {
+        cloud.recovering = false;
+      }
     }
 
     async function ensureSupabaseReady() {
@@ -5325,14 +6200,16 @@
       }
       const config = loadSupabaseConfig();
       if (!config?.url || !config?.key) {
-        updateSyncBadge('Cloud non configurato');
+        const offline = enterOfflineModeIfPossible();
+        updateSyncBadge(offline ? 'Offline — dati locali' : 'Cloud non configurato');
         updateUserBadge();
         resetGoogleState();
         return false;
       }
       const ready = initSupabaseClient(config);
       if (!ready || !cloud.client?.auth) {
-        console.error('[DSWORLD] Client cloud non disponibile dopo initSupabaseClient.');
+        console.error('[FitFlow] Client cloud non disponibile dopo initSupabaseClient.');
+        if (enterOfflineModeIfPossible()) updateSyncBadge('Offline — dati locali');
         updateUserBadge();
         resetGoogleState();
         return false;
@@ -5340,13 +6217,43 @@
       if (!cloud.listenerBound) {
         cloud.client.auth.onAuthStateChange((event, session) => {
           if (event === 'PASSWORD_RECOVERY') handlePasswordRecovery(session);
-          handleSession(session);
+          /* La sessione iniziale viene già letta qui sotto con getSession() */
+          if (event === 'INITIAL_SESSION') return;
+          handleSession(session, event);
         });
         cloud.listenerBound = true;
       }
-      const { data, error } = await cloud.client.auth.getSession();
-      if (error) console.error(error);
-      await handleSession(data?.session || null);
+      let session = null;
+      let sessionError = null;
+      /* Senza rete e con il login da rinnovare, Supabase riprova per circa mezzo
+         minuto prima di rispondere: dopo 8 secondi si prosegue sui dati del
+         dispositivo, e se la sessione arriva più tardi la si usa comunque. */
+      const sessionPromise = cloud.client.auth.getSession();
+      try {
+        const result = await Promise.race([
+          sessionPromise,
+          new Promise(resolve => setTimeout(() => resolve({ timedOut: true }), 8000))
+        ]);
+        if (result.timedOut) {
+          sessionError = new Error('Failed to fetch (timeout sessione)');
+          sessionPromise
+            .then(late => { if (late?.data?.session && !cloud.user) handleSession(late.data.session, 'RECOVERED'); })
+            .catch(() => {});
+        } else {
+          session = result.data?.session || null;
+          sessionError = result.error || null;
+        }
+      } catch (error) {
+        sessionError = error;
+      }
+      if (sessionError) console.error(sessionError);
+      if (!session) {
+        /* Si resta sui dati del dispositivo solo se una sessione salvata esiste ma non
+           si riesce a rinnovarla per mancanza di rete; altrimenti serve il login. */
+        if (sessionError && isNetworkError(sessionError)) enterOfflineModeIfPossible();
+        else cloud.offlineOwner = null;
+      }
+      await handleSession(session, 'INITIAL');
       return true;
     }
 
@@ -5386,12 +6293,12 @@
       if (el.googleStatusLabel) el.googleStatusLabel.textContent = cloud.google?.syncing ? 'Sync in corso' : baseStatus;
       let hint = 'Accedi per collegare Google Calendar.';
       if (loggedIn && connected) {
-        const parts = [cloud.google.calendarName || 'DSWORLD Clienti'];
+        const parts = [cloud.google.calendarName || 'FitFlow Clienti'];
         if (cloud.google.googleEmail) parts.push(cloud.google.googleEmail);
         parts.push('sync automatica attiva');
         hint = parts.join(' • ');
       } else if (loggedIn) {
-        hint = 'Collega Google per creare e sincronizzare automaticamente il calendario DSWORLD Clienti. Gli altri calendari Google selezionati sul tuo account bloccano gli slot non disponibili.';
+        hint = 'Collega Google per creare e sincronizzare automaticamente il calendario FitFlow Clienti. Gli altri calendari Google selezionati sul tuo account bloccano gli slot non disponibili.';
       }
       if (cloud.google?.lastError) hint = `${hint} • ${cloud.google.lastError}`;
       if (el.googleStatusHint) el.googleStatusHint.textContent = hint;
@@ -5400,11 +6307,11 @@
       if (el.disconnectGoogleBtn) el.disconnectGoogleBtn.disabled = !loggedIn || !connected || cloud.google?.syncing;
     }
 
-    async function googleApi(path, { method = 'GET', body = null } = {}) {
+    async function googleApi(path, { method = 'GET', body = null, timeoutMs = 15000 } = {}) {
       const token = getAuthToken();
       if (!token) throw new Error('Login richiesto.');
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000);
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
       try {
         const cacheBust = path === 'google-status' ? `?_=${Date.now()}` : '';
         const response = await fetch(`${GOOGLE_FN_BASE}/${path}${cacheBust}`, {
@@ -5434,7 +6341,7 @@
         const data = await googleApi('google-status');
         cloud.google.connected = Boolean(data.connected);
         cloud.google.calendarId = data.calendarId || '';
-        cloud.google.calendarName = data.calendarName || 'DSWORLD Clienti';
+        cloud.google.calendarName = data.calendarName || 'FitFlow Clienti';
         cloud.google.googleEmail = data.googleEmail || '';
         cloud.google.lastError = '';
       } catch (error) {
@@ -5487,7 +6394,7 @@
       const isDelete = action === 'delete';
       const isTerminalStatus = payload.status === 'done' || payload.status === 'cancelled';
       if ((isDelete || isTerminalStatus) && !payload.googleEventId && !allowCreateWithoutEventId) {
-        console.warn('[DSWORLD Google Sync] Sync evitata per lezione senza googleEventId:', payload.id, 'azione:', action, 'stato:', payload.status);
+        console.warn('[FitFlow Google Sync] Sync evitata per lezione senza googleEventId:', payload.id, 'azione:', action, 'stato:', payload.status);
         return true;
       }
       return false;
@@ -5543,24 +6450,41 @@
         showToast('Collega Google Calendar.');
         return false;
       }
-      const lessons = state.lessons.map(item => buildGoogleSyncPayload(item)).filter(Boolean);
+      /* Come per il sync di una singola lezione: una lezione già svolta o annullata
+         che su Google non c'è mai stata non viene creata adesso. */
+      const lessons = state.lessons
+        .map(item => buildGoogleSyncPayload(item))
+        .filter(payload => payload && !shouldSkipGoogleCreateForLesson('upsert', payload));
       cloud.google.syncing = true;
       cloud.google.lastError = '';
       updateGoogleUi();
       try {
-        const result = await googleApi('google-replay-sync', { method: 'POST', body: { lessons } });
+        /* A blocchi: una sola richiesta con centinaia di lezioni supera il tempo
+           massimo concesso alla funzione e falliva per intero. */
+        const CHUNK = 20;
+        let synced = 0;
+        let failed = 0;
         let changed = false;
-        (result.mappings || []).forEach(mapping => {
-          const lesson = getLesson(mapping.id);
-          if (lesson && mapping.googleEventId && lesson.googleEventId !== mapping.googleEventId) {
-            lesson.googleEventId = mapping.googleEventId;
-            changed = true;
-          }
-        });
+        for (let start = 0; start < lessons.length; start += CHUNK) {
+          const result = await googleApi('google-replay-sync', { method: 'POST', body: { lessons: lessons.slice(start, start + CHUNK) }, timeoutMs: 25000 });
+          if (result.skipped) break;
+          (result.mappings || []).forEach(mapping => {
+            const lesson = getLesson(mapping.id);
+            if (lesson && mapping.googleEventId && lesson.googleEventId !== mapping.googleEventId) {
+              lesson.googleEventId = mapping.googleEventId;
+              changed = true;
+            }
+          });
+          synced += Number(result.synced || 0);
+          failed += Number(result.failed || 0);
+          if (el.googleStatusLabel) el.googleStatusLabel.textContent = `Sync ${Math.min(start + CHUNK, lessons.length)}/${lessons.length}`;
+        }
         if (changed) saveState();
         cloud.google.lastSyncAt = new Date().toISOString();
         updateGoogleUi();
-        if (showToastOnSuccess) showToast(`Google aggiornato: ${result.synced || 0} lezioni.`);
+        if (showToastOnSuccess || failed) {
+          showToast(failed ? `Google aggiornato: ${synced} lezioni, ${failed} non riuscite.` : `Google aggiornato: ${synced} lezioni.`, failed ? 'warn' : 'info');
+        }
         return true;
       } catch (error) {
         console.error(error);
@@ -5691,9 +6615,9 @@
       state.packages = (state.packages || []).map(pkg => ({ ...pkg, totalPrice: Number(pkg?.totalPrice || 0) }));
     }
 
-    function getClient(id) { return state.clients.find(item => item.id === id) || null; }
-    function getPackage(id) { return state.packages.find(item => item.id === id) || null; }
-    function getPlan(id) { return state.plans.find(item => item.id === id) || null; }
+    function getClient(id) { return indexById('clients').get(id) || null; }
+    function getPackage(id) { return indexById('packages').get(id) || null; }
+    function getPlan(id) { return indexById('plans').get(id) || null; }
     function getActivePlan(clientId) {
       const client = getClient(clientId);
       if (!client) return null;
@@ -5712,12 +6636,13 @@
       }
       return plans[plans.length - 1] || null;
     }
-    function getLesson(id) { return state.lessons.find(item => item.id === id) || null; }
+    function getLesson(id) { return indexById('lessons').get(id) || null; }
+    /* Restituiscono una copia: chi le usa può ordinarle o filtrarle liberamente */
     function getLessonsForClient(clientId) {
-      return state.lessons.filter(item => item.clientId === clientId).sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`));
+      return (lessonGroups().byClient.get(clientId) || []).slice();
     }
     function getLessonsForPlan(planId) {
-      return state.lessons.filter(item => item.planId === planId).sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`));
+      return (lessonGroups().byPlan.get(planId) || []).slice();
     }
 
     function getPlanCapacity(planId) {
@@ -5740,6 +6665,19 @@
 
     function planStats(plan) {
       if (!plan) return { total: 0, done: 0, scheduled: 0, used: 0, remaining: 0, bookable: 0, firstLesson: null, nextLesson: null, progress: 0, cancelled: 0 };
+      /* Stesso piano chiesto decine di volte per ogni aggiornamento dello schermo:
+         si calcola una volta e si riusa fino al prossimo salvataggio. */
+      ensureDerivedDay();
+      if (!derived.planStats) derived.planStats = new Map();
+      const groups = lessonGroups();
+      const cached = derived.planStats.get(plan.id);
+      if (cached && cached.groups === groups && cached.plan === plan) return cached.stats;
+      const stats = computePlanStats(plan);
+      derived.planStats.set(plan.id, { groups, plan, stats });
+      return stats;
+    }
+
+    function computePlanStats(plan) {
       const pkg = getPackage(plan.packageId);
       const lessons = getLessonsForPlan(plan.id);
       const done = lessons.filter(item => item.status === 'done').length;
@@ -5765,8 +6703,11 @@
       const lessons = getLessonsForClient(clientId);
       const cancelled = lessons.filter(item => item.status === 'cancelled').length;
       const done = lessons.filter(item => item.status === 'done').length;
-      const future = lessons.filter(item => item.status !== 'cancelled' && item.date >= todayISO()).length;
-      const lastSeen = lessons.filter(item => item.status !== 'cancelled').map(item => item.date).sort().slice(-1)[0] || null;
+      const today = todayISO();
+      const future = lessons.filter(item => item.status !== 'cancelled' && item.date >= today).length;
+      /* "Ultima presenza": l'ultima lezione non annullata fino a oggi. Prima contava
+         anche le lezioni future, e nella scheda compariva una data ancora da venire. */
+      const lastSeen = lessons.filter(item => item.status !== 'cancelled' && item.date <= today).map(item => item.date).sort().slice(-1)[0] || null;
       return { lessons, cancelled, done, future, lastSeen };
     }
 
@@ -5909,6 +6850,9 @@
     }
 
     function autoCompleteElapsedLessons() {
+      /* All'avvio si aspetta di sapere se c'è una sessione: così l'aggiornamento
+         delle lezioni concluse arriva anche su Google Calendar. */
+      if (!cloud.startupDone) return false;
       const now = new Date();
       let changed = false;
       const changedLessons = [];
@@ -6115,13 +7059,13 @@
       const date = button.getAttribute('data-date');
       if (clientId) focusClient(clientId);
       if (action === 'renew' && clientId) {
-        saveState();
+        saveUiState();
         renderAfterClientFocus();
         openRenewModal();
         return;
       }
       if (action === 'open-client' && clientId) {
-        saveState();
+        saveUiState();
         renderAfterClientFocus();
         return;
       }
@@ -6129,7 +7073,7 @@
         state.selectedDay = date;
         state.viewDate = startOfMonth(fromISO(date));
         state.calendarView = 'day';
-        saveState();
+        saveUiState();
         renderCalendarOnly();
         return;
       }
@@ -6265,8 +7209,11 @@
       const backdrop = document.getElementById(id);
       if (!backdrop) return;
       activeModalTrigger = trigger instanceof HTMLElement ? trigger : activeModalTrigger;
+      /* Riaprire un modal già aperto (es. dopo aver cambiato stato a una lezione) non deve
+         bloccare lo scroll una seconda volta: alla chiusura la pagina restava ferma. */
+      const wasOpen = backdrop.classList.contains('open');
       backdrop.classList.add('open');
-      lockBodyScroll();
+      if (!wasOpen) lockBodyScroll();
       /* Theme color contestuale per tipo di modal */
       const dangerModals = ['confirmModalBackdrop'];
       const isDanger = dangerModals.includes(id) ||
@@ -6284,7 +7231,7 @@
     }
     function closeModal(id) {
       const backdrop = document.getElementById(id);
-      if (!backdrop) return;
+      if (!backdrop || !backdrop.classList.contains('open')) return;
       backdrop.classList.remove('open');
       unlockBodyScroll();
       if (!document.querySelector('.modal-backdrop.open')) {
@@ -6379,7 +7326,9 @@
     }
 
     /* ── Custom confirm dialog (replaces window.confirm) ─────── */
-    function showConfirm(title, message, onConfirm, confirmLabel = 'Elimina') {
+    /* tone: 'danger' (pulsante rosso, per ciò che cancella o sostituisce) oppure
+       'good' (pulsante verde, per una conferma che non cancella nulla) */
+    function showConfirm(title, message, onConfirm, confirmLabel = 'Elimina', onCancel = null, cancelLabel = 'Annulla', tone = 'danger') {
       const backdrop = document.getElementById('confirmModalBackdrop');
       const titleEl  = document.getElementById('confirmModalTitle');
       const msgEl    = document.getElementById('confirmModalMsg');
@@ -6389,19 +7338,24 @@
       titleEl.textContent   = title;
       msgEl.textContent     = message;
       okBtn.textContent     = confirmLabel;
+      const confirmWasOpen = backdrop.classList.contains('open');
       backdrop.classList.add('open');
-      lockBodyScroll();
+      if (!confirmWasOpen) lockBodyScroll();
       /* remove old listeners */
       const newOk = okBtn.cloneNode(true);
       const newCancel = cancelBtn.cloneNode(true);
       okBtn.replaceWith(newOk);
       cancelBtn.replaceWith(newCancel);
       function close() {
+        if (!backdrop.classList.contains('open')) return;
         backdrop.classList.remove('open');
         unlockBodyScroll();
       }
+      newCancel.textContent = cancelLabel;
+      newOk.classList.toggle('btn-danger', tone !== 'good');
+      newOk.classList.toggle('btn-good', tone === 'good');
       newOk.addEventListener('click', () => { close(); if (onConfirm) onConfirm(); });
-      newCancel.addEventListener('click', close);
+      newCancel.addEventListener('click', () => { close(); if (onCancel) onCancel(); });
       backdrop.addEventListener('click', e => { if (e.target === backdrop) close(); }, { once: true });
       requestAnimationFrame(() => newOk.focus());
     }
@@ -6720,7 +7674,7 @@ async function exportManagedXlsx() {
           const a      = Object.assign(document.createElement('a'), { href:url, download:fileName });
           document.body.appendChild(a); a.click(); a.remove();
           URL.revokeObjectURL(url);
-          showToast(`✅ Excel ${meseIT} ${monthDate.getFullYear()} — ${clients.length} gestiti.`, 'ok');
+          showToast(`Excel ${meseIT} ${monthDate.getFullYear()} — ${clients.length} gestiti.`, 'ok');
         } catch (err) {
           console.error(err);
           showToast('Excel non generato.', 'error');
@@ -6825,7 +7779,7 @@ function copyAppointmentsToClipboard() {
   }
   /* Web Share API — apre il foglio nativo iOS (WhatsApp, Mail, AirDrop…) */
   if (navigator.share) {
-    navigator.share({ title: 'Appuntamenti DSWORLD', text })
+    navigator.share({ title: 'Appuntamenti FitFlow', text })
       .then(() => showToast('Appuntamenti condivisi!', 'ok'))
       .catch(err => { if (err.name !== 'AbortError') showToast('Condivisione annullata.'); });
     return;
@@ -6869,6 +7823,7 @@ function applyReportFilter() {
       el.clientName.value = client?.firstName || nameParts.firstName || '';
       el.clientSurname.value = client?.lastName || nameParts.lastName || '';
       if (el.clientEmail) el.clientEmail.value = client?.email || '';
+      if (el.clientPhone) el.clientPhone.value = client?.phone || '';
       if (el.clientSendCalendarInvite) el.clientSendCalendarInvite.value = client?.sendCalendarInvite ? 'yes' : 'no';
       el.clientNotes.value = client?.notes || '';
       el.clientStartDate.value = client ? (getActivePlan(client.id)?.startDate || todayISO()) : todayISO();
@@ -6979,8 +7934,8 @@ function applyReportFilter() {
       ].map(item => `
         <div class="hero-insight${item.cls ? ' ' + item.cls : ''}"${item.action ? ` data-hero-action="${item.action}"${item.lessonDate ? ` data-lesson-date="${item.lessonDate}"` : ''} role="button" tabindex="0"` : ''}>
           <div class="k">${item.key}</div>
-          <div class="v">${item.value}</div>
-          <div class="s">${item.sub}</div>
+          <div class="v">${escapeHtml(String(item.value))}</div>
+          <div class="s">${escapeHtml(String(item.sub))}</div>
           ${item.extra || ''}
         </div>
       `).join('');
@@ -7262,7 +8217,7 @@ function applyReportFilter() {
       const paid = Number(client.installmentsPaid || 0);
 
       if (title) title.textContent = isInstallments ? 'Pagamento a rate' : 'Pagamento';
-      if (sub) sub.textContent = escapeHtml(getClientFullName(client));
+      if (sub) sub.textContent = getClientFullName(client);
 
       if (!isInstallments) {
         // Pagamento unica soluzione
@@ -7371,7 +8326,7 @@ function applyReportFilter() {
       el_content.querySelectorAll('[data-ops-client]').forEach(btn => {
         btn.addEventListener('click', () => {
           focusClient(btn.getAttribute('data-ops-client'));
-          saveState(); renderAfterClientFocus();
+          saveUiState(); renderAfterClientFocus();
           closeModal('operazioniModalBackdrop');
         });
       });
@@ -7419,7 +8374,7 @@ function applyReportFilter() {
       el_content.querySelectorAll('[data-risk-client]').forEach(btn => {
         btn.addEventListener('click', () => {
           focusClient(btn.getAttribute('data-risk-client'));
-          saveState(); renderAfterClientFocus();
+          saveUiState(); renderAfterClientFocus();
           closeModal('atRiskModalBackdrop');
         });
       });
@@ -7627,7 +8582,7 @@ function applyReportFilter() {
         if (!client.shareToken) return;
         const url = clientPortalUrl(client.shareToken);
         if (navigator.share) {
-          navigator.share({ title: `DSWORLD — Portale di ${getClientFullName(client)}`, url })
+          navigator.share({ title: `FitFlow — Portale di ${getClientFullName(client)}`, url })
             .catch(e => { if (e.name !== 'AbortError') navigator.clipboard.writeText(url).then(() => showToast('Link copiato!', 'ok')); });
         } else {
           navigator.clipboard.writeText(url).then(() => showToast('Link copiato!', 'ok'))
@@ -7645,7 +8600,7 @@ function applyReportFilter() {
         state.selectedDay = nextAgendaDate;
         state.viewDate = startOfMonth(fromISO(nextAgendaDate));
         state.calendarView = 'day';
-        saveState();
+        saveUiState();
         renderCalendarOnly();
       };
       if (document.getElementById('mobileCopyAppointmentsBtn')) document.getElementById('mobileCopyAppointmentsBtn').addEventListener('click', copyAppointments);
@@ -7702,7 +8657,7 @@ function applyReportFilter() {
         const urgency = urgencyMap ? urgencyMap.get(client.id) : getClientUrgency(client);
         const revenue = activePlan ? formatCurrency(getPlanTotalPrice(activePlan, pkg, client)) : '—';
         return `
-          <div class="client-card ${client.id === state.selectedClientId ? 'active' : ''}" data-client-id="${client.id}" tabindex="0" role="button" aria-label="Apri cliente ${escapeHtml(getClientFullName(client))}" style="--i:${Math.min(idx, 12)}">>
+          <div class="client-card ${client.id === state.selectedClientId ? 'active' : ''}" data-client-id="${client.id}" tabindex="0" role="button" aria-label="Apri cliente ${escapeHtml(getClientFullName(client))}" style="--i:${Math.min(idx, 12)}">
             <div class="client-meta-row">
               <div style="display:flex;gap:10px;align-items:center;min-width:0;flex:1 1 auto;">
                 <div class="avatar">${escapeHtml(initials(getClientFullName(client)))}</div>
@@ -7787,6 +8742,7 @@ function applyReportFilter() {
       const drawerCountTag = document.getElementById('clientCountTagDrawer');
       if (drawerCountTag) drawerCountTag.textContent = String(clients.length);
       if (!sortedClients.length) {
+        /* nessun cliente: il messaggio è breve, si scrive in entrambe le liste */
         const isFiltered = state.clientFilter !== 'all' || state.search.trim();
         const emptyMarkup = isFiltered
           ? '<div class="empty">Nessun cliente trovato</div>'
@@ -7800,14 +8756,21 @@ function applyReportFilter() {
         if (drawerList) drawerList.innerHTML = emptyMarkup;
         return;
       }
-      const markup = buildClientListMarkup(sortedClients, urgencyMap);
-      el.clientList.innerHTML = markup;
-      hydrateClientQuickActions(el.clientList);
+      /* L'elenco esiste due volte: nella colonna laterale (computer) e nel pannello
+         a scomparsa (telefono, sotto i 580px). Prima venivano ridisegnati entrambi
+         a ogni modifica, anche quello invisibile: con molti clienti era la parte più
+         lenta di ogni aggiornamento. Ora si disegna solo quello che si vede; il
+         pannello del telefono viene disegnato quando lo si apre. */
       const drawerList = document.getElementById('clientListDrawer');
-      if (drawerList) {
-        drawerList.innerHTML = markup;
-        hydrateClientQuickActions(drawerList);
-      }
+      const narrow = _narrowScreenQuery.matches;
+      const drawerOpen = Boolean(document.getElementById('sidebarDrawer')?.classList.contains('open'));
+      const visibleList = narrow ? (drawerOpen ? drawerList : null) : el.clientList;
+      [el.clientList, drawerList].forEach(list => {
+        if (list && list !== visibleList && list.firstChild) list.innerHTML = '';
+      });
+      if (!visibleList) return;
+      visibleList.innerHTML = buildClientListMarkup(sortedClients, urgencyMap);
+      hydrateClientQuickActions(visibleList);
     }
 
     function getCalendarAnchorDate() {
@@ -7820,7 +8783,7 @@ function applyReportFilter() {
     let _calSaveTimer = null;
     function debouncedCalendarSave() {
       clearTimeout(_calSaveTimer);
-      _calSaveTimer = setTimeout(() => saveState(), 1200);
+      _calSaveTimer = setTimeout(() => saveUiState(), 400);
     }
 
     function setCalendarView(view) {
@@ -7948,7 +8911,19 @@ function applyReportFilter() {
     function renderWeekAgenda(anchorDate = getCalendarAnchorDate()) {
       const monday = addDays(anchorDate, -((anchorDate.getDay() + 6) % 7));
       const weekDays = Array.from({ length: 7 }, (_, index) => addDays(monday, index));
-      const hours = Array.from({ length: 15 }, (_, index) => `${String(index + 7).padStart(2, '0')}:00`);
+      /* Di norma dalle 7 alle 21; la griglia si allunga se in quella settimana
+         c'è una lezione più presto o più tardi (prima non veniva mostrata). */
+      let firstHour = 7;
+      let lastHour = 21;
+      weekDays.forEach(day => {
+        getLessonsByDate(toISO(day)).forEach(lesson => {
+          const hour = Number(String(lesson.time || '').slice(0, 2));
+          if (!Number.isFinite(hour) || !lesson.time) return;
+          firstHour = Math.min(firstHour, hour);
+          lastHour = Math.max(lastHour, hour);
+        });
+      });
+      const hours = Array.from({ length: lastHour - firstHour + 1 }, (_, index) => `${String(index + firstHour).padStart(2, '0')}:00`);
       const isMobile = window.innerWidth <= 580;
 
       if (isMobile) {
@@ -7978,9 +8953,8 @@ function applyReportFilter() {
           /* Day cells */
           weekDays.forEach(day => {
             const iso = toISO(day);
-            const slotLessons = state.lessons
-              .filter(item => item.date === iso && item.time.slice(0, 2) === time.slice(0, 2))
-              .sort((a, b) => a.time.localeCompare(b.time));
+            const slotLessons = getLessonsByDate(iso)
+              .filter(item => String(item.time || '').slice(0, 2) === time.slice(0, 2));
             if (slotLessons.length) {
               const pills = slotLessons.map(lesson => `
                 <button type="button" class="wgm-pill status-${lesson.status}${lesson.duoGroupId ? ' duo' : ''}" data-lesson-id="${lesson.id}">
@@ -8018,9 +8992,8 @@ function applyReportFilter() {
             <div class="agenda-week-time">${time}</div>
             ${weekDays.map(day => {
               const iso = toISO(day);
-              const slotLessons = state.lessons
-                .filter(item => item.date === iso && item.time.slice(0, 2) === time.slice(0, 2))
-                .sort((a, b) => a.time.localeCompare(b.time));
+              const slotLessons = getLessonsByDate(iso)
+                .filter(item => String(item.time || '').slice(0, 2) === time.slice(0, 2));
               return `
                 <div class="agenda-week-cell" data-week-slot="${iso}|${time}">
                   ${slotLessons.length ? slotLessons.map(lesson => {
@@ -8039,7 +9012,7 @@ function applyReportFilter() {
       el.agendaWrap.querySelectorAll('[data-open-day]').forEach(node => node.addEventListener('click', () => {
         state.selectedDay = node.getAttribute('data-open-day');
         state.calendarView = 'day';
-        saveState();
+        saveUiState();
         renderCalendarOnly();
       }));
       el.agendaWrap.querySelectorAll('[data-add-slot]').forEach(button => button.addEventListener('click', () => {
@@ -8268,7 +9241,7 @@ function applyReportFilter() {
           derived.lessonsByDate.get(item.date).push(item);
         });
         derived.lessonsByDate.forEach((items, key) => {
-          items.sort((a, b) => a.time.localeCompare(b.time) || getClientFullName(getClient(a.clientId)).localeCompare(getClientFullName(getClient(b.clientId))));
+          items.sort((a, b) => String(a.time || '').localeCompare(String(b.time || '')) || getClientFullName(getClient(a.clientId)).localeCompare(getClientFullName(getClient(b.clientId))));
           derived.lessonsByDate.set(key, items);
         });
       }
@@ -8439,7 +9412,7 @@ function applyReportFilter() {
 
     function selectClient(clientId) {
       state.selectedClientId = clientId;
-      saveState(true);
+      saveUiState();
       renderAfterClientFocus();
       /* Se è un cliente free session con lezione già svolta → proponi conversione */
       const client = getClient(clientId);
@@ -8697,11 +9670,11 @@ function applyReportFilter() {
     function rescheduleCancelledLesson({ date, time }) {
       const lesson = getLesson(state.selectedLessonId);
       if (!lesson) return;
-      const wasCancelled = lesson.status === 'cancelled';
+      const previousStatus = lesson.status;
+      const wasCancelled = previousStatus === 'cancelled';
       if (!wasCancelled) {
         lesson.status = 'cancelled';
         saveState();
-        requestGoogleLessonSync('upsert', lesson);
       }
       const ok = createLesson({
         clientId: lesson.clientId,
@@ -8713,6 +9686,15 @@ function applyReportFilter() {
         linkedTo: lesson.id,
         setFixedTime: false
       });
+      if (!ok && !wasCancelled) {
+        /* Il recupero non è stato creato (orario occupato, pacchetto pieno…):
+           la lezione originale torna com'era invece di restare annullata. */
+        lesson.status = previousStatus;
+        saveState();
+        renderAfterLessonChange();
+        return;
+      }
+      if (!wasCancelled) requestGoogleLessonSync('upsert', lesson);
       if (ok) openLessonModal(lesson.id);
     }
 
@@ -8963,6 +9945,7 @@ function applyReportFilter() {
         .replace(/(^|[\s'\-])([a-zà-ÿ])/g, (m, sep, ch) => sep + ch.toUpperCase());
     }
 
+    /* prova:telefono:inizio */
     function normalizePhoneDigits(phone) {
       return String(phone || '').replace(/\D/g, '');
     }
@@ -8984,11 +9967,18 @@ function applyReportFilter() {
     }
 
     function normalizeItalianPhone(phone) {
-      let digits = normalizePhoneDigits(phone);
+      const raw = String(phone || '').trim();
+      let digits = normalizePhoneDigits(raw);
+      const international = raw.startsWith('+') || digits.startsWith('00');
       if (digits.startsWith('00')) digits = digits.slice(2);
-      if (!digits.startsWith('39')) digits = '39' + digits;
-      return digits;
+      /* Numero scritto con il prefisso internazionale: va usato così com'è */
+      if (international) return digits;
+      /* Senza prefisso: un cellulare italiano ha al massimo 10 cifre, anche quando
+         inizia per 39 (392, 393…). Solo oltre le 10 cifre il 39 è già il prefisso. */
+      if (digits.length > 10 && digits.startsWith('39')) return digits;
+      return '39' + digits;
     }
+    /* prova:telefono:fine */
 
     function parseFreeSessionContactsInput(raw) {
       const lines = String(raw || '').split(/\r?\n/).map(line => line.trim()).filter(Boolean);
@@ -9047,23 +10037,6 @@ function applyReportFilter() {
           error: duplicatePhone ? 'Telefono già presente' : (duplicateName ? 'Nome già presente' : '')
         };
       });
-    }
-
-    function saveAutomaticImportBackup() {
-      try {
-        const payload = {
-          exportedAt: new Date().toISOString(),
-          reason: 'before_free_session_import',
-          clients: state.clients,
-          packages: state.packages,
-          plans: state.plans,
-          lessons: state.lessons
-        };
-        localStorage.setItem(SESSION_BACKUP_KEY, JSON.stringify(payload));
-        localStorage.setItem(BACKUP_LATEST_KEY, JSON.stringify(payload));
-      } catch (error) {
-        console.warn('Backup automatico import non salvato:', error);
-      }
     }
 
     function renderFreeSessionImportPreview() {
@@ -9137,7 +10110,8 @@ function applyReportFilter() {
         renderFreeSessionImportPreview();
         return;
       }
-      saveAutomaticImportBackup();
+      /* copia dei dati di adesso, ripristinabile da Cloud → Backup automatici */
+      writeDailyBackup({ tag: 'prima-import' });
       const freePackage = ensureSpecialPackage('free_session');
       const newClients = importable.map(createFreeSessionClient);
       const newPlans = newClients.map(client => {
@@ -9181,10 +10155,149 @@ function applyReportFilter() {
         showToast('Numero di telefono mancante.', 'warn');
         return;
       }
+      /* Prima volta: serve sapere come si presenta il trainer */
+      const profile = getTrainerSettings();
+      if (!profile.trainerName && !profile.waTemplate) {
+        _pendingWhatsAppClientId = client.id;
+        openAccountModal({ focusProfile: true });
+        showToast('Scrivi una volta il tuo nome: comparirà nei messaggi WhatsApp.', 'warn');
+        return;
+      }
       const phone = normalizeItalianPhone(client.phone);
-      const message = `Ciao ${client.firstName || getClientFullName(client)}, sono Dejan, personal trainer della FitActive di Vicenza Pioppi, ti contatto in merito alla tua Free Session ovvero la prima consulenza e allenamento incluso assistito con il trainer. Quando saresti disponibile per fissarla?💪🏼`;
-      const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+      const url = `https://wa.me/${phone}?text=${encodeURIComponent(buildWhatsAppMessage(client))}`;
       window.open(url, '_blank', 'noopener,noreferrer');
+    }
+
+    /* ── Profilo trainer (nome, struttura, testo del messaggio) ───────── */
+    const DEFAULT_WA_TEMPLATE = 'Ciao {nome}, sono {trainer}, ti contatto in merito alla tua Free Session, ovvero la prima consulenza e allenamento assistito incluso con il trainer. Quando saresti disponibile per fissarla? 💪🏼';
+    let _pendingWhatsAppClientId = null;
+
+    function getTrainerSettings() {
+      const settings = state.settings || {};
+      return {
+        trainerName: String(settings.trainerName || '').trim(),
+        studioName: String(settings.studioName || '').trim(),
+        waTemplate: String(settings.waTemplate || '').trim()
+      };
+    }
+
+    function buildWhatsAppMessage(client, profile = getTrainerSettings()) {
+      const { trainerName, studioName, waTemplate } = profile;
+      const role = studioName ? `personal trainer di ${studioName}` : 'il tuo personal trainer';
+      const who = trainerName ? `${trainerName}, ${role}` : role;
+      return (waTemplate || DEFAULT_WA_TEMPLATE)
+        .replace(/\{nome\}/gi, client?.firstName || getClientFullName(client))
+        .replace(/\{trainer\}/gi, waTemplate ? (trainerName || 'il tuo personal trainer') : who)
+        .replace(/\{studio\}/gi, studioName);
+    }
+
+    function renderTrainerProfile() {
+      const profile = getTrainerSettings();
+      const nameInput = document.getElementById('trainerNameInput');
+      const studioInput = document.getElementById('trainerStudioInput');
+      const templateInput = document.getElementById('trainerWaTemplateInput');
+      if (!nameInput || !studioInput || !templateInput) return;
+      nameInput.value = profile.trainerName;
+      studioInput.value = profile.studioName;
+      templateInput.value = profile.waTemplate;
+      updateTrainerProfilePreview();
+    }
+
+    function readTrainerProfileInputs() {
+      return {
+        trainerName: (document.getElementById('trainerNameInput')?.value || '').trim().slice(0, 60),
+        studioName: (document.getElementById('trainerStudioInput')?.value || '').trim().slice(0, 80),
+        waTemplate: (document.getElementById('trainerWaTemplateInput')?.value || '').trim().slice(0, 700)
+      };
+    }
+
+    function updateTrainerProfilePreview() {
+      const profile = readTrainerProfileInputs();
+      const status = document.getElementById('trainerProfileStatus');
+      if (status) status.textContent = profile.trainerName || profile.waTemplate ? 'Impostato' : 'Da completare';
+      const preview = document.getElementById('trainerWaPreview');
+      if (preview) preview.textContent = `"${buildWhatsAppMessage({ firstName: 'Anna' }, profile)}"`;
+    }
+
+    function saveTrainerProfile() {
+      const profile = readTrainerProfileInputs();
+      if (!profile.trainerName && !profile.waTemplate) {
+        showToast('Scrivi almeno il tuo nome.', 'warn');
+        document.getElementById('trainerNameInput')?.focus();
+        return;
+      }
+      state.settings = { ...(state.settings || {}), ...profile };
+      saveState(true);
+      updateTrainerProfilePreview();
+      showToast('Profilo salvato.', 'ok');
+      /* Se si era partiti da un tasto WhatsApp, si prosegue da lì */
+      const pending = _pendingWhatsAppClientId ? getClient(_pendingWhatsAppClientId) : null;
+      _pendingWhatsAppClientId = null;
+      if (pending) {
+        closeModal('accountModalBackdrop');
+        openWhatsAppForClient(pending);
+      }
+    }
+
+    /* ── Backup automatici: elenco e ripristino ───────────────────────── */
+    async function renderAutoBackups() {
+      const list = document.getElementById('autoBackupList');
+      const count = document.getElementById('autoBackupCount');
+      if (!list) return;
+      const rows = await listDailyBackups();
+      if (count) count.textContent = rows.length ? `${rows.length} ${rows.length === 1 ? 'copia' : 'copie'}` : 'Nessuna';
+      if (!rows.length) {
+        list.innerHTML = '<div class="muted small">La prima copia viene creata dopo la prossima modifica.</div>';
+        return;
+      }
+      const today = todayISO();
+      list.innerHTML = rows.map(row => {
+        const label = row.day === today ? 'Oggi' : formatDateFancy(row.day);
+        const tag = row.tag === 'prima-import' ? ' · prima dell\'importazione' : row.tag === 'prima-ripristino' ? ' · prima del ripristino' : row.tag === 'prima-recupero' ? ' · prima del recupero dal cloud' : '';
+        const time = new Date(row.savedAt).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+        return `<div class="summary-row" style="gap:10px;align-items:center;">
+          <span>${escapeHtml(label)}${escapeHtml(tag)} · ${escapeHtml(time)}<br><span class="muted small">${Number(row.counts?.clients || 0)} clienti · ${Number(row.counts?.lessons || 0)} lezioni</span></span>
+          <button class="btn btn-ghost btn-small" type="button" data-restore-backup="${escapeHtml(row.key)}">Ripristina</button>
+        </div>`;
+      }).join('');
+      list.querySelectorAll('[data-restore-backup]').forEach(button => {
+        button.addEventListener('click', () => {
+          const row = rows.find(item => item.key === button.getAttribute('data-restore-backup'));
+          if (!row) return;
+          showConfirm(
+            'Ripristina backup',
+            `Tornare ai dati del ${formatDateShort(row.day)} (${Number(row.counts?.clients || 0)} clienti, ${Number(row.counts?.lessons || 0)} lezioni)? I dati attuali verranno sostituiti, anche sul cloud. Una copia di adesso resta in questo elenco.`,
+            () => {
+              writeDailyBackup({ tag: 'prima-ripristino' }).finally(() => {
+                applySnapshot(row.data);
+                ensureShareTokens();
+                cloud.massChangeConfirmed = true;
+                cloud.syncPaused = false;
+                saveState(true);
+                renderAll();
+                renderAutoBackups();
+                showToast('Backup ripristinato.', 'ok');
+              });
+            },
+            'Ripristina'
+          );
+        });
+      });
+    }
+
+    async function openAccountModal({ focusProfile = false } = {}) {
+      populateCloudConfigInputs();
+      renderTrainerProfile();
+      renderAutoBackups();
+      openModal('accountModalBackdrop');
+      if (focusProfile) {
+        requestAnimationFrame(() => {
+          document.getElementById('trainerProfileCard')?.scrollIntoView({ block: 'center' });
+          document.getElementById('trainerNameInput')?.focus();
+        });
+      }
+      /* Lo stato di Google arriva dopo: l'apertura della finestra non deve aspettarlo */
+      refreshGoogleStatus();
     }
 
     function downloadClientVCard(client) {
@@ -9194,21 +10307,24 @@ function applyReportFilter() {
       }
       const firstName = client.firstName || '';
       const lastName = client.lastName || '';
-      const fullName = getClientFullName(client) || `${firstName} ${lastName}`.trim() || 'Contatto DSWORLD';
+      const fullName = getClientFullName(client) || `${firstName} ${lastName}`.trim() || 'Contatto FitFlow';
       const phone = normalizeItalianPhone(client.phone);
+      /* Nei file vCard virgole, punti e virgola e barre vanno precedute da una barra */
+      const vText = value => String(value || '').replace(/\\/g, '\\\\').replace(/([,;])/g, '\\$1').replace(/\r?\n/g, ' ');
+      const studio = getTrainerSettings().studioName || 'FitFlow';
       const vcard = [
         'BEGIN:VCARD',
         'VERSION:3.0',
-        `N:${lastName};${firstName};;;`,
-        `FN:${fullName}`,
+        `N:${vText(lastName)};${vText(firstName)};;;`,
+        `FN:${vText(fullName)}`,
         `TEL;TYPE=CELL:+${phone}`,
-        'ORG:DSWORLD',
-        'NOTE:Free session DSWORLD',
+        `ORG:${vText(studio)}`,
+        `NOTE:${getClientServiceType(client) === 'free_session' ? 'Free session' : 'Cliente'} ${vText(studio)}`,
         'END:VCARD'
-      ].join('\n');
-      const safeName = `${firstName || 'contatto'}_${lastName || 'dsworld'}`.replace(/[^a-z0-9_-]+/gi, '_');
+      ].join('\r\n');
+      const safeName = `${firstName || 'contatto'}_${lastName || 'fitflow'}`.replace(/[^a-z0-9_-]+/gi, '_');
       const blob = new Blob([vcard], { type: 'text/vcard;charset=utf-8' });
-      fallbackDownload(blob, `${safeName}.vcf`);
+      fallbackDownload(blob, `${safeName}.vcf`, 'Contatto pronto da salvare in rubrica.');
     }
 
     function hydrateClientQuickActions(root) {
@@ -9252,14 +10368,16 @@ function applyReportFilter() {
         clients: state.clients,
         packages: state.packages,
         plans: state.plans,
-        lessons: state.lessons
+        lessons: state.lessons,
+        dismissedAlerts: state.dismissedAlerts || [],
+        settings: state.settings || {}
       };
       const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-      const filename = `dsworld-backup-${todayISO()}.json`;
+      const filename = `fitflow-backup-${todayISO()}.json`;
       /* Web Share API con file — AirDrop, iCloud Drive, Mail… */
       if (navigator.share && navigator.canShare && navigator.canShare({ files: [new File([blob], filename, { type: 'application/json' })] })) {
         const file = new File([blob], filename, { type: 'application/json' });
-        navigator.share({ title: 'DSWORLD Backup', files: [file] })
+        navigator.share({ title: 'FitFlow Backup', files: [file] })
           .then(() => showToast('Backup condiviso!', 'ok'))
           .catch(err => { if (err.name !== 'AbortError') fallbackDownload(blob, filename); });
         return;
@@ -9267,7 +10385,7 @@ function applyReportFilter() {
       fallbackDownload(blob, filename);
     }
 
-    function fallbackDownload(blob, filename) {
+    function fallbackDownload(blob, filename, message = 'Backup esportato.') {
       const url = URL.createObjectURL(blob);
       try {
         const a = document.createElement('a');
@@ -9276,43 +10394,414 @@ function applyReportFilter() {
         document.body.appendChild(a);
         a.click();
         a.remove();
-        showToast('Backup esportato.');
+        showToast(message);
       } finally {
         setTimeout(() => URL.revokeObjectURL(url), 1000);
       }
     }
 
+    /* ── I tuoi dati: copia completa ed eliminazione dell'account ──────
+       La copia completa contiene tutto ciò che FitFlow conserva per il trainer:
+       i dati dell'app (gli stessi del backup) più i messaggi con i clienti, che
+       stanno solo nel cloud. Le voci dei dati dell'app hanno gli stessi nomi del
+       backup: il file si può quindi anche reimportare con "Importa" (tornano
+       clienti, piani, lezioni e pacchetti; i messaggi no). */
+    const MESSAGES_PAGE_SIZE = 1000;   /* Supabase restituisce al massimo 1000 righe per richiesta */
+    const MESSAGES_MAX_REQUESTS = 300;
+    let _fullExportBusy = false;
+    let _fullExportSavedAt = null;     /* quando è stata salvata l'ultima copia completa (finché l'app resta aperta) */
+    let _deletingAccount = false;
+
+    /* Per le operazioni importanti: se il login è scaduto mentre l'app era aperta,
+       prima lo rinnova (aspettando al massimo qualche secondo) */
+    async function getFreshAuthToken() {
+      try {
+        const result = await Promise.race([
+          cloud.client.auth.getSession(),
+          new Promise(resolve => setTimeout(() => resolve(null), 8000))
+        ]);
+        if (result?.data?.session?.access_token) return result.data.session.access_token;
+      } catch (_) {}
+      return getAuthToken();
+    }
+
+    /* Tutti i messaggi del trainer, una pagina alla volta fino a una pagina vuota */
+    async function fetchAllTrainerMessages() {
+      const cfg = loadSupabaseConfig();
+      const token = await getFreshAuthToken();
+      if (!cfg.url || !cfg.key || !token || !cloud.user) throw new Error('Login richiesto.');
+      const base = `${cfg.url.replace(/\/$/, '')}/rest/v1/client_messages?user_id=eq.${encodeURIComponent(cloud.user.id)}&select=*&order=created_at.asc,id.asc`;
+      const rows = [];
+      for (let request = 0; request < MESSAGES_MAX_REQUESTS; request++) {
+        const res = await fetch(`${base}&limit=${MESSAGES_PAGE_SIZE}&offset=${rows.length}`, {
+          headers: { 'apikey': cfg.key, 'Authorization': `Bearer ${token}` }
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const page = await res.json();
+        if (!Array.isArray(page)) throw new Error('Risposta non valida');
+        if (!page.length) return rows;
+        rows.push(...page);
+      }
+      throw new Error('Troppi messaggi');
+    }
+
+    /* (Le funzioni tra i due segnaposto "prova:dati-completi" vengono eseguite da
+       tests/logica-app.test.js: non spostare i segnaposto.) */
+    /* prova:dati-completi:inizio */
+    /* Il contenuto del file "tutti i miei dati" */
+    function buildFullExport({ snapshot, messages, account, google, exportedAt }) {
+      const data = snapshot || {};
+      const list = value => (Array.isArray(value) ? value : []);
+      const clientNames = new Map(list(data.clients).map(client => [
+        client.id,
+        client.name || [client.firstName, client.lastName].filter(Boolean).join(' ')
+      ]));
+      return {
+        format: 'fitflow-dati-completi',
+        version: 1,
+        description: 'Copia completa dei dati FitFlow di questo account: clienti, pacchetti, piani, lezioni, impostazioni e messaggi con i clienti.',
+        exportedAt,
+        account: {
+          email: account?.email || '',
+          userId: account?.id || '',
+          createdAt: account?.created_at || ''
+        },
+        googleCalendar: {
+          connected: Boolean(google?.connected),
+          calendarName: google?.connected ? (google.calendarName || '') : '',
+          googleEmail: google?.connected ? (google.googleEmail || '') : ''
+        },
+        clients: list(data.clients),
+        packages: list(data.packages),
+        plans: list(data.plans),
+        lessons: list(data.lessons),
+        dismissedAlerts: list(data.dismissedAlerts),
+        settings: data.settings && typeof data.settings === 'object' ? data.settings : {},
+        /* a ogni messaggio si aggiunge il nome del cliente, per poterlo leggere senza l'app */
+        messages: list(messages).map(message => ({ ...message, clientName: clientNames.get(message.client_id) || '' }))
+      };
+    }
+
+    /* L'email riscritta a mano come conferma: non contano maiuscole e spazi attorno */
+    function emailMatchesAccount(typed, accountEmail) {
+      const expected = String(accountEmail || '').trim().toLowerCase();
+      return Boolean(expected) && String(typed || '').trim().toLowerCase() === expected;
+    }
+    /* prova:dati-completi:fine */
+
+    function setFullExportBusy(busy) {
+      _fullExportBusy = busy;
+      ['downloadAllDataBtn', 'deleteAccountDownloadBtn'].forEach(id => {
+        const button = document.getElementById(id);
+        if (!button) return;
+        button.disabled = busy;
+        button.style.opacity = busy ? '0.45' : '';
+        button.textContent = busy ? 'Preparo la copia…' : 'Scarica tutti i miei dati';
+      });
+    }
+
+    function renderFullExportStatus() {
+      const status = document.getElementById('deleteAccountDownloadStatus');
+      if (!status) return;
+      status.textContent = _fullExportSavedAt
+        ? `Copia scaricata alle ${_fullExportSavedAt.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}.`
+        : '';
+    }
+
+    /* Salva un file sul dispositivo: dove c'è il pannello di condivisione (iPhone:
+       File, AirDrop, Mail…) si usa quello, altrimenti parte un normale download.
+       Risponde false solo se l'utente ha chiuso il pannello senza salvare. */
+    async function saveFileToDevice(blob, filename, title, doneMessage) {
+      const file = new File([blob], filename, { type: blob.type });
+      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({ title, files: [file] });
+          showToast(doneMessage, 'ok');
+          return true;
+        } catch (error) {
+          if (error?.name === 'AbortError') return false;
+        }
+      }
+      fallbackDownload(blob, filename, doneMessage);
+      return true;
+    }
+
+    async function downloadAllData() {
+      if (_fullExportBusy) return;
+      if (!cloud.user || !cloud.client || cloud.allowLocalOnly) {
+        showToast('Per scaricare anche i messaggi devi essere connesso: accedi e riprova.', 'warn');
+        return;
+      }
+      setFullExportBusy(true);
+      let payload;
+      try {
+        const messages = await fetchAllTrainerMessages();
+        payload = buildFullExport({
+          snapshot: getSnapshot(),
+          messages,
+          account: cloud.user,
+          google: cloud.google,
+          exportedAt: new Date().toISOString()
+        });
+      } catch (error) {
+        console.error('[FitFlow] Copia completa dei dati:', error?.message || error);
+        showToast('Copia non riuscita: controlla la connessione e riprova.', 'error');
+        return;
+      } finally {
+        setFullExportBusy(false);
+      }
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const filename = `fitflow-dati-completi-${todayISO()}.json`;
+      const count = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+      /* Il salvataggio parte da un tocco: su iPhone il pannello di condivisione si
+         apre solo in risposta a un tocco, non dopo l'attesa dello scaricamento. */
+      showConfirm(
+        'La tua copia è pronta',
+        `Contiene ${count(payload.clients.length, 'cliente', 'clienti')}, ${count(payload.plans.length, 'piano', 'piani')}, ${count(payload.lessons.length, 'lezione', 'lezioni')}, ${count(payload.packages.length, 'pacchetto', 'pacchetti')}, le tue impostazioni e ${count(payload.messages.length, 'messaggio', 'messaggi')}. Dentro ci sono i dati personali dei tuoi clienti: conserva il file in un posto sicuro.`,
+        async () => {
+          const saved = await saveFileToDevice(blob, filename, 'FitFlow — i miei dati', 'Copia dei dati salvata.');
+          if (saved) {
+            _fullExportSavedAt = new Date();
+            renderFullExportStatus();
+          }
+        },
+        'Salva il file',
+        null,
+        'Annulla',
+        'good'
+      );
+    }
+
+    function showDeleteAccountError(message) {
+      const box = document.getElementById('deleteAccountError');
+      if (!box) return;
+      box.textContent = message || '';
+      box.style.display = message ? 'block' : 'none';
+    }
+
+    /* Il pulsante rosso si accende solo quando l'email scritta è quella dell'account */
+    function updateDeleteAccountButton() {
+      const button = document.getElementById('deleteAccountConfirmBtn');
+      const input = document.getElementById('deleteAccountEmailInput');
+      if (!button || !input) return;
+      button.disabled = _deletingAccount || !emailMatchesAccount(input.value, cloud.user?.email);
+      button.style.opacity = button.disabled ? '0.45' : '';
+      button.textContent = _deletingAccount ? 'Eliminazione in corso…' : 'Elimina definitivamente';
+      input.disabled = _deletingAccount;
+    }
+
+    function openDeleteAccountModal() {
+      if (!cloud.user || !cloud.client || cloud.allowLocalOnly) {
+        showToast("Per eliminare l'account devi essere connesso: accedi e riprova.", 'warn');
+        return;
+      }
+      const input = document.getElementById('deleteAccountEmailInput');
+      if (input && !_deletingAccount) input.value = '';
+      const hint = document.getElementById('deleteAccountEmailHint');
+      if (hint) hint.textContent = cloud.user.email || '';
+      const counts = document.getElementById('deleteAccountCounts');
+      if (counts) counts.textContent = `Tutti i clienti (${state.clients.length}), i piani, le lezioni (${state.lessons.length}) e i pacchetti`;
+      if (!_deletingAccount) showDeleteAccountError('');
+      updateDeleteAccountButton();
+      renderFullExportStatus();
+      closeModal('accountModalBackdrop');
+      openModal('deleteAccountModalBackdrop');
+    }
+
+    /* Seconda conferma, dopo aver riscritto l'email */
+    function requestAccountDeletion() {
+      if (_deletingAccount || !cloud.user) return;
+      const typed = document.getElementById('deleteAccountEmailInput')?.value || '';
+      if (!emailMatchesAccount(typed, cloud.user.email)) {
+        showDeleteAccountError("L'email scritta non corrisponde a quella del tuo account.");
+        return;
+      }
+      showDeleteAccountError('');
+      showConfirm(
+        'Ultima conferma',
+        `${_fullExportSavedAt ? '' : 'Non hai scaricato una copia dei tuoi dati. '}Stai per eliminare per sempre l'account ${cloud.user.email} con tutti i clienti, le lezioni e i messaggi. Dopo non si potrà recuperare nulla.`,
+        () => { deleteAccountNow(typed); },
+        'Elimina per sempre'
+      );
+      /* Il tasto già selezionato è "Annulla": un Invio premuto per sbaglio non elimina nulla */
+      requestAnimationFrame(() => document.getElementById('confirmModalCancel')?.focus());
+    }
+
+    /* Una richiesta al cloud che non risponde non deve lasciare l'app in attesa per sempre */
+    function withTimeout(promise, ms, fallback) {
+      return Promise.race([promise, new Promise(resolve => setTimeout(() => resolve(fallback), ms))]);
+    }
+
+    /* true = l'account esiste ancora, false = non esiste più, null = non si riesce a saperlo.
+       "Non esiste più" vale solo se il cloud lo dice in modo esplicito: una sessione
+       scaduta o la rete assente non bastano per cancellare i dati dal dispositivo. */
+    async function accountStillExists() {
+      try {
+        const { data, error } = await withTimeout(cloud.client.auth.getUser(), 10000, { data: null, error: null });
+        if (data?.user) return true;
+        const code = String(error?.code || '');
+        const text = String(error?.message || '').toLowerCase();
+        if (code === 'user_not_found' || text.includes('user from sub claim')) return false;
+      } catch (_) {}
+      return null;
+    }
+
+    /* L'account non esiste più: se la chiusura normale della sessione non riesce
+       (rete assente) il login salvato su questo dispositivo va tolto comunque. */
+    function removeStoredSession() {
+      try {
+        for (let index = localStorage.length - 1; index >= 0; index--) {
+          const key = localStorage.key(index);
+          if (key && /^sb-.+-auth-token/.test(key)) localStorage.removeItem(key);
+        }
+      } catch (_) {}
+    }
+
+    async function deleteAccountNow(confirmEmail) {
+      if (_deletingAccount || !cloud.client || !cloud.user) return;
+      _deletingAccount = true;
+      updateDeleteAccountButton();
+      showDeleteAccountError('');
+      let outcome = 'failed';   /* 'deleted' | 'refused' | 'failed' | 'unknown' */
+      let googleRevoked = null;
+      let serverError = false;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
+      try {
+        /* Mentre l'account viene eliminato nessun salvataggio deve partire verso il cloud */
+        clearTimeout(cloud.saveTimer);
+        clearTimeout(cloud.retryTimer);
+        if (cloud.saving && cloud.savePromise) await cloud.savePromise.catch(() => {});
+        /* Da qui fino alla fine nessun invio e nessuno scaricamento (vedi
+           cloud.deletingAccount): un salvataggio partito adesso potrebbe ricreare
+           i dati nel cloud, o riscriverli su questo dispositivo dopo la pulizia.
+           L'invio appena concluso può aver fatto ripartire un timer: si ferma. */
+        cloud.deletingAccount = true;
+        clearTimeout(cloud.saveTimer);
+        clearTimeout(cloud.retryTimer);
+        const token = await getFreshAuthToken();
+        const response = await fetch(`${GOOGLE_FN_BASE}/delete-account`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ confirmEmail }),
+          signal: controller.signal
+        });
+        let payload = {};
+        try { payload = await response.json(); } catch (_) { payload = {}; }
+        if (response.ok && payload.ok === true) {
+          outcome = 'deleted';
+          googleRevoked = payload.googleRevoked ?? null;
+        } else if (response.status === 400) {
+          outcome = 'refused';
+        } else if (response.status >= 500) {
+          serverError = true;
+        }
+      } catch (error) {
+        console.error('[FitFlow] Eliminazione account:', error?.message || error);
+      } finally {
+        clearTimeout(timeoutId);
+      }
+      /* Nessuna risposta, oppure un errore: l'account potrebbe essere stato eliminato
+         lo stesso (rete caduta proprio alla fine). Si controlla, per non lasciare su
+         questo dispositivo i dati di un account che non esiste più. */
+      if (outcome === 'failed') {
+        const exists = await accountStillExists();
+        if (exists === false) outcome = 'deleted';
+        else if (exists === null) outcome = 'unknown';
+      }
+      if (outcome !== 'deleted') {
+        _deletingAccount = false;
+        cloud.deletingAccount = false;
+        updateDeleteAccountButton();
+        showDeleteAccountError(
+          outcome === 'refused' ? "L'email scritta non corrisponde a quella del tuo account."
+            : outcome === 'unknown' ? "Non riesco a sapere se l'eliminazione è riuscita: controlla la connessione e riprova."
+              : `L'eliminazione non è stata completata e il tuo account esiste ancora. Riprova tra qualche minuto.${serverError ? ' Una parte dei dati nel cloud potrebbe essere già stata cancellata: quelli su questo dispositivo sono intatti.' : ''}`
+        );
+        /* i salvataggi fermati qui sopra ripartono */
+        if (getSyncMeta().dirty) queueCloudSave(true);
+        return;
+      }
+      await finishAccountDeletion(googleRevoked);
+    }
+
+    /* Account eliminato: come all'uscita, su questo dispositivo non deve restare
+       nulla. Poi si torna alla schermata di accesso con la conferma. */
+    async function finishAccountDeletion(googleRevoked) {
+      wipeLocalData();
+      /* anche i dati della primissima versione dell'app, se ancora presenti */
+      try { localStorage.removeItem(LEGACY_KEY); } catch (_) {}
+      await withTimeout(clearDailyBackups(), 5000);
+      let signedOut = false;
+      try {
+        const result = await withTimeout(cloud.client.auth.signOut({ scope: 'local' }), 8000, { error: new Error('timeout') });
+        signedOut = !result?.error;
+      } catch (_) {}
+      if (!signedOut) removeStoredSession();
+      await handleSession(null, 'SIGNED_OUT');
+      _deletingAccount = false;
+      /* la sessione è chiusa: da qui invii e scaricamenti sono già fermi da soli */
+      cloud.deletingAccount = false;
+      _fullExportSavedAt = null;
+      document.querySelectorAll('.modal-backdrop.open').forEach(backdrop => closeModal(backdrop.id));
+      const input = document.getElementById('deleteAccountEmailInput');
+      if (input) input.value = '';
+      updateDeleteAccountButton();
+      setAuthTab('login');
+      el.authLoginEmail.value = '';
+      el.authLoginPassword.value = '';
+      updateAuthMessage(googleRevoked === false
+        ? 'Account eliminato: i tuoi dati sono stati cancellati dal cloud e da questo dispositivo. Non siamo riusciti a togliere a FitFlow l\'accesso al tuo Google Calendar: puoi toglierlo tu da myaccount.google.com/connections.'
+        : 'Account eliminato: i tuoi dati sono stati cancellati dal cloud e da questo dispositivo.');
+      showToast('Account eliminato.', 'ok');
+    }
+
     function importBackup(file) {
       if (!file) return;
       const reader = new FileReader();
+      reader.onerror = () => showToast('File non leggibile.', 'error');
       reader.onload = () => {
+        let parsed;
         try {
-          const parsed = JSON.parse(String(reader.result || '{}'));
-          if (!Array.isArray(parsed.clients)) throw new Error('invalid');
+          parsed = JSON.parse(String(reader.result || '{}'));
+          if (!parsed || typeof parsed !== 'object' || !Array.isArray(parsed.clients)) throw new Error('invalid');
           if (parsed.packages && !Array.isArray(parsed.packages)) throw new Error('invalid');
           if (parsed.plans && !Array.isArray(parsed.plans)) throw new Error('invalid');
           if (parsed.lessons && !Array.isArray(parsed.lessons)) throw new Error('invalid');
-          const sanitize = (arr) => (arr || []).map(item => {
-            if (typeof item !== 'object' || item === null || Array.isArray(item)) return null;
-            const clean = {};
-            for (const [k, v] of Object.entries(item)) {
-              if (typeof v === 'string') clean[k] = v.replace(/<script[\s>]/gi, '');
-              else clean[k] = v;
-            }
-            return clean;
-          }).filter(Boolean);
-          state.clients = sanitize(parsed.clients);
-          state.packages = sanitize(parsed.packages) || seedPackages();
-          state.plans = sanitize(parsed.plans) || [];
-          state.lessons = sanitize(parsed.lessons) || [];
-          state.selectedClientId = getDefaultSelectedClientId();
-          saveState();
-          renderAll();
-          showToast('Backup importato.', 'ok');
         } catch (error) {
           console.error(error);
           showToast('Backup non valido.', 'error');
+          return;
         }
+        /* Solo oggetti con un id: il resto verrebbe mostrato male o bloccherebbe l'app */
+        const sanitize = list => (list || []).filter(item => item && typeof item === 'object' && !Array.isArray(item) && item.id);
+        const incoming = {
+          clients: sanitize(parsed.clients),
+          packages: sanitize(parsed.packages),
+          plans: sanitize(parsed.plans),
+          lessons: sanitize(parsed.lessons).filter(lesson => lesson.date),
+          dismissedAlerts: Array.isArray(parsed.dismissedAlerts) ? parsed.dismissedAlerts.filter(id => typeof id === 'string') : [],
+          settings: parsed.settings && typeof parsed.settings === 'object' && !Array.isArray(parsed.settings) ? parsed.settings : (state.settings || {}),
+          selectedClientId: null,
+          viewDate: toISO(state.viewDate)
+        };
+        const when = parsed.exportedAt ? ` del ${formatSnapshotDate(parsed.exportedAt)}` : '';
+        showConfirm(
+          'Importa backup',
+          `Il backup${when} contiene ${incoming.clients.length} clienti e ${incoming.lessons.length} lezioni. Sostituirà TUTTI i dati attuali (${state.clients.length} clienti, ${state.lessons.length} lezioni), anche sul cloud. Una copia dei dati di adesso resta tra i backup automatici di oggi.`,
+          () => {
+            /* copia di sicurezza dei dati che stanno per essere sostituiti */
+            writeDailyBackup({ tag: 'prima-import' }).finally(() => {
+              applySnapshot(incoming);
+              ensureShareTokens();
+              cloud.massChangeConfirmed = true;
+              saveState(true);
+              renderAll();
+              showToast('Backup importato.', 'ok');
+            });
+          },
+          'Sostituisci i dati'
+        );
       };
       reader.readAsText(file);
     }
@@ -9345,44 +10834,85 @@ function applyReportFilter() {
       await ensureSupabaseReady();
     }
 
+    /* I messaggi di Supabase arrivano in inglese: qui le versioni in italiano */
+    function translateAuthError(error) {
+      const message = String(error?.message || '').toLowerCase();
+      const code = String(error?.code || '').toLowerCase();
+      if (message.includes('invalid login credentials') || code === 'invalid_credentials') return 'Email o password non corretti.';
+      if (message.includes('email not confirmed') || code === 'email_not_confirmed') return 'Email non ancora confermata: apri il link che ti abbiamo inviato.';
+      if (message.includes('already registered') || code === 'user_already_exists') return 'Esiste già un account con questa email. Prova ad accedere.';
+      if (message.includes('password should be') || code === 'weak_password') return 'Password troppo debole: usa almeno 8 caratteri.';
+      if (message.includes('different from the old') || code === 'same_password') return 'La nuova password deve essere diversa dalla precedente.';
+      if (message.includes('rate limit') || message.includes('too many') || code.includes('rate_limit')) return 'Troppi tentativi. Attendi qualche minuto e riprova.';
+      if (message.includes('unable to validate email') || message.includes('invalid format') || code === 'validation_failed' || code === 'email_address_invalid') return 'Indirizzo email non valido.';
+      if (message.includes('signups not allowed') || code === 'signup_disabled') return 'Le registrazioni non sono attive al momento.';
+      if (message.includes('session missing') || message.includes('session not found')) return 'Il link è scaduto: richiedi un nuovo reset della password.';
+      if (isNetworkError(error)) return 'Nessuna connessione. Controlla la rete e riprova.';
+      return '';
+    }
+
+    /* Disattiva il pulsante del modulo mentre la richiesta è in corso (niente doppi invii) */
+    async function withBusyForm(form, work) {
+      const button = form?.querySelector('button[type="submit"]');
+      if (button?.disabled) return;
+      if (button) button.disabled = true;
+      try { await work(); } finally { if (button) button.disabled = false; }
+    }
+
+    function ensureAuthClient() {
+      if (cloud.client) return true;
+      initSupabaseClient(loadSupabaseConfig());
+      if (cloud.client) return true;
+      updateAuthMessage('Servizio non raggiungibile. Controlla la connessione e ricarica la pagina.');
+      showToast('Cloud non disponibile.', 'error');
+      return false;
+    }
+
     async function signInWithPassword(email, password) {
-      if (!cloud.client) {
-        initSupabaseClient(loadSupabaseConfig());
-        if (!cloud.client) {
-          showToast('Cloud non disponibile.');
-          return;
-        }
+      if (!email || !password) {
+        updateAuthMessage('Inserisci email e password.');
+        showToast('Inserisci email e password.');
+        return;
       }
+      if (!ensureAuthClient()) return;
       const { error } = await cloud.client.auth.signInWithPassword({ email, password });
       if (error) {
         console.error(error);
-        updateAuthMessage(error.message || 'Login non riuscito.');
-        showToast('Login non riuscito.');
+        updateAuthMessage(translateAuthError(error) || 'Accesso non riuscito. Riprova.');
+        showToast('Accesso non riuscito.', 'error');
         return;
       }
+      el.authLoginPassword.value = '';
       updateAuthMessage('Accesso eseguito.');
       showToast('Accesso eseguito.', 'ok');
     }
 
     async function signUpWithPassword(email, password) {
-      if (!email || !password) { showToast('Inserisci email e password.'); return; }
-      if (password.length < 8) { showToast('Password troppo corta (min 8 caratteri).'); return; }
-      if (!cloud.client) {
-        initSupabaseClient(loadSupabaseConfig());
-        if (!cloud.client) {
-          showToast('Cloud non disponibile.');
-          return;
-        }
-      }
-      const { error } = await cloud.client.auth.signUp({ email, password });
+      if (!email || !password) { updateAuthMessage('Inserisci email e password.'); showToast('Inserisci email e password.'); return; }
+      if (password.length < 8) { updateAuthMessage('La password deve avere almeno 8 caratteri.'); showToast('Password troppo corta (min 8 caratteri).'); return; }
+      if (!ensureAuthClient()) return;
+      const { data, error } = await cloud.client.auth.signUp({ email, password });
       if (error) {
         console.error(error);
-        updateAuthMessage(error.message || 'Registrazione non riuscita.');
-        showToast('Registrazione non riuscita.');
+        updateAuthMessage(translateAuthError(error) || 'Registrazione non riuscita. Riprova.');
+        showToast('Registrazione non riuscita.', 'error');
         return;
       }
-      updateAuthMessage('Account creato. Controlla l\'email se la conferma è attiva.');
-      showToast('Account creato.', 'ok');
+      el.authSignupPassword.value = '';
+      /* Email già registrata: Supabase risponde senza errore ma senza creare nulla */
+      if (data?.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+        updateAuthMessage('Esiste già un account con questa email. Accedi oppure usa "Password dimenticata?".');
+        setAuthTab('login');
+        el.authLoginEmail.value = email;
+        return;
+      }
+      if (data?.session) {
+        updateAuthMessage('Account creato.');
+        showToast('Account creato. Benvenuto!', 'ok');
+        return;
+      }
+      updateAuthMessage('Account creato. Apri il link di conferma che ti abbiamo inviato per email, poi accedi.');
+      showToast('Account creato: controlla la tua email.', 'ok');
       setAuthTab('login');
       el.authLoginEmail.value = email;
     }
@@ -9397,20 +10927,14 @@ function applyReportFilter() {
         showToast("Inserisci l'email.");
         return;
       }
-      if (!cloud.client) {
-        initSupabaseClient(loadSupabaseConfig());
-        if (!cloud.client) {
-          showToast('Cloud non disponibile.');
-          return;
-        }
-      }
+      if (!ensureAuthClient()) return;
       const { error } = await cloud.client.auth.resetPasswordForEmail(email, {
         redirectTo: getResetRedirectUrl()
       });
       if (error) {
         console.error(error);
-        updateAuthMessage(error.message || 'Invio reset non riuscito.');
-        showToast('Reset non inviato.');
+        updateAuthMessage(translateAuthError(error) || 'Invio reset non riuscito. Riprova.');
+        showToast('Reset non inviato.', 'error');
         return;
       }
       updateAuthMessage('Email di reset inviata. Apri il link ricevuto per scegliere la nuova password.');
@@ -9434,18 +10958,13 @@ function applyReportFilter() {
         showToast('Password troppo corta.');
         return;
       }
-      if (!cloud.client) {
-        initSupabaseClient(loadSupabaseConfig());
-        if (!cloud.client) {
-          showToast('Cloud non disponibile.');
-          return;
-        }
-      }
+      if (!ensureAuthClient()) return;
       const { error } = await cloud.client.auth.updateUser({ password: newPassword });
       if (error) {
         console.error(error);
-        updateAuthMessage(error.message || 'Aggiornamento password non riuscito.');
-        showToast('Password non aggiornata.');
+        const reason = translateAuthError(error);
+        updateAuthMessage(reason || 'Aggiornamento password non riuscito.');
+        showToast(reason || 'Password non aggiornata.', 'error');
         return;
       }
       const cleanUrl = new URL(window.location.href);
@@ -9461,12 +10980,35 @@ function applyReportFilter() {
 
     async function logoutCloud() {
       if (!cloud.client) return;
+      /* Prima di uscire porta al cloud le ultime modifiche */
+      if (cloud.user && getSyncMeta().dirty) {
+        const synced = await syncStateToCloud(true);
+        if (!synced) {
+          showConfirm(
+            'Modifiche non sincronizzate',
+            'Le ultime modifiche non sono ancora arrivate al cloud. Se esci adesso andranno perse.',
+            () => { finishLogout(); },
+            'Esci comunque'
+          );
+          return;
+        }
+      }
+      await finishLogout();
+    }
+
+    async function finishLogout() {
       const { error } = await cloud.client.auth.signOut();
       if (error) {
         console.error(error);
         showToast('Uscita non riuscita.');
         return;
       }
+      /* I dati restano al sicuro nel cloud: su questo dispositivo non deve rimanere
+         nulla (computer condivisi, telefono prestato). */
+      wipeLocalData();
+      clearDailyBackups();
+      closeModal('accountModalBackdrop');
+      renderAll();
       showToast("Sei uscito dall'account.");
     }
 
@@ -9556,25 +11098,33 @@ function renderClientFormStickySummary() {
     function renderAll() {
       if (_rendering) return;
       _rendering = true;
-      applyResponsiveDefaults();
-      try { autoCompleteElapsedLessons(); } catch(e) { console.error(e); }
-      renderHero();
-      renderHeroGreeting();
-      // opsBoard rimosso
-      renderSelectedClient();
-      renderAlerts();
-      renderClientList();
-      renderCalendarHead();
-      renderCalendar();
-      renderPackages();
-      renderPackageOptions(el.clientPackage, el.clientPackage.value || state.packages[0]?.id || '');
-      renderPackageOptions(el.renewPackage, el.renewPackage.value || state.packages[0]?.id || '');
-      el.packagePreview.innerHTML = buildPackageSummary(getPackage(el.clientPackage.value));
-      renderClientFormStickySummary();
-      el.renewPreview.innerHTML = buildPackageSummary(getPackage(el.renewPackage.value));
-      renderFixedSchedulePreview();
-      if (el.reportModalBackdrop.classList.contains('open')) renderReport();
-      _rendering = false;
+      try {
+        applyResponsiveDefaults();
+        try { autoCompleteElapsedLessons(); } catch(e) { console.error(e); }
+        /* Ogni sezione è indipendente: se una va in errore le altre si aggiornano lo stesso */
+        const sections = [
+          renderHero,
+          renderHeroGreeting,
+          renderSelectedClient,
+          renderAlerts,
+          renderClientList,
+          renderCalendarHead,
+          renderCalendar,
+          renderPackages,
+          () => renderPackageOptions(el.clientPackage, el.clientPackage.value || state.packages[0]?.id || ''),
+          () => renderPackageOptions(el.renewPackage, el.renewPackage.value || state.packages[0]?.id || ''),
+          () => { el.packagePreview.innerHTML = buildPackageSummary(getPackage(el.clientPackage.value)); },
+          renderClientFormStickySummary,
+          () => { el.renewPreview.innerHTML = buildPackageSummary(getPackage(el.renewPackage.value)); },
+          renderFixedSchedulePreview,
+          () => { if (el.reportModalBackdrop.classList.contains('open')) renderReport(); }
+        ];
+        sections.forEach(section => {
+          try { section(); } catch (error) { console.error('[FitFlow] Errore di visualizzazione:', error); }
+        });
+      } finally {
+        _rendering = false;
+      }
     }
 
     function openNewClientModal(trigger = document.activeElement) {
@@ -9591,7 +11141,11 @@ function renderClientFormStickySummary() {
     const handleResize = throttle(() => { applyResponsiveDefaults(); renderCalendarHead(); renderCalendar(); }, 140);
     window.addEventListener('resize', handleResize);
     document.getElementById('exportBtn').addEventListener('click', exportBackup);
-    document.getElementById('importInput').addEventListener('change', event => importBackup(event.target.files?.[0]));
+    document.getElementById('importInput').addEventListener('change', event => {
+      importBackup(event.target.files?.[0]);
+      /* svuota il campo: scegliere di nuovo lo stesso file deve funzionare */
+      event.target.value = '';
+    });
     document.getElementById('openFreeSessionImportBtn')?.addEventListener('click', openFreeSessionImportModal);
     document.getElementById('openFreeSessionImportDrawerBtn')?.addEventListener('click', () => {
       document.getElementById('sidebarDrawer')?.classList.remove('open');
@@ -9629,7 +11183,11 @@ function renderClientFormStickySummary() {
       updateAuthMessage('Modalità locale attiva. Nessuna sincronizzazione cloud.');
       renderAll();
     });
-    el.openAccountBtn.addEventListener('click', async () => { populateCloudConfigInputs(); await refreshGoogleStatus(); openModal('accountModalBackdrop'); });
+    el.openAccountBtn.addEventListener('click', () => openAccountModal());
+    document.getElementById('saveTrainerProfileBtn')?.addEventListener('click', saveTrainerProfile);
+    ['trainerNameInput', 'trainerStudioInput', 'trainerWaTemplateInput'].forEach(id => {
+      document.getElementById(id)?.addEventListener('input', updateTrainerProfilePreview);
+    });
     el.manualSyncBtn.addEventListener('click', async () => {
       const ok = await syncStateToCloud(true);
       if (ok) showToast('Sincronizzazione completata.');
@@ -9638,6 +11196,15 @@ function renderClientFormStickySummary() {
     el.googleResyncBtn.addEventListener('click', () => syncAllLessonsToGoogle(true));
     el.disconnectGoogleBtn.addEventListener('click', disconnectGoogleCalendar);
     el.logoutBtnModal.addEventListener('click', logoutCloud);
+    /* I tuoi dati: copia completa ed eliminazione dell'account */
+    document.getElementById('downloadAllDataBtn')?.addEventListener('click', downloadAllData);
+    document.getElementById('deleteAccountDownloadBtn')?.addEventListener('click', downloadAllData);
+    document.getElementById('deleteAccountBtn')?.addEventListener('click', openDeleteAccountModal);
+    document.getElementById('deleteAccountConfirmBtn')?.addEventListener('click', requestAccountDeletion);
+    document.getElementById('deleteAccountEmailInput')?.addEventListener('input', () => {
+      showDeleteAccountError('');
+      updateDeleteAccountButton();
+    });
     el.showResetTabBtn.addEventListener('click', () => {
       el.authResetEmail.value = el.authLoginEmail.value.trim();
       setAuthTab('reset');
@@ -9648,19 +11215,19 @@ function renderClientFormStickySummary() {
     });
     el.loginPanel.addEventListener('submit', event => {
       event.preventDefault();
-      signInWithPassword(el.authLoginEmail.value.trim(), el.authLoginPassword.value);
+      withBusyForm(el.loginPanel, () => signInWithPassword(el.authLoginEmail.value.trim(), el.authLoginPassword.value));
     });
     el.signupPanel.addEventListener('submit', event => {
       event.preventDefault();
-      signUpWithPassword(el.authSignupEmail.value.trim(), el.authSignupPassword.value);
+      withBusyForm(el.signupPanel, () => signUpWithPassword(el.authSignupEmail.value.trim(), el.authSignupPassword.value));
     });
     el.resetPanel.addEventListener('submit', event => {
       event.preventDefault();
-      sendPasswordReset(el.authResetEmail.value.trim());
+      withBusyForm(el.resetPanel, () => sendPasswordReset(el.authResetEmail.value.trim()));
     });
     el.passwordUpdateForm.addEventListener('submit', event => {
       event.preventDefault();
-      updatePasswordFromRecovery(el.passwordUpdateInput.value);
+      withBusyForm(el.passwordUpdateForm, () => updatePasswordFromRecovery(el.passwordUpdateInput.value));
     });
 
     el.clientSearch.addEventListener('input', event => { state.search = event.target.value; renderClientList(); });
@@ -9739,6 +11306,7 @@ function renderClientFormStickySummary() {
       if (!firstName || !lastName) { showToast('Inserisci nome e cognome.'); return; }
       const serviceType = el.clientServiceType.value || 'personal';
       const clientEmail = (el.clientEmail?.value || '').trim();
+      const clientPhone = (el.clientPhone?.value || '').replace(/[^\d+\s]/g, '').trim();
       const sendCalendarInvite = el.clientSendCalendarInvite?.value === 'yes';
       if (sendCalendarInvite && !clientEmail) { showToast('Inserisci l\'email del cliente per inviare il calendario.'); return; }
       const freeSessionDone = el.clientFreeSessionDone.value === 'yes';
@@ -9788,6 +11356,7 @@ function renderClientFormStickySummary() {
         client.name = name;
         const newClientName = getClientFullName(client);
         client.email = clientEmail;
+        client.phone = clientPhone;
         client.sendCalendarInvite = sendCalendarInvite;
         client.notes = el.clientNotes.value.trim();
         client.serviceType = serviceType;
@@ -9842,6 +11411,7 @@ function renderClientFormStickySummary() {
         lastName,
         name,
         email: clientEmail,
+        phone: clientPhone,
         sendCalendarInvite,
         notes: el.clientNotes.value.trim(),
         shareToken: generateShareToken(),
@@ -10110,13 +11680,23 @@ function renderClientFormStickySummary() {
     });
 
     document.addEventListener('visibilitychange', () => {
-      if (!document.hidden) return;
-      try { saveLocalState(); } catch (error) { console.error(error); }
-      if (cloud.client && cloud.user && !cloud.allowLocalOnly) {
-        syncStateToCloud(true).catch(error => console.error(error));
+      if (document.hidden) {
+        /* App in secondo piano: invia subito ciò che non è ancora nel cloud
+           (solo se c'è qualcosa di nuovo) e aggiorna la copia di sicurezza del giorno */
+        flushDailyBackup();
+        if (cloud.client && cloud.user && !cloud.allowLocalOnly) {
+          syncStateToCloud().catch(error => console.error(error));
+        }
+        return;
       }
+      /* App di nuovo in primo piano: prende le novità fatte da altri dispositivi */
+      recoverSessionIfOffline();
+      refreshFromCloudIfNewer().catch(error => console.error(error));
     });
     window.addEventListener('beforeunload', () => {
+      /* Dopo un'uscita dall'account (anche fatta da un'altra scheda) non si riscrive
+         nulla: i dati rimossi dal dispositivo non devono ricomparire. */
+      if (!cloud.user && !cloud.offlineOwner && !cloud.allowLocalOnly) return;
       try { saveLocalState(); } catch (error) { console.error(error); }
     });
 
@@ -10209,7 +11789,7 @@ function renderClientFormStickySummary() {
           if (!_pwaInstallPrompt) return;
           _pwaInstallPrompt.prompt();
           const { outcome } = await _pwaInstallPrompt.userChoice;
-          if (outcome === 'accepted') showToast('DSWORLD installato!', 'ok');
+          if (outcome === 'accepted') showToast('FitFlow installato!', 'ok');
           _pwaInstallPrompt = null;
           banner.classList.remove('show');
         });
@@ -10283,7 +11863,7 @@ function renderClientFormStickySummary() {
             state.selectedDay = date;
             state.viewDate = startOfMonth(fromISO(date));
             state.calendarView = 'day';
-            saveState(); renderCalendarOnly();
+            saveUiState(); renderCalendarOnly();
           }
         }
       });
@@ -10334,7 +11914,7 @@ function renderClientFormStickySummary() {
             state.selectedDay = iso;
             if (window.innerWidth <= 580) {
               state.calendarView = 'day';
-              saveState();
+              saveUiState();
               renderCalendarOnly();
             } else {
               openDayModal(iso);
@@ -10347,7 +11927,7 @@ function renderClientFormStickySummary() {
           state.selectedDay = iso;
           if (window.innerWidth <= 580) {
             state.calendarView = 'day';
-            saveState();
+            saveUiState();
             renderCalendarOnly();
           } else {
             openDayModal(iso);
@@ -10426,10 +12006,8 @@ function renderClientFormStickySummary() {
 
       /* Se non ci sono pacchetti, vai direttamente a modifica cliente */
       if (!packages.length) {
-        backdrop.classList.remove('open');
-        unlockBodyScroll();
+        if (backdrop.classList.contains('open')) { backdrop.classList.remove('open'); unlockBodyScroll(); }
         renderClientModal(client);
-        openModal('clientModalBackdrop');
         showToast('Aggiungi prima un pacchetto.', 'warn');
         return;
       }
@@ -10474,7 +12052,11 @@ function renderClientFormStickySummary() {
         el2.parentNode.replaceChild(clone, el2);
       });
 
-      function closeFsc() { backdrop.classList.remove('open'); unlockBodyScroll(); }
+      function closeFsc() {
+        if (!backdrop.classList.contains('open')) return;
+        backdrop.classList.remove('open');
+        unlockBodyScroll();
+      }
 
       /* Click fuori dal modal chiude e sblocca lo scroll */
       backdrop.addEventListener('click', e => { if (e.target === backdrop) closeFsc(); }, { once: true });
@@ -10520,11 +12102,10 @@ function renderClientFormStickySummary() {
         pushClientPaymentSnapshot(client, 'create');
 
         saveState(true); renderAll(); closeFsc();
-        showToast(`✅ Percorso avviato — ${escapeHtml(pkg.name)} · ${formatCurrency(price)}`, 'ok');
+        showToast(`Percorso avviato — ${pkg.name} · ${formatCurrency(price)}`, 'ok');
       });
 
-      backdrop.classList.add('open');
-      lockBodyScroll();
+      if (!backdrop.classList.contains('open')) { backdrop.classList.add('open'); lockBodyScroll(); }
       requestAnimationFrame(() => document.getElementById('fscYesBtn')?.focus());
     }
 
@@ -10581,34 +12162,51 @@ function renderClientFormStickySummary() {
       requestAnimationFrame(() => document.getElementById('mpConfirmBtn')?.focus());
     }
 
-        async function initApp() {
+    async function initApp() {
       loadStateLocal();
       resetPackageForm();
       el.clientStartDate.value = todayISO();
-      /* Mostra skeleton subito mentre si caricano i dati */
-      showClientSkeletons(6);
-      
-      /* 1. Carica le credenziali dal ponte Netlify */
-      await loadRemoteConfig();
+      initInteractionDelegation();
+      initDebouncedSearch();
+      initFormKeyboardNav();
+      initMessagesModal();
+
+      /* Su questo dispositivo ci sono già i dati di un account: si mostrano subito,
+         senza far lampeggiare la schermata di login mentre il cloud risponde.
+         Se poi la sessione risulta scaduta, torna il login. */
+      const knownOwner = getSyncMeta().owner;
+      if (knownOwner && state.clients.length) {
+        cloud.offlineOwner = knownOwner;
+        updateUserBadge();
+        renderAll();
+      } else {
+        /* Mostra skeleton subito mentre si caricano i dati */
+        showClientSkeletons(6);
+      }
+
+      /* 1. Carica le credenziali dal ponte Netlify e attende la libreria Supabase */
+      const [, libraryReady] = await Promise.all([loadRemoteConfig(), waitForSupabaseLib()]);
+      if (!libraryReady) console.error('[FitFlow] supabase-js non caricato: si lavora sui dati del dispositivo.');
       
       /* 2. Recupera la configurazione (che ora dovrebbe avere le chiavi caricate) */
       const config = loadSupabaseConfig();
-      console.log('[DSWORLD] Configurazione caricata:', config.url ? 'URL presente' : 'URL mancante');
+      console.log('[FitFlow] Configurazione caricata:', config.url ? 'URL presente' : 'URL mancante');
 
       /* 3. Inizializza il client Supabase con la nuova configurazione */
       if (config.url && config.key) {
         const clientReady = initSupabaseClient(config);
         if (clientReady) {
-          console.log('[DSWORLD] Client Supabase inizializzato con successo.');
+          console.log('[FitFlow] Client Supabase inizializzato con successo.');
         } else {
-          console.error('[DSWORLD] Client Supabase NON inizializzato. Libreria o client non disponibile.');
+          console.error('[FitFlow] Client Supabase NON inizializzato. Libreria o client non disponibile.');
         }
       } else {
-        console.warn('[DSWORLD] Attenzione: Chiavi Supabase non trovate dopo loadRemoteConfig.');
+        console.warn('[FitFlow] Attenzione: Chiavi Supabase non trovate dopo loadRemoteConfig.');
       }
 
       persistSupabaseConfig(config);
       await ensureSupabaseReady();
+      cloud.startupDone = true;
 
       const currentUrl = new URL(window.location.href);
       const googleFlag = currentUrl.searchParams.get('google');
@@ -10632,18 +12230,16 @@ function renderClientFormStickySummary() {
         clearUrlParams(['google', 'reason']);
       }
       renderAll();
-      initInteractionDelegation();
       updateGoogleUi();
-      initDebouncedSearch();
-      initFormKeyboardNav();
-      initMessagesModal();
-      /* Prima carica il conteggio, poi avvia Realtime */
-      refreshUnreadMessages();
-      initRealtimeMessages();
 
       /* ── PWA: register Service Worker ────────────────────── */
       if ('serviceWorker' in navigator) {
+        const hadController = Boolean(navigator.serviceWorker.controller);
         navigator.serviceWorker.register('sw.js').catch(() => {});
+        /* Una nuova versione dell'app ha preso il controllo mentre questa pagina era aperta */
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          if (hadController) showToast('Nuova versione disponibile: chiudi e riapri l\'app per usarla.', 'ok');
+        });
       }
 
       /* ── PWA: show install banner ─────────────────────────── */
@@ -10680,17 +12276,27 @@ function renderClientFormStickySummary() {
       const openAccountBtnMobile = document.getElementById('openAccountBtnMobile');
 
       function openDrawer() {
+        const wasOpen = sidebarDrawer.classList.contains('open');
         sidebarDrawer.classList.add('open');
         drawerOverlay.classList.add('open');
-        lockBodyScroll();
+        /* l'elenco del pannello viene disegnato adesso, non a ogni modifica */
+        renderClientList();
+        if (!wasOpen) lockBodyScroll();
         const search = document.getElementById('clientSearchDrawer');
         if (search) setTimeout(() => search.focus(), 260);
       }
       function closeDrawer() {
+        if (!sidebarDrawer.classList.contains('open')) return;
         sidebarDrawer.classList.remove('open');
         drawerOverlay.classList.remove('open');
         unlockBodyScroll();
       }
+
+      /* Passaggio da telefono a computer (o rotazione): cambia la lista visibile */
+      _narrowScreenQuery.addEventListener('change', () => {
+        renderClientList();
+        renderSelectedClient();
+      });
 
       if (drawerOverlay) drawerOverlay.addEventListener('click', closeDrawer);
       if (drawerCloseBtn) drawerCloseBtn.addEventListener('click', closeDrawer);
@@ -10703,7 +12309,7 @@ function renderClientFormStickySummary() {
       if (bnavAddCliente) bnavAddCliente.addEventListener('click', event => { closeDrawer(); openNewClientModal(event.currentTarget); });
       if (bnavResoconto) bnavResoconto.addEventListener('click', () => { closeDrawer(); renderReport(); openModal('reportModalBackdrop'); });
       if (bnavPacchetti) bnavPacchetti.addEventListener('click', () => { closeDrawer(); renderPackages(); openModal('packagesModalBackdrop'); });
-      if (openAccountBtnMobile) openAccountBtnMobile.addEventListener('click', async () => { populateCloudConfigInputs(); await refreshGoogleStatus(); openModal('accountModalBackdrop'); });
+      if (openAccountBtnMobile) openAccountBtnMobile.addEventListener('click', () => openAccountModal());
 
       function setActiveBnav(activeBtn) {
         document.querySelectorAll('.bnav-btn').forEach(b => b.classList.remove('active'));
@@ -10747,8 +12353,8 @@ function renderClientFormStickySummary() {
         if (!syncBadgeMobile) return;
         const main = document.getElementById('syncBadge');
         if (!main) return;
-        const isOk = main.textContent.toLowerCase().includes('sincron') || main.textContent.toLowerCase().includes('cloud');
-        syncBadgeMobile.style.color = isOk ? '#1db954' : 'rgba(255,255,255,0.4)';
+        const tone = syncBadgeTone(main.textContent);
+        syncBadgeMobile.style.color = tone.syncing ? '#f59e0b' : tone.color;
         syncBadgeMobile.title = main.textContent;
       }
       const syncObserver = new MutationObserver(mirrorSyncBadge);
@@ -10816,10 +12422,18 @@ function renderClientFormStickySummary() {
       } catch(e) {}
     }
 
-    /* Polling ogni 60 secondi — fallback se Realtime non disponibile */
+    /* Polling ogni 60 secondi — fallback se Realtime non disponibile.
+       Un solo timer alla volta: prima ne veniva creato uno nuovo a ogni errore del
+       canale in tempo reale, e le richieste si moltiplicavano. */
+    let _msgPollTimer = null;
     function initMessagePolling() {
+      if (_msgPollTimer) return;
       refreshUnreadMessages();
-      setInterval(refreshUnreadMessages, 60000);
+      _msgPollTimer = setInterval(() => { if (!document.hidden) refreshUnreadMessages(); }, 60000);
+    }
+    function stopMessagePolling() {
+      clearInterval(_msgPollTimer);
+      _msgPollTimer = null;
     }
 
     /* ── Supabase Realtime — notifica istantanea nuovi messaggi ── */
@@ -10856,6 +12470,10 @@ function renderClientFormStickySummary() {
                 const client = getClient(_activeMsgClientId);
                 if (client) openMsgChat(client);
               }
+              if (payload.new?.client_id === state.selectedClientId) {
+                const selected = getClient(state.selectedClientId);
+                if (selected) loadClientMessages(selected, { force: true });
+              }
               haptic([10, 50, 10]);
             }
           }
@@ -10886,9 +12504,10 @@ function renderClientFormStickySummary() {
         )
         .subscribe((status) => {
           if (status === 'SUBSCRIBED') {
-            console.log('[DSWORLD] Realtime messaggi attivo.');
+            console.log('[FitFlow] Realtime messaggi attivo.');
+            stopMessagePolling();
           } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-            console.warn('[DSWORLD] Realtime non disponibile, uso polling.');
+            console.warn('[FitFlow] Realtime non disponibile, uso polling.');
             /* Fallback al polling se realtime fallisce */
             initMessagePolling();
           }
@@ -10918,11 +12537,27 @@ function renderClientFormStickySummary() {
       } catch(e) { return null; }
     }
 
-    async function loadClientMessages(client) {
+    /* Ultimo caricamento del riquadro messaggi: la scheda cliente viene ridisegnata a
+       ogni modifica, ma i messaggi si richiedono al server solo se serve davvero. */
+    let _clientMsgCache = { clientId: null, at: 0, html: '' };
+
+    async function loadClientMessages(client, { force = false } = {}) {
       const panel = document.getElementById('clientMessagesPanel');
       if (!panel || !client.shareToken) return;
+      if (!cloud.user || cloud.allowLocalOnly) return;
+      /* Su telefono la scheda grande è nascosta: i messaggi non si vedono, quindi non
+         vanno né scaricati né segnati come letti (prima sparivano senza essere visti). */
+      if (!isClientPanelVisible()) return;
 
       panel.style.display = 'block';
+      if (!force && _clientMsgCache.clientId === client.id && Date.now() - _clientMsgCache.at < 20000) {
+        panel.innerHTML = _clientMsgCache.html;
+        requestAnimationFrame(() => {
+          const cachedList = document.getElementById('trainerMsgList');
+          if (cachedList) cachedList.scrollTop = cachedList.scrollHeight;
+        });
+        return;
+      }
       panel.innerHTML = `
         <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);margin-bottom:8px;">
           Messaggi dal cliente
@@ -10936,6 +12571,11 @@ function renderClientFormStickySummary() {
           <button class="btn btn-primary btn-small" onclick="sendTrainerReply('${escapeHtml(client.shareToken)}')">Invia</button>
         </div>
       `;
+      const rememberPanel = () => {
+        /* la scheda può essere stata ridisegnata nel frattempo per un altro cliente */
+        if (state.selectedClientId !== client.id || !document.body.contains(panel)) return;
+        _clientMsgCache = { clientId: client.id, at: Date.now(), html: panel.innerHTML };
+      };
 
       /* Query diretta a Supabase — RLS filtra per user_id automaticamente */
       const cfg = loadSupabaseConfig();
@@ -10967,12 +12607,16 @@ function renderClientFormStickySummary() {
 
         if (!Array.isArray(messages) || !messages.length) {
           msgList.innerHTML = `<div style="font-size:0.82rem;color:var(--muted);">Nessun messaggio ancora.</div>`;
+          rememberPanel();
           return;
         }
 
         msgList.innerHTML = messages.map(m => renderMsgBubble(m, m.sender === 'trainer')).join('');
         msgList.scrollTop = msgList.scrollHeight;
+        rememberPanel();
 
+        /* Niente da segnare: nessuna richiesta in più */
+        if (!messages.some(m => m.sender === 'client' && !m.read)) return;
         const now = new Date().toISOString();
         /* Segna messaggi del cliente come delivered + read */
         await fetch(
@@ -11001,13 +12645,14 @@ function renderClientFormStickySummary() {
       const input = document.getElementById('trainerReplyInput');
       const text = input?.value?.trim();
       if (!text) return;
-      input.value = '';
       haptic(6);
 
       const cfg = loadSupabaseConfig();
       const authToken = getAuthToken();
       const client = getClient(state.selectedClientId);
       if (!client || !cloud.user) { showToast('Errore: utente non trovato.', 'error'); return; }
+      input.value = '';
+      const restoreText = () => { const field = document.getElementById('trainerReplyInput'); if (field && !field.value) field.value = text; };
 
       try {
         const res = await fetch(
@@ -11033,14 +12678,16 @@ function renderClientFormStickySummary() {
         );
         if (res.ok || res.status === 201) {
           showToast('Risposta inviata!', 'ok');
-          loadClientMessages(client);
+          loadClientMessages(client, { force: true });
           /* Broadcast al portale cliente — notifica istantanea */
           broadcastToClient(clientToken, 'new_message');
         } else {
-          showToast('Errore invio risposta.', 'error');
+          restoreText();
+          showToast('Risposta non inviata. Riprova.', 'error');
         }
       } catch(e) {
-        showToast('Errore connessione.', 'error');
+        restoreText();
+        showToast('Nessuna connessione: risposta non inviata.', 'error');
       }
     }
 
@@ -11213,24 +12860,34 @@ function renderClientFormStickySummary() {
       const input = document.getElementById('msgChatInput');
       const text = input?.value?.trim();
       if (!text || !_activeMsgClientToken || !_activeMsgClientId) return;
-      input.value = '';
-      haptic(6);
       const cfg = loadSupabaseConfig();
       const token = getAuthToken();
       const client = getClient(_activeMsgClientId);
       if (!client || !cloud.user) return;
+      const clientToken = _activeMsgClientToken;
+      input.value = '';
+      haptic(6);
+      const restoreText = () => { if (!input.value) input.value = text; };
       try {
-        await fetch(`${cfg.url.replace(/\/$/, '')}/rest/v1/client_messages`, {
+        const res = await fetch(`${cfg.url.replace(/\/$/, '')}/rest/v1/client_messages`, {
           method: 'POST',
           headers: { 'apikey': cfg.key, 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-          body: JSON.stringify({ client_token: _activeMsgClientToken, user_id: cloud.user.id, client_id: client.id, sender: 'trainer', text, type: 'message', read: false })
+          body: JSON.stringify({ client_token: clientToken, user_id: cloud.user.id, client_id: client.id, sender: 'trainer', text, type: 'message', read: false })
         });
+        if (!res.ok) {
+          restoreText();
+          showToast('Risposta non inviata. Riprova.', 'error');
+          return;
+        }
         showToast('Risposta inviata!', 'ok');
-        openMsgChat(client);
-        loadClientMessages(client);
+        if (_activeMsgClientId === client.id) openMsgChat(client);
+        if (state.selectedClientId === client.id) loadClientMessages(client, { force: true });
         /* Broadcast al portale cliente — notifica istantanea */
-        broadcastToClient(_activeMsgClientToken, 'new_message');
-      } catch(e) { showToast('Errore invio.', 'error'); }
+        broadcastToClient(clientToken, 'new_message');
+      } catch(e) {
+        restoreText();
+        showToast('Nessuna connessione: risposta non inviata.', 'error');
+      }
     }
 
     function initMessagesModal() {
@@ -11329,7 +12986,7 @@ function renderClientFormStickySummary() {
       navigator.serviceWorker.addEventListener('message', event => {
         if (event.data?.type === 'SYNC_REQUESTED') {
           if (cloud.client && cloud.user && !cloud.allowLocalOnly) {
-            syncStateToCloud(true).catch(err => console.error('BG sync failed:', err));
+            syncStateToCloud().catch(err => console.error('BG sync failed:', err));
           }
         }
       });
@@ -11339,8 +12996,13 @@ function renderClientFormStickySummary() {
     window.addEventListener('online', () => {
       showToast('Connessione ripristinata.', 'ok');
       document.getElementById('offlineBanner')?.classList.remove('show');
+      cloud.lastErrorKind = '';
+      recoverSessionIfOffline();
       if (cloud.client && cloud.user && !cloud.allowLocalOnly) {
-        syncStateToCloud(true).catch(err => console.error('Reconnect sync failed:', err));
+        /* Prima le novità dal cloud, poi l'invio di ciò che è stato fatto senza rete */
+        refreshFromCloudIfNewer({ force: true })
+          .then(() => syncStateToCloud())
+          .catch(err => console.error('Reconnect sync failed:', err));
       }
     });
     window.addEventListener('offline', () => {
@@ -11349,18 +13011,19 @@ function renderClientFormStickySummary() {
       updateSyncBadge('Offline');
     });
 
-    // Attende che window.supabase sia disponibile (necessario con CDN di fallback asincroni)
-    (function waitForSupabase(attempts) {
-      if (window.supabase && window.supabase.createClient) {
-        initApp();
-      } else if (attempts > 0) {
-        setTimeout(function () { waitForSupabase(attempts - 1); }, 150);
-      } else {
-        console.error('[DSWORLD] supabase-js non caricato dopo tutti i tentativi CDN.');
-        // Avvia comunque l'app in modalità solo locale
-        initApp();
-      }
-    })(40); // 40 × 150ms = 6 secondi max di attesa
+    /* L'app parte subito con i dati già presenti sul dispositivo; il collegamento
+       al cloud avviene appena la libreria Supabase è disponibile (vedi initApp). */
+    function waitForSupabaseLib(maxMs = 6000) {
+      return new Promise(resolve => {
+        const started = Date.now();
+        (function check() {
+          if (window.supabase && window.supabase.createClient) { resolve(true); return; }
+          if (Date.now() - started >= maxMs) { resolve(false); return; }
+          setTimeout(check, 100);
+        })();
+      });
+    }
+    initApp();
   </script>
 </body>
 </html>

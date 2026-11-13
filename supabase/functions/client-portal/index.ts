@@ -52,23 +52,52 @@ Deno.serve(async (req: Request) => {
     return json({ error: 'Azione non riconosciuta' }, 400)
   }
 
-  // Cerca SOLO la riga del trainer che possiede questo token (filtro jsonb nel database),
-  // invece di caricare in memoria i dati di tutti i trainer.
+  // ── A quale trainer appartiene questo link? ───────────────────
+  // Ricerca veloce: la tabella client_portal_links (codice → trainer) è tenuta
+  // allineata dal database a ogni salvataggio dei dati (trigger su user_app_state,
+  // vedi supabase/migrations/20261113080000_client_portal_links.sql).
+  // Si legge una riga piccola tramite indice e poi SOLO i dati di quel trainer:
+  // il costo non cresce con il numero dei trainer.
+  // La tabella dice solo DOVE guardare: più sotto si controlla comunque che nei
+  // dati di quel trainer ci sia davvero un cliente con questo codice.
   let rows: { user_id: string; app_data: unknown }[] | null = null
-  const lookup = await supabase
-    .from('user_app_state')
-    .select('user_id, app_data')
-    .contains('app_data', { clients: [{ shareToken: token }] })
-    .limit(1)
+  const link = await supabase
+    .from('client_portal_links')
+    .select('user_id')
+    .eq('token', token)
+    .maybeSingle()
 
-  if (lookup.error) {
-    // Fallback (es. colonna non jsonb): scansione completa come prima.
-    console.error('[client-portal] lookup mirato fallito, uso scansione:', lookup.error.message)
-    const all = await supabase.from('user_app_state').select('user_id, app_data')
-    if (all.error) return json({ error: 'Errore database' }, 500)
-    rows = all.data
+  if (link.error) {
+    // Riserva: la tabella non risponde (es. migrazione non ancora applicata).
+    // Si usa la ricerca di prima, dentro i dati dei trainer (filtro jsonb nel database).
+    console.error('[client-portal] tabella dei link non disponibile, uso la ricerca di riserva:', link.error.message)
+    const lookup = await supabase
+      .from('user_app_state')
+      .select('user_id, app_data')
+      .contains('app_data', { clients: [{ shareToken: token }] })
+      .limit(1)
+
+    if (lookup.error) {
+      // Ultima riserva (es. colonna non jsonb): scansione completa.
+      console.error('[client-portal] lookup mirato fallito, uso scansione:', lookup.error.message)
+      const all = await supabase.from('user_app_state').select('user_id, app_data')
+      if (all.error) return json({ error: 'Errore database' }, 500)
+      rows = all.data
+    } else {
+      rows = lookup.data
+    }
+  } else if (link.data) {
+    const owner = await supabase
+      .from('user_app_state')
+      .select('user_id, app_data')
+      .eq('user_id', link.data.user_id)
+      .limit(1)
+    if (owner.error) return json({ error: 'Errore database' }, 500)
+    rows = owner.data
   } else {
-    rows = lookup.data
+    // La tabella ha risposto e il codice non c'è: link inesistente o cliente
+    // eliminato. Non si leggono i dati di nessun trainer.
+    rows = []
   }
 
   let foundUserId: string | null = null
@@ -76,9 +105,10 @@ Deno.serve(async (req: Request) => {
   let appData: Record<string, unknown> | null = null
 
   for (const row of rows ?? []) {
-    const data = row.app_data as Record<string, unknown>
-    const clients = (data?.clients ?? []) as Record<string, unknown>[]
-    const match = clients.find((c) => c.shareToken === token)
+    const data = (row.app_data ?? {}) as Record<string, unknown>
+    const clients = (Array.isArray(data.clients) ? data.clients : []) as (Record<string, unknown> | null)[]
+    // Vale solo se il cliente ha davvero questo codice nei dati del trainer
+    const match = clients.find((c) => c?.shareToken === token)
     if (match) {
       foundUserId = row.user_id
       foundClient = match
@@ -120,6 +150,7 @@ Deno.serve(async (req: Request) => {
       .filter((l) => l.clientId === clientId)
       .map((l) => ({
         id: l.id,
+        planId: l.planId,
         date: l.date,
         time: l.time,
         duration: l.duration,
@@ -137,10 +168,20 @@ Deno.serve(async (req: Request) => {
       ? packages.find((p) => p.id === (activePlan as Record<string, unknown>).packageId) ?? null
       : null
 
+    // Lezioni totali del percorso: nell'app il campo del pacchetto si chiama lessonsTotal
+    // (più eventuali lezioni bonus o riportate sul piano). Prima veniva letto un campo
+    // "sessions" che non esiste, e il portale mostrava "undefined sessioni".
+    const planRecord = (activePlan ?? {}) as Record<string, unknown>
+    const pkgRecord = (pkg ?? {}) as Record<string, unknown>
+    const totalSessions =
+      Number(pkgRecord.lessonsTotal ?? pkgRecord.sessions ?? 0) +
+      Number(planRecord.bonusLessons ?? 0) +
+      Number(planRecord.carryOverLessons ?? 0)
+
     // Messaggi dal cliente (tabella separata)
     const { data: messages } = await supabase
       .from('client_messages')
-      .select('id, sender, text, type, lesson_id, created_at, read')
+      .select('id, sender, text, type, lesson_id, created_at, read, delivered_at')
       .eq('client_token', token)
       .order('created_at', { ascending: true })
 
@@ -154,16 +195,17 @@ Deno.serve(async (req: Request) => {
       lessons,
       plan: activePlan
         ? {
-            startDate: (activePlan as Record<string, unknown>).startDate,
-            totalPrice: (activePlan as Record<string, unknown>).totalPrice,
+            id: planRecord.id,
+            startDate: planRecord.startDate,
+            totalPrice: planRecord.totalPrice,
           }
         : null,
       package: pkg
         ? {
-            name: (pkg as Record<string, unknown>).name,
-            sessions: (pkg as Record<string, unknown>).sessions,
-            duration: (pkg as Record<string, unknown>).duration,
-            perWeek: (pkg as Record<string, unknown>).perWeek,
+            name: pkgRecord.name,
+            sessions: totalSessions > 0 ? totalSessions : null,
+            duration: pkgRecord.duration,
+            perWeek: pkgRecord.perWeek,
           }
         : null,
       messages: messages ?? [],

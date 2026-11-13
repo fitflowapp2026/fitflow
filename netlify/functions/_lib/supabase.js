@@ -73,9 +73,41 @@ async function patchGoogleConnection(userId, patch) {
   return Array.isArray(rows) && rows[0] ? rows[0] : null;
 }
 
+// ── Eliminazione dell'account ────────────────────────────────────────
+// L'id di un utente Supabase è sempre un UUID. Senza un id valido non parte
+// nessuna richiesta: un'eliminazione senza il filtro sull'utente non deve
+// poter esistere.
+const USER_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isUserId(value) {
+  return typeof value === 'string' && USER_ID_RE.test(value);
+}
+
+// Elimina da una tabella SOLO le righe di quell'utente (colonna user_id).
+async function deleteUserRows(table, userId) {
+  if (!isUserId(userId)) throw new Error('Id utente non valido');
+  if (!/^[a-z_]+$/.test(String(table))) throw new Error('Nome tabella non valido');
+  await serviceRequest(`/rest/v1/${table}?user_id=eq.${encodeURIComponent(userId)}`, {
+    method: 'DELETE',
+    headers: { Prefer: 'return=minimal' }
+  });
+}
+
+// Elimina l'utente di Supabase Auth: email, password e sessioni aperte.
+async function deleteAuthUser(userId) {
+  if (!isUserId(userId)) throw new Error('Id utente non valido');
+  await serviceRequest(`/auth/v1/admin/users/${encodeURIComponent(userId)}`, {
+    method: 'DELETE',
+    body: { should_soft_delete: false }
+  });
+}
+
 module.exports = {
   verifyUser,
   getGoogleConnection,
   upsertGoogleConnection,
-  patchGoogleConnection
+  patchGoogleConnection,
+  isUserId,
+  deleteUserRows,
+  deleteAuthUser
 };

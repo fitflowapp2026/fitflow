@@ -6516,15 +6516,41 @@
       }
     }
 
+    let _disconnectingGoogle = false;
+
     async function disconnectGoogleCalendar() {
-      if (!cloud.user || !cloud.google?.connected) return;
+      if (!cloud.user || !cloud.google?.connected || _disconnectingGoogle) return;
+      /* Lo scollegamento passa anche da Google (che deve togliere l'accesso dal suo
+         lato) e può durare qualche secondo: nel frattempo il pulsante resta spento,
+         così la richiesta non parte due volte. */
+      _disconnectingGoogle = true;
+      if (el.disconnectGoogleBtn) el.disconnectGoogleBtn.disabled = true;
+      if (el.googleStatusLabel) el.googleStatusLabel.textContent = 'Scollegamento in corso';
       try {
-        await googleApi('google-disconnect', { method: 'POST' });
+        const result = await googleApi('google-disconnect', { method: 'POST' });
         resetGoogleState();
-        showToast('Google Calendar scollegato.', 'ok');
+        if (result?.googleRevoked === false) {
+          /* FitFlow ha dimenticato il collegamento, ma Google non ha tolto l'accesso
+             dal suo lato: lo si dice in una finestra che resta aperta finché non viene
+             chiusa (un avviso a scomparsa non lascerebbe il tempo di leggere l'indirizzo). */
+          showConfirm(
+            'Google Calendar scollegato',
+            "FitFlow non usa più il tuo calendario, ma non siamo riusciti a togliere l'accesso anche dal lato di Google: puoi toglierlo tu da myaccount.google.com/connections.",
+            () => { window.open('https://myaccount.google.com/connections', '_blank', 'noopener,noreferrer'); },
+            'Apri la pagina',
+            null,
+            'Chiudi',
+            'good'
+          );
+        } else {
+          showToast('Google Calendar scollegato.', 'ok');
+        }
       } catch (error) {
         console.error(error);
         showToast('Scollegamento non riuscito.', 'error');
+      } finally {
+        _disconnectingGoogle = false;
+        updateGoogleUi();
       }
     }
 

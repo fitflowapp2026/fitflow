@@ -230,6 +230,79 @@ const run = code => vm.runInContext(code, sandbox);
   assert.strictEqual(fullFile.messages[0].clientName, demo.clients[1].name);
   console.log('  ok   copia completa dei dati: tutti i messaggi, a pagine, con il nome del cliente');
 
+  // ── 6b. "Scollega" Google Calendar ──────────────────────────────────
+  // Il server dice anche se è riuscito a togliere l'accesso dal lato di Google
+  // (googleRevoked): quando non ci è riuscito l'app lo spiega, con l'indirizzo
+  // da cui l'utente può toglierlo da sé.
+  {
+    const box = doc.getElementById('confirmModalBackdrop');
+    const button = doc.getElementById('disconnectGoogleBtn');
+    const toasts = [];
+    sandbox.__toast = (message, type) => { toasts.push(`${type}: ${message}`); };
+    run('var __showToast = showToast; showToast = (message, type) => { __toast(message, type); __showToast(message, type); };');
+    let sent = [];
+    let during = null;
+    let serverAnswer = () => answer(200, { ok: true, googleRevoked: true });
+    sandbox.fetch = async (url, options = {}) => {
+      sent.push({ url: String(url), method: options.method, auth: options.headers?.Authorization });
+      during = { label: text('googleStatusLabel'), buttonOff: button.disabled };
+      // un secondo tocco mentre la richiesta è in corso non deve farne partire un'altra
+      if (sent.length === 1) await run('disconnectGoogleCalendar()');
+      return serverAnswer();
+    };
+    const scollega = async () => {
+      sent = []; toasts.length = 0; during = null;
+      run("cloud.google.connected = true; cloud.google.calendarName = 'FitFlow Clienti'; updateGoogleUi();");
+      assert.strictEqual(button.disabled, false, 'con Google collegato il pulsante "Scollega" è acceso');
+      await run('disconnectGoogleCalendar()');
+    };
+
+    // Accesso tolto anche dal lato di Google, oppure Google non era collegato, oppure
+    // il server non lo dice (versione precedente): conferma normale, nessun avviso
+    for (const body of [{ ok: true, googleRevoked: true }, { ok: true, googleRevoked: null }, { ok: true }]) {
+      serverAnswer = () => answer(200, body);
+      await scollega();
+      assert.deepStrictEqual(sent, [{ url: '/.netlify/functions/google-disconnect', method: 'POST', auth: 'Bearer token-di-prova' }], 'una sola richiesta, con il login di chi usa l\'app');
+      assert.deepStrictEqual(during, { label: 'Scollegamento in corso', buttonOff: true }, 'mentre la richiesta è in corso il pulsante è spento');
+      assert.strictEqual(run('cloud.google.connected'), false, "l'app non considera più Google collegato");
+      assert.strictEqual(text('googleStatusLabel'), 'Non collegato');
+      assert.deepStrictEqual(toasts, ['ok: Google Calendar scollegato.']);
+      assert.strictEqual(box.classList.contains('open'), false, 'nessun avviso: ' + JSON.stringify(body));
+    }
+
+    // Scollegato, ma l'accesso dal lato di Google non è stato tolto: lo si dice in una
+    // finestra che resta aperta, con l'indirizzo da cui toglierlo a mano
+    serverAnswer = () => answer(200, { ok: true, googleRevoked: false });
+    await scollega();
+    assert.strictEqual(sent.length, 1);
+    assert.strictEqual(run('cloud.google.connected'), false, "l'app non considera più Google collegato");
+    assert.strictEqual(box.classList.contains('open'), true, "l'avviso resta a schermo finché non viene chiuso");
+    assert.strictEqual(text('confirmModalTitle'), 'Google Calendar scollegato');
+    assert.ok(text('confirmModalMsg').includes('myaccount.google.com/connections'), "l'avviso dice dove togliere l'accesso a mano");
+    assert.deepStrictEqual(toasts, [], "al posto della conferma normale c'è l'avviso");
+    box.classList.remove('open');
+    run('unlockBodyScroll()');
+
+    // Il server risponde con un errore: Google resta collegato e si può riprovare
+    serverAnswer = () => answer(500, { error: 'Disconnessione Google non riuscita' });
+    await scollega();
+    assert.deepStrictEqual(toasts, ['error: Scollegamento non riuscito.']);
+    assert.strictEqual(run('cloud.google.connected'), true, 'dopo un errore Google risulta ancora collegato');
+    assert.strictEqual(button.disabled, false, 'si può riprovare');
+    assert.strictEqual(text('googleStatusLabel'), 'Connesso');
+    assert.strictEqual(box.classList.contains('open'), false);
+
+    // Google non collegato: il pulsante non fa partire nulla
+    run('resetGoogleState()');
+    sent = [];
+    await run('disconnectGoogleCalendar()');
+    assert.strictEqual(sent.length, 0);
+    assert.strictEqual(button.disabled, true, 'senza Google collegato il pulsante "Scollega" è spento');
+
+    run('showToast = __showToast;');
+    console.log('  ok   "Scollega" Google: conferma normale, avviso se Google non ha tolto l\'accesso, errore segnalato');
+  }
+
   // ── 7. Eliminazione dell'account (per ultima: alla fine sul dispositivo non resta nulla) ──
   let sent = [];
   let duringRequest = null;

@@ -5650,6 +5650,18 @@
       const clientIds = new Set(merged.clients.map(client => client.id));
       merged.plans = merged.plans.filter(plan => clientIds.has(plan.clientId));
       merged.lessons = merged.lessons.filter(lesson => clientIds.has(lesson.clientId));
+      /* Link del portale rigenerato sull'altro dispositivo ("Nuovo link"): resta
+         quello nuovo anche se qui lo stesso cliente è stato modificato. Altrimenti
+         tornerebbe a funzionare il link vecchio, disattivato apposta. */
+      if (Array.isArray(base?.clients) && Array.isArray(remote?.clients)) {
+        const tokenBefore = new Map(base.clients.filter(Boolean).map(client => [client.id, client.shareToken]));
+        const tokenTheirs = new Map(remote.clients.filter(Boolean).map(client => [client.id, client.shareToken]));
+        merged.clients = merged.clients.map(client => {
+          const before = tokenBefore.get(client.id);
+          const theirs = tokenTheirs.get(client.id);
+          return before && theirs && theirs !== before && client.shareToken === before ? { ...client, shareToken: theirs } : client;
+        });
+      }
       return merged;
     }
     /* prova:unione:fine */
@@ -8507,6 +8519,7 @@ function applyReportFilter() {
           <button class="btn btn-soft btn-small" id="pianificaBtn" title="Pianifica tutte le lezioni rimanenti">📅 Pianifica</button>
           <button class="btn btn-soft btn-small" id="bonusLessonsBtn" title="Aggiungi lezioni bonus al pacchetto">＋ Bonus</button>
           <button class="btn btn-soft btn-small" id="sharePortalBtn" title="Invia link portale al cliente">🔗 Portale</button>
+          <button class="btn btn-ghost btn-small" id="regenPortalLinkBtn" title="Crea un nuovo link e disattiva quello attuale">⟳ Nuovo link</button>
         </div>
         <div id="clientMessagesPanel" style="display:none;margin-top:4px;"></div>
       `;
@@ -8553,6 +8566,7 @@ function applyReportFilter() {
             <button class="btn btn-soft btn-small" id="mobilePianificaBtn" type="button">📅 Pianifica</button>
             <button class="btn btn-soft btn-small" id="mobileBonusLessonsBtn" type="button">＋ Bonus</button>
             <button class="btn btn-soft btn-small" id="mobileSharePortalBtn" type="button">🔗 Portale</button>
+            <button class="btn btn-ghost btn-small" id="mobileRegenPortalLinkBtn" type="button" title="Crea un nuovo link e disattiva quello attuale">⟳ Nuovo link</button>
             <button class="btn btn-soft btn-small" id="mobileMsgClientBtn" type="button" style="position:relative;">
               💬 Messaggi
               <span class="msg-badge" id="msgBadgeClientCard" style="top:-6px;right:-6px;">0</span>
@@ -8618,6 +8632,9 @@ function applyReportFilter() {
       };
       document.getElementById('sharePortalBtn')?.addEventListener('click', sharePortalLinkFn);
       document.getElementById('mobileSharePortalBtn')?.addEventListener('click', sharePortalLinkFn);
+      /* Nuovo link: disattiva quello attuale (chiede conferma) */
+      document.getElementById('regenPortalLinkBtn')?.addEventListener('click', () => confirmRegeneratePortalLink(client));
+      document.getElementById('mobileRegenPortalLinkBtn')?.addEventListener('click', () => confirmRegeneratePortalLink(client));
 
       /* Carica messaggi del cliente */
       loadClientMessages(client);
@@ -12603,7 +12620,9 @@ function renderClientFormStickySummary() {
         _clientMsgCache = { clientId: client.id, at: Date.now(), html: panel.innerHTML };
       };
 
-      /* Query diretta a Supabase — RLS filtra per user_id automaticamente */
+      /* Query diretta a Supabase — RLS filtra per user_id automaticamente.
+         I messaggi si cercano per CLIENTE, non per codice del link: così restano
+         tutti visibili anche dopo un "Nuovo link" del portale. */
       const cfg = loadSupabaseConfig();
       const token = getAuthToken();
       const indicator = document.getElementById('msgLoadingIndicator');
@@ -12611,7 +12630,7 @@ function renderClientFormStickySummary() {
 
       try {
         const res = await fetch(
-          `${cfg.url.replace(/\/$/, '')}/rest/v1/client_messages?client_token=eq.${encodeURIComponent(client.shareToken)}&order=created_at.asc&select=*`,
+          `${cfg.url.replace(/\/$/, '')}/rest/v1/client_messages?client_id=eq.${encodeURIComponent(client.id)}&order=created_at.asc&select=*`,
           {
             headers: {
               'apikey': cfg.key,
@@ -12646,7 +12665,7 @@ function renderClientFormStickySummary() {
         const now = new Date().toISOString();
         /* Segna messaggi del cliente come delivered + read */
         await fetch(
-          `${cfg.url.replace(/\/$/, '')}/rest/v1/client_messages?client_token=eq.${encodeURIComponent(client.shareToken)}&sender=eq.client`,
+          `${cfg.url.replace(/\/$/, '')}/rest/v1/client_messages?client_id=eq.${encodeURIComponent(client.id)}&sender=eq.client`,
           {
             method: 'PATCH',
             headers: {
@@ -12677,6 +12696,9 @@ function renderClientFormStickySummary() {
       const authToken = getAuthToken();
       const client = getClient(state.selectedClientId);
       if (!client || !cloud.user) { showToast('Errore: utente non trovato.', 'error'); return; }
+      /* Vale il codice attuale del cliente: quello scritto nel pulsante può essere
+         di prima di un "Nuovo link", e la risposta non comparirebbe nel portale */
+      clientToken = client.shareToken || clientToken;
       input.value = '';
       const restoreText = () => { const field = document.getElementById('trainerReplyInput'); if (field && !field.value) field.value = text; };
 
@@ -12717,6 +12739,128 @@ function renderClientFormStickySummary() {
       }
     }
 
+    /* ═══════════════════════════════════════════════════════════
+       NUOVO LINK DEL PORTALE
+       Il link del portale è personale. Se è finito nelle mani sbagliate, o il
+       cliente non deve più averlo, se ne crea uno nuovo e quello vecchio smette
+       di funzionare (quando il cambio arriva nel cloud).
+    ═══════════════════════════════════════════════════════════ */
+    let _regeneratingPortalLink = false;
+
+    /* Il portale mostra al cliente i messaggi legati al codice del suo link: quelli
+       già scambiati vengono portati sul codice nuovo, così la conversazione non
+       sparisce. Riguarda tutti i messaggi di quel cliente con un codice diverso,
+       quindi si può ripetere senza danni. Risponde true se è andata bene. */
+    async function movePortalMessages(clientId, newToken) {
+      const cfg = loadSupabaseConfig();
+      const authToken = await getFreshAuthToken();
+      if (!cfg.url || !cfg.key || !authToken || !cloud.user) return false;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+      try {
+        const response = await fetch(
+          `${cfg.url.replace(/\/$/, '')}/rest/v1/client_messages?client_id=eq.${encodeURIComponent(clientId)}&user_id=eq.${encodeURIComponent(cloud.user.id)}&client_token=neq.${encodeURIComponent(newToken)}`,
+          {
+            method: 'PATCH',
+            headers: {
+              'apikey': cfg.key,
+              'Authorization': `Bearer ${authToken}`,
+              'Content-Type': 'application/json',
+              'Prefer': 'return=minimal'
+            },
+            body: JSON.stringify({ client_token: newToken }),
+            signal: controller.signal
+          }
+        );
+        return response.ok;
+      } catch (error) {
+        console.error('[FitFlow] Messaggi non spostati sul nuovo link:', error?.message || error);
+        return false;
+      } finally {
+        clearTimeout(timeoutId);
+      }
+    }
+
+    async function regenerateClientPortalLink(clientId) {
+      if (_regeneratingPortalLink || !getClient(clientId)) return false;
+      /* Solo cache locale: non esistono né portale né messaggi, si cambia e basta */
+      const usesCloud = !cloud.allowLocalOnly;
+      /* Il link vecchio smette di funzionare solo quando il cambio arriva nel cloud:
+         senza connessione (o con l'app aperta sui soli dati del dispositivo) non si
+         cambia nulla, così non resta un link "nuovo" che ancora non vale. */
+      if (usesCloud && (!cloud.client || !cloud.user || cloud.deletingAccount || navigator.onLine === false)) {
+        showToast('Nuovo link non creato: serve la connessione. Quello attuale resta valido.', 'error');
+        return false;
+      }
+      _regeneratingPortalLink = true;
+      try {
+        const newToken = generateShareToken();
+        if (usesCloud) {
+          /* Prima i messaggi: se non si riesce a spostarli non si cambia nulla.
+             Riprovando si riparte da capo, senza lasciare cose a metà. */
+          const moved = await movePortalMessages(clientId, newToken);
+          if (!moved) {
+            showToast('Nuovo link non creato: serve la connessione. Quello attuale resta valido.', 'error');
+            return false;
+          }
+        }
+        /* Durante l'attesa i dati possono essere stati aggiornati dal cloud: si riprende il cliente */
+        const client = getClient(clientId);
+        if (!client) return false;
+        client.shareToken = newToken;
+        if (_activeMsgClientId === client.id) _activeMsgClientToken = newToken;
+        /* il riquadro messaggi tenuto in memoria va ridisegnato */
+        _clientMsgCache = { clientId: null, at: 0, html: '' };
+        saveState(true);
+        renderAll();
+        if (!usesCloud) {
+          showToast('Nuovo link creato.', 'ok');
+          return true;
+        }
+        const saved = (await syncStateToCloud(true)) === true && !getSyncMeta().dirty;
+        if (!saved) {
+          showToast('Nuovo link creato, ma non ancora salvato nel cloud: il vecchio resta attivo finché non torna la connessione.', 'warn');
+          return true;
+        }
+        /* Controllo finale: il portale deve riconoscere il link nuovo, altrimenti il
+           cliente resterebbe senza un link che funziona. Se non lo riconosce si
+           ripete una volta il salvataggio (a ogni salvataggio il database riallinea
+           l'elenco dei link) e si ricontrolla. */
+        const currentToken = () => getClient(clientId)?.shareToken;
+        let opens = await portalLinkOpens(currentToken());
+        if (!opens) {
+          saveState(true);
+          await syncStateToCloud(true);
+          opens = await portalLinkOpens(currentToken());
+        }
+        if (opens) {
+          showToast('Nuovo link creato. Quello vecchio non funziona più: invia al cliente quello nuovo.', 'ok');
+        } else {
+          showToast('Nuovo link creato e quello vecchio non funziona più, ma non sono riuscito ad aprire quello nuovo: provalo con 🔗 Portale prima di inviarlo al cliente.', 'warn');
+        }
+        return true;
+      } finally {
+        _regeneratingPortalLink = false;
+      }
+    }
+
+    /* true se il portale riconosce quel link: è la stessa richiesta che fa la pagina del cliente */
+    async function portalLinkOpens(token) {
+      if (!token) return false;
+      const data = await withTimeout(callPortalEdge(token, 'get_data'), 10000, null);
+      return Boolean(data && data.client);
+    }
+
+    function confirmRegeneratePortalLink(client) {
+      if (!client) return;
+      showConfirm(
+        `Nuovo link per ${getClientFullName(client) || 'il cliente'}`,
+        'Il link attuale del portale smetterà di funzionare e dovrai inviare al cliente quello nuovo. I messaggi restano.',
+        () => { regenerateClientPortalLink(client.id); },
+        'Crea nuovo link'
+      );
+    }
+
     /* ── Modal messaggi — lista clienti + chat ───────────────── */
     let _activeMsgClientToken = null;
     let _activeMsgClientId = null;
@@ -12737,16 +12881,17 @@ function renderClientFormStickySummary() {
       const cfg = loadSupabaseConfig();
       const token = getAuthToken();
 
-      /* Carica conteggio messaggi non letti per cliente */
-      let unreadByToken = {};
+      /* Carica conteggio messaggi non letti per cliente (per cliente, non per codice
+         del link: il conteggio resta giusto anche dopo un "Nuovo link") */
+      let unreadByClient = {};
       try {
         const res = await fetch(
-          `${cfg.url.replace(/\/$/, '')}/rest/v1/client_messages?sender=eq.client&read=eq.false&select=client_token`,
+          `${cfg.url.replace(/\/$/, '')}/rest/v1/client_messages?sender=eq.client&read=eq.false&select=client_id`,
           { headers: { 'apikey': cfg.key, 'Authorization': `Bearer ${token}` } }
         );
         if (res.ok) {
           const rows = await res.json();
-          rows.forEach(r => { unreadByToken[r.client_token] = (unreadByToken[r.client_token] || 0) + 1; });
+          rows.forEach(r => { unreadByClient[r.client_id] = (unreadByClient[r.client_id] || 0) + 1; });
         }
       } catch(e) {}
 
@@ -12758,19 +12903,19 @@ function renderClientFormStickySummary() {
 
       /* Ordina: non letti prima (più non letti = primo), poi alfabetico */
       const sorted = clientsWithPortal.slice().sort((a, b) => {
-        const ua = unreadByToken[a.shareToken] || 0;
-        const ub = unreadByToken[b.shareToken] || 0;
+        const ua = unreadByClient[a.id] || 0;
+        const ub = unreadByClient[b.id] || 0;
         if (ub !== ua) return ub - ua;
         return getClientFullName(a).localeCompare(getClientFullName(b));
       });
 
       /* Mostra/nascondi bottone "Segna tutti letti" */
-      const totalUnread = Object.values(unreadByToken).reduce((s, v) => s + v, 0);
+      const totalUnread = Object.values(unreadByClient).reduce((s, v) => s + v, 0);
       const markAllBtn = document.getElementById('markAllReadBtn');
       if (markAllBtn) markAllBtn.style.display = totalUnread > 0 ? '' : 'none';
 
       listEl.innerHTML = sorted.map(c => {
-        const unread = unreadByToken[c.shareToken] || 0;
+        const unread = unreadByClient[c.id] || 0;
         const isActive = c.id === _activeMsgClientId;
         return `
           <div class="msg-client-row ${unread > 0 ? 'has-unread' : ''} ${isActive ? 'active' : ''}"
@@ -12855,7 +13000,7 @@ function renderClientFormStickySummary() {
 
       try {
         const res = await fetch(
-          `${cfg.url.replace(/\/$/, '')}/rest/v1/client_messages?client_token=eq.${encodeURIComponent(client.shareToken)}&order=created_at.asc&select=*`,
+          `${cfg.url.replace(/\/$/, '')}/rest/v1/client_messages?client_id=eq.${encodeURIComponent(client.id)}&order=created_at.asc&select=*`,
           { headers: { 'apikey': cfg.key, 'Authorization': `Bearer ${token}` } }
         );
         const messages = res.ok ? await res.json() : [];
@@ -12871,7 +13016,7 @@ function renderClientFormStickySummary() {
         const now = new Date().toISOString();
         /* Segna messaggi del cliente come delivered + read */
         await fetch(
-          `${cfg.url.replace(/\/$/, '')}/rest/v1/client_messages?client_token=eq.${encodeURIComponent(client.shareToken)}&sender=eq.client`,
+          `${cfg.url.replace(/\/$/, '')}/rest/v1/client_messages?client_id=eq.${encodeURIComponent(client.id)}&sender=eq.client`,
           { method: 'PATCH', headers: { 'apikey': cfg.key, 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
             body: JSON.stringify({ delivered_at: now, read: true }) }
         );
@@ -12890,7 +13035,8 @@ function renderClientFormStickySummary() {
       const token = getAuthToken();
       const client = getClient(_activeMsgClientId);
       if (!client || !cloud.user) return;
-      const clientToken = _activeMsgClientToken;
+      /* il codice attuale del cliente (può essere cambiato con "Nuovo link" a chat aperta) */
+      const clientToken = client.shareToken || _activeMsgClientToken;
       input.value = '';
       haptic(6);
       const restoreText = () => { if (!input.value) input.value = text; };

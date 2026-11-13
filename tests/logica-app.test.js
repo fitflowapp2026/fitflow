@@ -139,6 +139,47 @@ test('dati mancanti o vuoti non fanno cadere l\'unione', () => {
   assert.strictEqual(onlyRemote.clients.length, 3);
 });
 
+test('link del portale rigenerato altrove: resta quello nuovo anche se qui il cliente è stato modificato', () => {
+  const withTokens = () => {
+    const data = base();
+    data.clients.forEach((client, index) => { client.shareToken = 'codice-vecchio-' + (index + 1); });
+    return data;
+  };
+  const tokenOf = (merged, id) => merged.clients.find(client => client.id === id).shareToken;
+
+  // c1: "Nuovo link" sull'altro dispositivo, nel frattempo qui è cambiata una nota.
+  // Senza questa regola varrebbe tutta la versione di qui, con il link vecchio di nuovo attivo.
+  let local = withTokens(), remote = withTokens();
+  local.clients[0].notes = 'nota scritta qui';
+  remote.clients[0].shareToken = 'codice-nuovo-altrove';
+  let merged = mergeSnapshots(withTokens(), local, remote);
+  assert.strictEqual(tokenOf(merged, 'c1'), 'codice-nuovo-altrove', 'il link disattivato altrove non torna a funzionare');
+  assert.strictEqual(merged.clients.find(client => client.id === 'c1').notes, 'nota scritta qui', 'la modifica fatta qui resta');
+  assert.strictEqual(local.clients[0].shareToken, 'codice-vecchio-1', "i dati di partenza non vengono toccati dall'unione");
+  assert.strictEqual(tokenOf(merged, 'c2'), 'codice-vecchio-2', 'gli altri clienti restano come sono');
+
+  // "Nuovo link" fatto qui, altrove è cambiata una nota: vale il link nuovo di qui
+  local = withTokens(); remote = withTokens();
+  local.clients[1].shareToken = 'codice-nuovo-qui';
+  remote.clients[1].notes = 'nota scritta altrove';
+  merged = mergeSnapshots(withTokens(), local, remote);
+  assert.strictEqual(tokenOf(merged, 'c2'), 'codice-nuovo-qui');
+
+  // "Nuovo link" su entrambi i dispositivi: vale questo dispositivo
+  local = withTokens(); remote = withTokens();
+  local.clients[2].shareToken = 'codice-nuovo-qui';
+  remote.clients[2].shareToken = 'codice-nuovo-altrove';
+  merged = mergeSnapshots(withTokens(), local, remote);
+  assert.strictEqual(tokenOf(merged, 'c3'), 'codice-nuovo-qui');
+
+  // Nessuno ha toccato il link: nulla cambia. Senza versione di partenza la regola non si applica.
+  local = withTokens(); remote = withTokens();
+  local.clients[0].notes = 'solo una nota';
+  assert.strictEqual(tokenOf(mergeSnapshots(withTokens(), local, remote), 'c1'), 'codice-vecchio-1');
+  remote.clients[0].shareToken = 'codice-nuovo-altrove';
+  assert.strictEqual(tokenOf(mergeSnapshots(null, local, remote), 'c1'), 'codice-vecchio-1', 'senza versione di partenza vale questo dispositivo, come per ogni altro campo');
+});
+
 test('numeri di telefono: prefisso +39 sempre corretto', () => {
   assert.strictEqual(normalizeItalianPhone('333 1234567'), '393331234567');
   assert.strictEqual(normalizeItalianPhone('3921234567'), '393921234567', 'cellulare che inizia per 39x');

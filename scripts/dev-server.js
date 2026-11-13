@@ -188,6 +188,7 @@ function matchFilters(row, params, ignore = []) {
     const value = raw.slice(dot + 1);
     const actual = row[key];
     if (op === 'eq' && String(actual) !== value) return false;
+    if (op === 'neq' && String(actual) === value) return false;
     if (op === 'is') {
       if (value === 'null' && actual !== null && actual !== undefined) return false;
       if (value === 'false' && actual !== false) return false;

@@ -303,6 +303,173 @@ const run = code => vm.runInContext(code, sandbox);
     console.log('  ok   "Scollega" Google: conferma normale, avviso se Google non ha tolto l\'accesso, errore segnalato');
   }
 
+  // ── 6c. "Nuovo link" del portale ────────────────────────────────────
+  // Crea un link nuovo per un cliente e disattiva quello vecchio. I messaggi già
+  // scambiati vengono portati sul codice nuovo PRIMA del cambio: se quel passo non
+  // riesce non cambia nulla. Il link vecchio smette di funzionare quando il cambio
+  // arriva nel cloud.
+  {
+    const TOKEN_RE = /^[A-Za-z0-9_-]{12,64}$/;   // lo stesso controllo della funzione client-portal
+    const clientId = demo.clients[3].id;
+    const idJson = JSON.stringify(clientId);
+    const tokenNow = () => run(`getClient(${idJson}).shareToken`);
+    const box = doc.getElementById('confirmModalBackdrop');
+    const NOT_CREATED = 'error: Nuovo link non creato: serve la connessione. Quello attuale resta valido.';
+    const toasts = [];
+    sandbox.__toast = (message, type) => { toasts.push(`${type}: ${message}`); };
+    run('var __showToast = showToast; showToast = (message, type) => { __toast(message, type); __showToast(message, type); };');
+    run('var __selected = state.selectedClientId;');
+    let requests = [];
+    let moveAnswer = () => answer(204, null);
+    let saves = [];           // il codice di quel cliente in ogni salvataggio arrivato al cloud
+    let saveAnswer = () => ({ data: [{ updated_at: '2026-11-13T09:00:00.000000+00:00' }], error: null, status: 200 });
+    let portalKnows = () => true;   // il portale riconosce il link che gli viene chiesto?
+    sandbox.fetch = async (url, options = {}) => {
+      const u = new URL(String(url));
+      const method = options.method || 'GET';
+      const body = options.body ? JSON.parse(options.body) : null;
+      if (u.pathname === '/functions/v1/client-portal') {
+        // il controllo finale dell'app: la stessa richiesta che fa la pagina del cliente
+        requests.push({ path: u.pathname, method, body });
+        return portalKnows(body.token) ? answer(200, { client: { name: 'Cliente' }, lessons: [], messages: [] }) : answer(404, { error: 'Link non valido o scaduto' });
+      }
+      assert.strictEqual(u.pathname, '/rest/v1/client_messages', 'richiesta non prevista: ' + u.pathname);
+      assert.strictEqual(options.headers.Authorization, 'Bearer token-di-prova');
+      requests.push({ path: u.pathname, method, client: u.searchParams.get('client_id'), user: u.searchParams.get('user_id'), token: u.searchParams.get('client_token'), body, tokenAtRequest: tokenNow() });
+      if (method === 'PATCH' && body && 'client_token' in body) return moveAnswer();
+      return answer(method === 'GET' ? 200 : 201, method === 'GET' ? [] : null);
+    };
+    const checks = () => requests.filter(r => r.path === '/functions/v1/client-portal').map(r => [r.body.token, r.body.action]);
+    sandbox.__cloudSave = body => { saves.push(Array.from(body.app_data.clients).find(c => c.id === clientId).shareToken); };
+    sandbox.__cloudAnswer = async () => saveAnswer();
+    run('cloud.client.from = () => { const chain = { update: body => { __cloudSave(body); return chain; }, upsert: body => { __cloudSave(body); return chain; }, eq: () => chain, select: () => __cloudAnswer() }; return chain; };');
+    const moves = () => requests.filter(r => r.method === 'PATCH' && r.body && 'client_token' in r.body);
+    const reset = () => { requests = []; saves = []; toasts.length = 0; };
+    const rigenera = () => run(`regenerateClientPortalLink(${idJson})`);
+    const oldToken = tokenNow();
+    assert.ok(oldToken, 'il cliente di prova ha già un link');
+
+    // Il pulsante c'è nella scheda del cliente, sia nella versione grande sia in quella per telefono
+    run(`state.selectedClientId = ${idJson}; renderSelectedClient();`);
+    const drawn = [...elements.values()].map(element => String(element.innerHTML)).join('\n');
+    assert.ok(drawn.includes('id="regenPortalLinkBtn"'), 'pulsante "Nuovo link" nella scheda cliente');
+    assert.ok(drawn.includes('id="mobileRegenPortalLinkBtn"'), 'pulsante "Nuovo link" nella scheda per telefono');
+    // (disegnare la scheda fa anche caricare i messaggi del cliente: si aspetta che finisca e si riparte da zero)
+    await new Promise(resolve => setTimeout(resolve, 20));
+    reset();
+
+    // Prima si chiede conferma: finché non si conferma non parte nulla
+    run(`confirmRegeneratePortalLink(getClient(${idJson}))`);
+    assert.strictEqual(box.classList.contains('open'), true, 'prima di cambiare il link si chiede conferma');
+    assert.ok(text('confirmModalTitle').startsWith('Nuovo link per '));
+    assert.ok(text('confirmModalMsg').includes('smetterà di funzionare'));
+    assert.strictEqual(requests.length, 0);
+    assert.strictEqual(tokenNow(), oldToken);
+    box.classList.remove('open');
+    run('unlockBodyScroll()');
+
+    // Senza connessione, o con l'app aperta sui soli dati del dispositivo: non cambia nulla
+    sandbox.navigator.onLine = false;
+    assert.strictEqual(await rigenera(), false);
+    sandbox.navigator.onLine = true;
+    run('var __user = cloud.user; cloud.user = null;');
+    assert.strictEqual(await rigenera(), false);
+    run('cloud.user = __user;');
+    assert.strictEqual(tokenNow(), oldToken, 'il link attuale resta valido');
+    assert.strictEqual(requests.length + saves.length, 0, 'nessuna richiesta partita');
+    assert.deepStrictEqual(toasts, [NOT_CREATED, NOT_CREATED]);
+
+    // I messaggi non si riescono a spostare (errore del server, rete caduta): non cambia nulla
+    for (const failure of [() => answer(500, { message: 'errore' }), () => { throw new TypeError('Failed to fetch'); }]) {
+      reset();
+      moveAnswer = failure;
+      assert.strictEqual(await rigenera(), false);
+      assert.strictEqual(moves().length, 1, 'lo spostamento dei messaggi è stato tentato');
+      assert.strictEqual(tokenNow(), oldToken, 'il link attuale resta valido');
+      assert.strictEqual(saves.length, 0, 'nessun salvataggio partito');
+      assert.strictEqual(run('getSyncMeta().dirty'), false);
+      assert.deepStrictEqual(toasts, [NOT_CREATED]);
+    }
+
+    // Tutto riesce: prima i messaggi (con il link ancora vecchio), poi il cambio, poi il cloud
+    reset();
+    moveAnswer = () => answer(204, null);
+    const first = rigenera();
+    assert.strictEqual(await rigenera(), false, 'un secondo tocco mentre è in corso non fa partire nulla');
+    assert.strictEqual(await first, true);
+    const newToken = tokenNow();
+    assert.notStrictEqual(newToken, oldToken, 'il cliente ha un codice nuovo');
+    assert.match(newToken, TOKEN_RE, 'il codice nuovo è nel formato che il portale accetta');
+    assert.deepStrictEqual(moves(), [{ path: '/rest/v1/client_messages', method: 'PATCH', client: 'eq.' + clientId, user: 'eq.utente-di-prova', token: 'neq.' + newToken, body: { client_token: newToken }, tokenAtRequest: oldToken }],
+      'si spostano solo i messaggi di quel cliente e di quel trainer, quando il link è ancora quello vecchio');
+    assert.deepStrictEqual(saves, [newToken], 'al cloud arriva il codice nuovo: da lì il link vecchio non funziona più');
+    assert.deepStrictEqual(checks(), [[newToken, 'get_data']], 'alla fine si controlla che il portale apra il link nuovo');
+    assert.strictEqual(run('getSyncMeta().dirty'), false);
+    const DONE = 'ok: Nuovo link creato. Quello vecchio non funziona più: invia al cliente quello nuovo.';
+    assert.deepStrictEqual(toasts, [DONE]);
+
+    // Il portale non riconosce subito il link nuovo: si ripete UNA volta il salvataggio e poi si apre
+    reset();
+    portalKnows = () => saves.length >= 2;
+    assert.strictEqual(await rigenera(), true);
+    assert.deepStrictEqual(saves, [tokenNow(), tokenNow()], 'un salvataggio in più, con lo stesso codice');
+    assert.deepStrictEqual(checks(), [[tokenNow(), 'get_data'], [tokenNow(), 'get_data']]);
+    assert.deepStrictEqual(toasts, [DONE]);
+
+    // Il portale non lo riconosce nemmeno dopo: l'app lo dice, invece di dare tutto per fatto
+    reset();
+    portalKnows = () => false;
+    assert.strictEqual(await rigenera(), true);
+    assert.strictEqual(saves.length, 2, 'un solo salvataggio in più, non di continuo');
+    assert.strictEqual(checks().length, 2);
+    assert.strictEqual(toasts.length, 1);
+    assert.ok(toasts[0].startsWith('warn: Nuovo link creato e quello vecchio non funziona più, ma non sono riuscito ad aprire quello nuovo'), toasts[0]);
+    assert.strictEqual(run('getSyncMeta().dirty'), false);
+    portalKnows = () => true;
+
+    // Il cloud non conferma il salvataggio: il link nuovo c'è, ma l'app avvisa che il vecchio vale ancora…
+    reset();
+    saveAnswer = () => ({ data: null, error: { message: 'Failed to fetch' }, status: 0 });
+    assert.strictEqual(await rigenera(), true);
+    const secondToken = tokenNow();
+    assert.notStrictEqual(secondToken, newToken);
+    assert.strictEqual(checks().length, 0, 'senza salvataggio confermato non ha senso controllare il portale');
+    assert.strictEqual(run('getSyncMeta().dirty'), true, 'il cambio resta da inviare');
+    assert.ok(toasts.includes('warn: Nuovo link creato, ma non ancora salvato nel cloud: il vecchio resta attivo finché non torna la connessione.'), 'avviso mostrato: ' + JSON.stringify(toasts));
+    // …e il cambio arriva al cloud appena torna a rispondere
+    saveAnswer = () => ({ data: [{ updated_at: '2026-11-13T09:05:00.000000+00:00' }], error: null, status: 200 });
+    saves = [];
+    assert.strictEqual(await run('syncStateToCloud(true)'), true);
+    assert.deepStrictEqual(saves, [secondToken]);
+
+    // I messaggi si cercano per cliente, non per codice del link: restano tutti visibili dopo il cambio
+    reset();
+    await run(`loadClientMessages(getClient(${idJson}), { force: true })`);
+    const read = requests.find(r => r.method === 'GET');
+    assert.ok(read, 'i messaggi del cliente vengono richiesti');
+    assert.deepStrictEqual([read.client, read.token], ['eq.' + clientId, null], 'ricerca per cliente, senza il codice del link');
+
+    // Una risposta scritta da un riquadro disegnato prima del cambio parte comunque con il codice attuale
+    reset();
+    doc.getElementById('trainerReplyInput').value = 'Ciao!';
+    await run(`sendTrainerReply(${JSON.stringify(oldToken)})`);
+    const reply = requests.find(r => r.method === 'POST' && r.path === '/rest/v1/client_messages');
+    assert.ok(reply, 'la risposta viene inviata');
+    assert.deepStrictEqual([reply.body.client_token, reply.body.client_id, reply.body.sender], [secondToken, clientId, 'trainer'], 'la risposta porta il codice attuale del cliente');
+
+    // Solo cache locale (senza cloud): non esistono portale né messaggi, si cambia e basta
+    reset();
+    run('cloud.allowLocalOnly = true;');
+    assert.strictEqual(await rigenera(), true);
+    run('cloud.allowLocalOnly = false;');
+    assert.notStrictEqual(tokenNow(), secondToken);
+    assert.strictEqual(requests.length + saves.length, 0, 'senza cloud non parte nessuna richiesta');
+    assert.deepStrictEqual(toasts, ['ok: Nuovo link creato.']);
+
+    run('clearTimeout(cloud.saveTimer); clearTimeout(cloud.retryTimer); cloud.saveTimer = null; delete cloud.client.from; setSyncMeta({ dirty: false }); state.selectedClientId = __selected; showToast = __showToast;');
+    console.log('  ok   "Nuovo link" del portale: conferma, messaggi spostati prima del cambio, link vecchio disattivato, errori senza danni');
+  }
+
   // ── 7. Eliminazione dell'account (per ultima: alla fine sul dispositivo non resta nulla) ──
   let sent = [];
   let duringRequest = null;

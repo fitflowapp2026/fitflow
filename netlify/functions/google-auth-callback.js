@@ -1,3 +1,4 @@
+// Funzione Netlify (runtime Node 22, vedi netlify.toml)
 const { redirect, verifyState, getSiteOrigin } = require('./_lib/utils');
 const { getGoogleConnection, upsertGoogleConnection } = require('./_lib/supabase');
 const { exchangeCodeForTokens, encryptRefreshToken, decryptRefreshToken, refreshGoogleAccessToken, ensureCalendar } = require('./_lib/google-calendar');

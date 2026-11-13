@@ -1,3 +1,4 @@
+// Funzione Netlify (runtime Node 22, vedi netlify.toml)
 const { json, getBearerToken } = require('./_lib/utils');
 const { verifyUser, getGoogleConnection } = require('./_lib/supabase');
 

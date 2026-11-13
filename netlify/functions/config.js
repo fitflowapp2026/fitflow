@@ -1,3 +1,4 @@
+// Funzione Netlify (runtime Node 22, vedi netlify.toml)
 exports.handler = async (event, context) => {
   // Gestione preflight CORS (richieste OPTIONS dal browser)
   if (event.httpMethod === 'OPTIONS') {

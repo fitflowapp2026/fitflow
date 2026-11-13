@@ -70,7 +70,12 @@ const quiet = console.error; console.error = () => {};
   r = await sync(ev('GET'));
   assert.strictEqual(r.statusCode, 405);
   r = await sync(ev('POST', { lesson }, 'bad'));
-  assert.strictEqual(r.statusCode, 500);
+  assert.strictEqual(r.statusCode, 401, 'senza login: non autorizzato, non errore del server');
+  for (const name of ['google-sync.js', 'google-replay-sync.js', 'google-availability.js', 'google-disconnect.js', 'google-auth-start.js']) {
+    const res = await fn(name).handler(ev('POST', {}, 'bad'));
+    assert.strictEqual(res.statusCode, 401, name + ' senza login');
+    assert.deepStrictEqual(JSON.parse(res.body), { error: 'Unauthorized' }, name + ': nessun dettaglio interno');
+  }
   assert.ok(!r.body.includes('SEGRETO'), 'nessun dettaglio interno nella risposta');
 
   const replay = fn('google-replay-sync.js').handler;

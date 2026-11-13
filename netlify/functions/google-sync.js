@@ -4,9 +4,13 @@ const { getReadyConnection, upsertOneLesson, deleteOneLesson } = require('./_lib
 
 exports.handler = async function handler(event) {
   if (event.httpMethod !== 'POST') return json(405, { error: 'Method not allowed' });
+  let user;
   try {
-    const accessToken = getBearerToken(event);
-    const user = await verifyUser(accessToken);
+    user = await verifyUser(getBearerToken(event));
+  } catch (error) {
+    return json(401, { error: 'Unauthorized' });
+  }
+  try {
     const ready = await getReadyConnection(user.id);
     if (!ready) return json(200, { skipped: true, reason: 'google_not_connected' });
     const body = parseJsonBody(event);

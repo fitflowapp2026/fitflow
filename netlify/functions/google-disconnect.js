@@ -3,9 +3,13 @@ const { verifyUser, patchGoogleConnection } = require('./_lib/supabase');
 
 exports.handler = async function handler(event) {
   if (event.httpMethod !== 'POST') return json(405, { error: 'Method not allowed' });
+  let user;
   try {
-    const accessToken = getBearerToken(event);
-    const user = await verifyUser(accessToken);
+    user = await verifyUser(getBearerToken(event));
+  } catch (error) {
+    return json(401, { error: 'Unauthorized' });
+  }
+  try {
     await patchGoogleConnection(user.id, {
       is_connected: false,
       refresh_token_enc: null,
@@ -15,6 +19,6 @@ exports.handler = async function handler(event) {
     return json(200, { ok: true });
   } catch (error) {
     console.error(error);
-    return json(401, { error: error.message || 'Unauthorized' });
+    return json(500, { error: 'Disconnessione Google non riuscita' });
   }
 };

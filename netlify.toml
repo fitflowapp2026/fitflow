@@ -7,7 +7,9 @@
   functions = "netlify/functions"
 
 [build.environment]
-  NODE_VERSION = "18"
+  # Node 18 non riceve più aggiornamenti di sicurezza dal 2025: build e funzioni su Node 22
+  NODE_VERSION = "22"
+  AWS_LAMBDA_JS_RUNTIME = "nodejs22.x"
 
 # ── Header di sicurezza per tutte le pagine ──────────────────────
 [[headers]]
